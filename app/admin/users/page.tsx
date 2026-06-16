@@ -59,71 +59,94 @@ export default function AdminUsers() {
   )
 
   if (loading) return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <p>⏳ Đang tải...</p>
+    <div className="min-h-screen bg-[#050814] text-white flex items-center justify-center font-orbitron tracking-widest">
+      <p className="animate-pulse">⏳ LOADING USERS REGISTER...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px' }}>
+    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
+      {/* Decorative Glows */}
+      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-        <Link href="/admin" style={{ display: 'inline-block', marginBottom: '20px', color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>
-          ← Quay lại Admin
+      <div className="max-w-6xl mx-auto relative z-10">
+
+        <Link 
+          href="/admin" 
+          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-red-400 hover:text-red-300 transition-colors uppercase mb-8"
+        >
+          ← QUAY LẠI PANEL ADMIN
         </Link>
 
-        <h1 style={{ margin: '0 0 24px', fontSize: '24px', fontWeight: 'bold' }}>👥 Quản lý người dùng ({users.length})</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-[#1e2d5a] pb-6">
+          <div>
+            <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase">
+              👥 CƠ SỞ DỮ LIỆU ĐẤU THỦ
+            </h1>
+            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
+              USER DATABASE MONITOR // ACCESS CONTROL
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-orbitron bg-cyan-950/30 border border-cyan-500/30 px-4 py-2 rounded-lg text-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.05)]">
+            TỔNG SỐ: {users.length} THÀNH VIÊN
+          </div>
+        </div>
 
         {message && (
-          <div style={{ padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', backgroundColor: message.startsWith('✅') ? '#f0fdf4' : '#fef2f2', border: `1px solid ${message.startsWith('✅') ? '#86efac' : '#fecaca'}`, color: message.startsWith('✅') ? '#16a34a' : '#dc2626' }}>
-            {message}
+          <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-6 text-sm font-semibold tracking-wide flex items-center gap-2">
+            <span>📡</span> {message}
           </div>
         )}
 
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="🔍 Tìm theo tên, email, đơn vị..."
-          style={{ width: '100%', padding: '12px 16px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px', boxSizing: 'border-box', marginBottom: '20px' }}
-        />
+        <div className="relative mb-6">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 Tìm kiếm đấu thủ theo tên, email, đơn vị công tác..."
+            className="w-full bg-slate-950/60 border border-[#1e2d5a] px-4 py-3 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
+          />
+        </div>
 
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>Họ tên</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>Email</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>SĐT</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>Đơn vị</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>Quyền</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((u) => (
-                <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '12px 16px', fontWeight: 500 }}>{u.full_name}</td>
-                  <td style={{ padding: '12px 16px', color: '#64748b' }}>{u.email}</td>
-                  <td style={{ padding: '12px 16px', color: '#64748b' }}>{u.phone || '-'}</td>
-                  <td style={{ padding: '12px 16px', color: '#64748b' }}>{u.organization || '-'}</td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <select
-                      value={u.role || 'participant'}
-                      onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                      style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
-                    >
-                      <option value="participant">Thí sinh</option>
-                      <option value="judge">Giám khảo</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </td>
+        <div className="tech-panel border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm text-slate-350">
+              <thead>
+                <tr className="bg-[#0b1124] border-b border-[#1e2d5a] text-slate-300 font-bold tracking-widest uppercase text-xs">
+                  <th className="padding-table px-6 py-4">Họ tên</th>
+                  <th className="padding-table px-6 py-4">Email</th>
+                  <th className="padding-table px-6 py-4">SĐT</th>
+                  <th className="padding-table px-6 py-4">Đơn vị</th>
+                  <th className="padding-table px-6 py-4">Quyền truy cập</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#1e2d5a]/40">
+                {filteredUsers.map((u) => (
+                  <tr key={u.id} className="hover:bg-[#131e3d]/30 transition duration-150">
+                    <td className="px-6 py-4 font-semibold text-white">{u.full_name}</td>
+                    <td className="px-6 py-4 text-slate-300">{u.email}</td>
+                    <td className="px-6 py-4 text-slate-400">{u.phone || '-'}</td>
+                    <td className="px-6 py-4 text-slate-400">{u.organization || '-'}</td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={u.role || 'participant'}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        className="bg-slate-950/80 border border-[#1e2d5a] text-xs font-bold font-orbitron tracking-wide uppercase rounded px-3 py-1.5 focus:outline-none focus:border-cyan-400 text-white cursor-pointer transition"
+                      >
+                        <option value="participant" className="bg-[#050814]">Thí sinh (PILOT)</option>
+                        <option value="judge" className="bg-[#050814]">Giám khảo (JUDGE)</option>
+                        <option value="admin" className="bg-[#050814]">Quản trị (ADMIN)</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {filteredUsers.length === 0 && (
-            <div style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
-              Không tìm thấy người dùng nào.
+            <div className="p-8 text-center text-slate-500 text-sm font-semibold">
+              Không tìm thấy người dùng nào khớp với truy vấn tìm kiếm.
             </div>
           )}
         </div>
@@ -131,4 +154,4 @@ export default function AdminUsers() {
       </div>
     </div>
   )
-}
+}

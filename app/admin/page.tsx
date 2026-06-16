@@ -43,51 +43,73 @@ export default function AdminDashboard() {
   }, [router, supabase])
 
   if (loading) return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <p>⏳ Đang tải...</p>
+    <div className="min-h-screen bg-[#050814] text-white flex items-center justify-center font-orbitron tracking-widest">
+      <p className="animate-pulse">⏳ LOADING SECURE DATABASE...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px' }}>
+    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
+      {/* Decorative Glows */}
+      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ margin: '0 0 8px', fontSize: '28px', fontWeight: 'bold' }}>🛠️ Admin Dashboard</h1>
-          <p style={{ margin: 0, color: '#64748b' }}>Quản lý toàn bộ hệ thống cuộc thi</p>
+      <div className="max-w-5xl mx-auto relative z-10">
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-[#1e2d5a] pb-6">
+          <div>
+            <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase">
+              ⚙️ TRUNG TÂM KIỂM SOÁT HỆ THỐNG
+            </h1>
+            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
+              SYSTEM CONTROL CENTER // OVERLORD TERMINAL
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-orbitron bg-red-950/30 border border-red-500/30 px-4 py-2 rounded-lg text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.05)]">
+            <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
+            BẢO MẬT: CẤP CAO (ADMIN)
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {[
-            { icon: '👥', label: 'Thí sinh', value: stats.users, color: '#3b82f6' },
-            { icon: '🏆', label: 'Cuộc thi', value: stats.competitions, color: '#eab308' },
-            { icon: '🧩', label: 'Đội thi', value: stats.teams, color: '#8b5cf6' },
-            { icon: '📝', label: 'Bài nộp', value: stats.submissions, color: '#16a34a' },
+            { icon: '👥', label: 'THÍ SINH ĐĂNG KÝ', value: stats.users, color: 'text-cyan-400', border: 'border-cyan-500/20' },
+            { icon: '🏆', label: 'CUỘC THI THIẾT LẬP', value: stats.competitions, color: 'text-yellow-500', border: 'border-yellow-500/20' },
+            { icon: '🧩', label: 'LIÊN MINH KHỞI TẠO', value: stats.teams, color: 'text-purple-400', border: 'border-purple-500/20' },
+            { icon: '📝', label: 'BẢN THIẾT KẾ ĐÃ NHẬN', value: stats.submissions, color: 'text-emerald-400', border: 'border-emerald-500/20' },
           ].map((stat) => (
-            <div key={stat.label} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-              <div style={{ fontSize: '28px', marginBottom: '8px' }}>{stat.icon}</div>
-              <div style={{ color: '#64748b', fontSize: '14px', marginBottom: '4px' }}>{stat.label}</div>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: stat.color }}>{stat.value}</div>
+            <div key={stat.label} className={`tech-panel-glow p-6 relative flex flex-col justify-between h-32 cyber-corners ${stat.border}`}>
+              <div className="text-2xl">{stat.icon}</div>
+              <div>
+                <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-1">{stat.label}</div>
+                <div className={`font-orbitron text-3xl font-extrabold tracking-widest leading-none ${stat.color}`}>{stat.value}</div>
+              </div>
             </div>
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+        {/* Navigation Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
-            { href: '/admin/competitions', icon: '🏆', title: 'Quản lý cuộc thi', desc: 'Tạo, sửa, xoá cuộc thi' },
-            { href: '/admin/users', icon: '👥', title: 'Quản lý người dùng', desc: 'Xem danh sách & phân quyền' },
-            { href: '/admin/submissions', icon: '📝', title: 'Bài nộp', desc: 'Xem và chấm điểm bài nộp' },
-            { href: '/admin/leaderboard', icon: '🏅', title: 'Bảng xếp hạng', desc: 'Xếp hạng theo điểm' },
+            { href: '/admin/competitions', icon: '🏆', title: 'QUẢN LÝ CUỘC THI', desc: 'Thiết lập, hiệu chỉnh thông số các Arena' },
+            { href: '/admin/users', icon: '👥', title: 'QUẢN LÝ NGƯỜI DÙNG', desc: 'Giám sát đấu thủ và phân quyền truy cập' },
+            { href: '/admin/submissions', icon: '📝', title: 'CHẤM ĐIỂM DỰ ÁN', desc: 'Đánh giá kỹ thuật và ghi nhận kết quả' },
+            { href: '/admin/leaderboard', icon: '🏅', title: 'BẢNG XẾP HẠNG CHUNG', desc: 'Xếp hạng hiệu năng của các liên minh' },
           ].map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', textDecoration: 'none', color: 'inherit', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '16px' }}
+              className="tech-panel p-6 text-slate-200 hover:border-cyan-400/40 hover:bg-cyan-950/10 hover:shadow-[0_0_15px_rgba(0,240,255,0.08)] transition duration-200 flex items-center gap-6 group relative"
             >
-              <div style={{ fontSize: '36px' }}>{item.icon}</div>
+              {/* Corner tech line decoration */}
+              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-cyan-500/30 group-hover:border-cyan-400 transition" />
+              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-cyan-500/30 group-hover:border-cyan-400 transition" />
+
+              <div className="text-4.5xl group-hover:scale-110 transition duration-300">{item.icon}</div>
               <div>
-                <div style={{ fontWeight: 'bold', fontSize: '17px', marginBottom: '4px' }}>{item.title}</div>
-                <div style={{ color: '#64748b', fontSize: '14px' }}>{item.desc}</div>
+                <div className="font-orbitron text-sm font-bold tracking-wider text-slate-100 group-hover:text-cyan-400 mb-1 transition">{item.title}</div>
+                <div className="text-slate-400 text-xs leading-relaxed">{item.desc}</div>
               </div>
             </Link>
           ))}
@@ -96,4 +118,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   )
-}
+}

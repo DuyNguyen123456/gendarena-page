@@ -64,20 +64,20 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center 
-                      bg-gray-50 p-4">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md 
-                        w-full text-center">
-          <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold mb-2">Đăng ký thành công!</h2>
-          <p className="text-gray-500 mb-6">
-            Kiểm tra email để xác thực tài khoản, 
-            sau đó đăng nhập.
+      <div className="min-h-screen flex items-center justify-center bg-[#050814] p-4 relative scanline-container">
+        {/* Glow Effects */}
+        <div className="absolute top-1/3 left-1/3 w-72 h-72 bg-[#112E81]/20 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-1/3 right-1/3 w-72 h-72 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="tech-panel-glow p-8 max-w-md w-full text-center relative cyber-corners border-cyan-500/20 shadow-[0_0_30px_rgba(0,240,255,0.05)] text-white">
+          <div className="text-5xl mb-4 inline-block bg-cyan-950/30 border border-cyan-800/30 p-4 rounded-full text-cyan-400">✅</div>
+          <h2 className="font-orbitron text-2xl font-extrabold mb-2 uppercase tracking-wider text-cyan-400">ĐĂNG KÝ THÀNH CÔNG!</h2>
+          <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+            Hệ thống đã gửi email kích hoạt. Vui lòng kiểm tra hộp thư để xác thực tài khoản trước khi truy cập đấu trường.
           </p>
           <Link href="/login"
-            className="inline-block px-6 py-3 bg-blue-600 text-white 
-                       rounded-lg hover:bg-blue-700">
-            Đăng nhập
+            className="tech-btn-accent font-orbitron inline-block px-8 py-3 rounded-lg text-sm tracking-widest text-black">
+            ĐĂNG NHẬP NGAY
           </Link>
         </div>
       </div>
@@ -85,82 +85,82 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center 
-                    bg-gray-50 p-4">
-      <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
-        <h2 className="text-2xl font-bold text-center mb-2">
-          🚀 Đăng Ký Tham Gia
+    <div className="min-h-screen flex items-center justify-center bg-[#050814] p-4 relative scanline-container py-12">
+      {/* Glow Effects */}
+      <div className="absolute top-1/3 left-1/3 w-72 h-72 bg-[#112E81]/20 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/3 right-1/3 w-72 h-72 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+      <div className="tech-panel-glow p-8 max-w-md w-full relative cyber-corners border-cyan-500/20 shadow-[0_0_30px_rgba(0,240,255,0.05)] text-white">
+        
+        {/* Terminal Header */}
+        <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/30 tracking-widest">
+          SECURE REGISTER // REG_02
+        </div>
+
+        <h2 className="font-orbitron text-2xl font-extrabold text-center text-white mb-1 uppercase tracking-wider">
+          🚀 ĐĂNG KÝ ĐẤU THỦ
         </h2>
-        <p className="text-gray-500 text-center mb-6">
-          Tạo tài khoản để bắt đầu hành trình khởi nghiệp
+        <p className="text-slate-400 text-xs font-medium text-center tracking-widest uppercase mb-6">
+          Tạo tài khoản để tham gia GenD Arena
         </p>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 
-                          px-4 py-3 rounded-lg mb-4">
-            {error}
+          <div className="bg-red-950/30 border border-red-500/40 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm font-medium">
+            ❌ HỆ THỐNG BÁO LỖI: {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Họ và tên *
+            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
+              HỌ VÀ TÊN *
             </label>
             <input
               name="fullName"
               required
               placeholder="Nguyễn Văn A"
-              className="w-full px-4 py-2 border rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 
-                         focus:outline-none"
+              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Email *
+            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
+              ĐỊA CHỈ EMAIL *
             </label>
             <input
               name="email"
               type="email"
               required
               placeholder="email@example.com"
-              className="w-full px-4 py-2 border rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 
-                         focus:outline-none"
+              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Số điện thoại
+            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
+              SỐ ĐIỆN THOẠI
             </label>
             <input
               name="phone"
               placeholder="0901234567"
-              className="w-full px-4 py-2 border rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 
-                         focus:outline-none"
+              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Trường / Công ty
+            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
+              ĐƠN VỊ / TRƯỜNG HỌC
             </label>
             <input
               name="organization"
               placeholder="Đại học ABC"
-              className="w-full px-4 py-2 border rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 
-                         focus:outline-none"
+              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Mật khẩu *
+            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
+              MẬT KHẨU KHỞI TẠO *
             </label>
             <input
               name="password"
@@ -168,44 +168,39 @@ export default function RegisterPage() {
               required
               minLength={6}
               placeholder="Ít nhất 6 ký tự"
-              className="w-full px-4 py-2 border rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 
-                         focus:outline-none"
+              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Xác nhận mật khẩu *
+            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
+              XÁC NHẬN MẬT KHẨU *
             </label>
             <input
               name="confirmPassword"
               type="password"
               required
               placeholder="Nhập lại mật khẩu"
-              className="w-full px-4 py-2 border rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 
-                         focus:outline-none"
+              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg 
-                       font-medium hover:bg-blue-700 
-                       disabled:opacity-50 transition">
-            {loading ? '⏳ Đang xử lý...' : 'Đăng Ký'}
+            className="w-full py-3.5 bg-gradient-to-r from-blue-900 to-[#112E81] hover:from-blue-800 hover:to-blue-700 text-white border border-cyan-500/30 font-bold uppercase tracking-wider rounded-lg shadow-[0_0_15px_rgba(17,46,129,0.3)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)] disabled:opacity-50 transition duration-200 cursor-pointer text-sm font-orbitron"
+          >
+            {loading ? '⏳ ĐANG KHỞI TẠO...' : 'ĐĂNG KÝ TÀI KHOẢN'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-4">
+        <p className="text-center text-xs text-slate-400 mt-6 font-semibold tracking-wide">
           Đã có tài khoản?{' '}
-          <Link href="/login" className="text-blue-600 hover:underline">
-            Đăng nhập
+          <Link href="/login" className="text-cyan-400 hover:text-cyan-300 hover:underline transition ml-1">
+            ĐĂNG NHẬP
           </Link>
         </p>
       </div>
     </div>
   )
-}
+}

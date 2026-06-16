@@ -107,109 +107,186 @@ export default function AdminSubmissions() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <p>⏳ Đang tải...</p>
+    <div className="min-h-screen bg-[#050814] text-white flex items-center justify-center font-orbitron tracking-widest">
+      <p className="animate-pulse">⏳ LOADING SUBMISSIONS RECORD...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px' }}>
+    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
+      {/* Decorative Glows */}
+      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-        <Link href="/admin" style={{ display: 'inline-block', marginBottom: '20px', color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>
-          ← Quay lại Admin
+      <div className="max-w-4xl mx-auto relative z-10">
+
+        <Link 
+          href="/admin" 
+          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-red-400 hover:text-red-300 transition-colors uppercase mb-8"
+        >
+          ← QUAY LẠI PANEL ADMIN
         </Link>
 
-        <h1 style={{ margin: '0 0 24px', fontSize: '24px', fontWeight: 'bold' }}>📝 Bài nộp ({submissions.length})</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-[#1e2d5a] pb-6">
+          <div>
+            <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase">
+              📝 BẢNG ĐÁNH GIÁ DỰ ÁN
+            </h1>
+            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
+              PROJECT EVALUATION TERMINAL // SECURE GRADING
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-orbitron bg-cyan-950/30 border border-cyan-500/30 px-4 py-2 rounded-lg text-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.05)]">
+            TỔNG SỐ: {submissions.length} BÀI NỘP
+          </div>
+        </div>
 
         {message && (
-          <div style={{ padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', backgroundColor: message.startsWith('✅') ? '#f0fdf4' : '#fef2f2', border: `1px solid ${message.startsWith('✅') ? '#86efac' : '#fecaca'}`, color: message.startsWith('✅') ? '#16a34a' : '#dc2626' }}>
-            {message}
+          <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-6 text-sm font-semibold tracking-wide flex items-center gap-2">
+            <span>📡</span> {message}
           </div>
         )}
 
         {submissions.length === 0 ? (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '48px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <p style={{ color: '#64748b' }}>Chưa có bài nộp nào.</p>
+          <div className="tech-panel p-8 text-center relative border-cyan-500/20 text-slate-400 text-sm font-semibold">
+            Chưa nhận được bài nộp dự án nào trên hệ thống.
           </div>
         ) : (
-          submissions.map((sub) => {
-            const score = scores[sub.id]
-            return (
-              <div key={sub.id} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', marginBottom: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 'bold' }}>{sub.title}</h3>
-                    <p style={{ margin: '0 0 4px', fontSize: '14px', color: '#64748b' }}>
-                      <strong>Đội:</strong> {sub.teams?.name} · <strong>Cuộc thi:</strong> {sub.competitions?.title}
-                    </p>
-                    <p style={{ margin: '8px 0 0', color: '#475569' }}>{sub.description}</p>
+          <div className="space-y-6">
+            {submissions.map((sub) => {
+              const score = scores[sub.id]
+              return (
+                <div key={sub.id} className="tech-panel-glow border-cyan-500/15 p-6 rounded-xl relative hover:border-cyan-400/30 transition duration-200">
+                  
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+                    <div className="space-y-2 flex-1">
+                      <h3 className="font-orbitron text-lg font-bold text-white tracking-wide uppercase">{sub.title}</h3>
+                      <div className="flex flex-wrap gap-2 text-xs font-bold tracking-wider uppercase text-slate-400">
+                        <span className="bg-[#131e3d]/60 border border-[#1e2d5a]/60 px-2.5 py-1 rounded">
+                          ĐỘI: {sub.teams?.name}
+                        </span>
+                        <span className="bg-[#131e3d]/60 border border-[#1e2d5a]/60 px-2.5 py-1 rounded">
+                          ĐẤU TRƯỜNG: {sub.competitions?.title}
+                        </span>
+                      </div>
+                      <p className="text-slate-350 text-sm leading-relaxed pt-1.5">{sub.description}</p>
+                    </div>
+                    {score && (
+                      <div className="bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 px-4 py-2.5 rounded-lg text-center self-start whitespace-nowrap shadow-[0_0_15px_rgba(16,163,74,0.1)]">
+                        <div className="text-[9px] font-extrabold tracking-widest font-orbitron uppercase opacity-75 mb-0.5">ĐÃ CHẤM</div>
+                        <div className="text-2xl font-extrabold font-orbitron tracking-wider">{score.total_score?.toFixed(1)}</div>
+                      </div>
+                    )}
                   </div>
-                  {score && (
-                    <div style={{ marginLeft: '16px', padding: '8px 16px', backgroundColor: '#f0fdf4', borderRadius: '8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '11px', color: '#16a34a', marginBottom: '2px' }}>ĐÃ CHẤM</div>
-                      <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#16a34a' }}>{score.total_score?.toFixed(1)}</div>
-                    </div>
+
+                  {/* Attachment links */}
+                  <div className="flex flex-wrap gap-3 mb-5 text-xs font-bold tracking-wider font-orbitron uppercase">
+                    {sub.pitch_deck_url && (
+                      <a 
+                        href={sub.pitch_deck_url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-400 text-cyan-400 hover:text-white px-3 py-2 rounded-lg flex items-center gap-1.5 transition"
+                      >
+                        📄 PITCH DECK
+                      </a>
+                    )}
+                    {sub.video_url && (
+                      <a 
+                        href={sub.video_url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-400 text-cyan-400 hover:text-white px-3 py-2 rounded-lg flex items-center gap-1.5 transition"
+                      >
+                        🎥 VIDEO DEMO
+                      </a>
+                    )}
+                    {sub.prototype_url && (
+                      <a 
+                        href={sub.prototype_url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-400 text-cyan-400 hover:text-white px-3 py-2 rounded-lg flex items-center gap-1.5 transition"
+                      >
+                        🔗 PROTOTYPE
+                      </a>
+                    )}
+                  </div>
+
+                  {scoringId !== sub.id && (
+                    <button
+                      onClick={() => setScoringId(sub.id)}
+                      className={`px-4 py-2 text-xs font-bold tracking-wider uppercase rounded-lg cursor-pointer transition ${
+                        score 
+                          ? 'border border-[#1e2d5a] hover:border-cyan-500 hover:text-cyan-400 bg-transparent text-slate-300' 
+                          : 'tech-btn-accent text-black'
+                      }`}
+                    >
+                      {score ? '✏️ CHỈNH SỬA ĐIỂM' : '⚖️ CHẤM ĐIỂM DỰ ÁN'}
+                    </button>
                   )}
+
+                  {scoringId === sub.id && (
+                    <form onSubmit={(e) => handleScore(e, sub.id)} className="border border-[#1e2d5a] bg-[#070c1e]/70 rounded-xl p-5 mt-4 space-y-4">
+                      <h4 className="font-orbitron text-xs font-bold tracking-wider text-cyan-400 uppercase">
+                        BẢNG ĐÁNH GIÁ CHI TIẾT (0-10 Điểm mỗi tiêu chí)
+                      </h4>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {[
+                          { name: 'innovation', label: '💡 Sáng tạo', default: score?.innovation_score },
+                          { name: 'feasibility', label: '🛠️ Khả thi', default: score?.feasibility_score },
+                          { name: 'presentation', label: '🎤 Trình bày', default: score?.presentation_score },
+                          { name: 'impact', label: '🌍 Tác động', default: score?.impact_score },
+                        ].map((field) => (
+                          <div key={field.name}>
+                            <label className="block text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-1">{field.label}</label>
+                            <input 
+                              name={field.name} 
+                              type="number" 
+                              min="0" 
+                              max="10" 
+                              required 
+                              defaultValue={field.default ?? ''}
+                              className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white focus:outline-none focus:border-cyan-400 transition" 
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-1">Nhận xét chi tiết của giám khảo</label>
+                        <textarea 
+                          name="comment" 
+                          rows={2} 
+                          defaultValue={score?.comment || ''}
+                          placeholder="Nêu rõ ưu nhược điểm kỹ thuật..."
+                          className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 transition resize-none text-sm" 
+                        />
+                      </div>
+
+                      <div className="flex gap-3 pt-1">
+                        <button 
+                          type="submit"
+                          className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold tracking-wider uppercase rounded-lg cursor-pointer transition shadow-[0_0_10px_rgba(16,163,74,0.2)]"
+                        >
+                          💾 LƯU ĐIỂM HỆ THỐNG
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => setScoringId(null)}
+                          className="px-5 py-2 border border-[#1e2d5a] hover:bg-slate-900/60 text-slate-300 text-xs font-semibold uppercase tracking-wider rounded-lg cursor-pointer transition"
+                        >
+                          HUỶ
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
                 </div>
-
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', fontSize: '14px' }}>
-                  {sub.pitch_deck_url && <a href={sub.pitch_deck_url} target="_blank" style={{ color: '#2563eb' }}>📄 Pitch Deck</a>}
-                  {sub.video_url && <a href={sub.video_url} target="_blank" style={{ color: '#2563eb' }}>🎥 Video</a>}
-                  {sub.prototype_url && <a href={sub.prototype_url} target="_blank" style={{ color: '#2563eb' }}>🔗 Demo</a>}
-                </div>
-
-                {scoringId !== sub.id && (
-                  <button
-                    onClick={() => setScoringId(sub.id)}
-                    style={{ padding: '8px 16px', backgroundColor: score ? '#eff6ff' : '#2563eb', color: score ? '#2563eb' : 'white', border: 'none', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', fontWeight: 500 }}
-                  >
-                    {score ? '✏️ Sửa điểm' : '⚖️ Chấm điểm'}
-                  </button>
-                )}
-
-                {scoringId === sub.id && (
-                  <form onSubmit={(e) => handleScore(e, sub.id)} style={{ marginTop: '16px', padding: '20px', backgroundColor: '#f8fafc', borderRadius: '10px' }}>
-                    <h4 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 'bold' }}>Chấm điểm (0-10 mỗi tiêu chí)</h4>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
-                      {[
-                        { name: 'innovation', label: '💡 Sáng tạo', default: score?.innovation_score },
-                        { name: 'feasibility', label: '🛠️ Khả thi', default: score?.feasibility_score },
-                        { name: 'presentation', label: '🎤 Trình bày', default: score?.presentation_score },
-                        { name: 'impact', label: '🌍 Tác động', default: score?.impact_score },
-                      ].map((field) => (
-                        <div key={field.name}>
-                          <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>{field.label}</label>
-                          <input name={field.name} type="number" min="0" max="10" required defaultValue={field.default ?? ''}
-                            style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '15px', boxSizing: 'border-box' }} />
-                        </div>
-                      ))}
-                    </div>
-
-                    <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Nhận xét</label>
-                      <textarea name="comment" rows={2} defaultValue={score?.comment || ''}
-                        style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', resize: 'vertical' }} />
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button type="submit"
-                        style={{ padding: '8px 16px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', fontWeight: 500 }}>
-                        💾 Lưu điểm
-                      </button>
-                      <button type="button" onClick={() => setScoringId(null)}
-                        style={{ padding: '8px 16px', border: '1px solid #e2e8f0', backgroundColor: 'white', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
-                        Huỷ
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-              </div>
-            )
-          })
+              )
+            })}
+          </div>
         )}
 
       </div>

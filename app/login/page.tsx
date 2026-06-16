@@ -35,71 +35,74 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center 
-                    bg-gray-50 p-4">
-      <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
-        <h2 className="text-2xl font-bold text-center mb-2">
-          👋 Đăng Nhập
+    <div className="min-h-screen flex items-center justify-center bg-[#050814] p-4 relative scanline-container">
+      {/* Glow Effects */}
+      <div className="absolute top-1/3 left-1/3 w-72 h-72 bg-[#112E81]/20 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/3 right-1/3 w-72 h-72 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+      <div className="tech-panel-glow p-8 max-w-md w-full relative cyber-corners border-cyan-500/20 shadow-[0_0_30px_rgba(0,240,255,0.05)]">
+        
+        {/* Terminal Header */}
+        <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/30 tracking-widest">
+          SECURE CONNECTION // AUTH_01
+        </div>
+
+        <h2 className="font-orbitron text-2xl font-extrabold text-center text-white mb-1 uppercase tracking-wider">
+          🔑 XÁC MINH DANH TÍNH
         </h2>
-        <p className="text-gray-500 text-center mb-6">
-          Chào mừng bạn quay lại
+        <p className="text-slate-400 text-xs font-medium text-center tracking-widest uppercase mb-8">
+          Đăng nhập vào hệ thống điều khiển
         </p>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 
-                          px-4 py-3 rounded-lg mb-4">
-            {error}
+          <div className="bg-red-950/30 border border-red-500/40 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm font-medium">
+            ❌ HỆ THỐNG BÁO LỖI: {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Email
+            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">
+              ĐỊA CHỈ EMAIL
             </label>
             <input
               name="email"
               type="email"
               required
               placeholder="email@example.com"
-              className="w-full px-4 py-2 border rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 
-                         focus:outline-none"
+              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Mật khẩu
+            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">
+              MẬT KHẨU TRUY CẬP
             </label>
             <input
               name="password"
               type="password"
               required
               placeholder="••••••"
-              className="w-full px-4 py-2 border rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 
-                         focus:outline-none"
+              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg 
-                       font-medium hover:bg-blue-700 
-                       disabled:opacity-50 transition">
-            {loading ? '⏳ Đang xử lý...' : 'Đăng Nhập'}
+            className="w-full py-3.5 bg-gradient-to-r from-blue-900 to-[#112E81] hover:from-blue-800 hover:to-blue-700 text-white border border-cyan-500/30 font-bold uppercase tracking-wider rounded-lg shadow-[0_0_15px_rgba(17,46,129,0.3)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)] disabled:opacity-50 transition duration-200 cursor-pointer text-sm font-orbitron"
+          >
+            {loading ? '⏳ ĐANG XỬ LÝ...' : 'ĐĂNG NHẬP HỆ THỐNG'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-4">
-          Chưa có tài khoản?{' '}
-          <Link href="/register" className="text-blue-600 hover:underline">
-            Đăng ký
+        <p className="text-center text-xs text-slate-400 mt-6 font-semibold tracking-wide">
+          Chưa đăng ký quyền truy cập?{' '}
+          <Link href="/register" className="text-cyan-400 hover:text-cyan-300 hover:underline transition ml-1">
+            ĐĂNG KÝ NGAY
           </Link>
         </p>
       </div>
     </div>
   )
-}
+}

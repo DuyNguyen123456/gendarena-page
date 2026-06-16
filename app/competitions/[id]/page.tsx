@@ -96,100 +96,140 @@ export default function CompetitionDetailPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 20px' }}>
+    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
+      {/* Decorative Glows */}
+      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-        <Link href="/dashboard" style={{ display: 'inline-block', marginBottom: '20px', color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>
-          ← Quay lại Dashboard
+      <div className="max-w-4xl mx-auto relative z-10">
+        
+        {/* Back navigation */}
+        <Link 
+          href="/dashboard" 
+          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-cyan-400 hover:text-cyan-300 transition-colors uppercase mb-8"
+        >
+          ← QUAY LẠI PILOT CONSOLE
         </Link>
 
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '32px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          <span style={{ display: 'inline-block', padding: '4px 12px', backgroundColor: '#dcfce7', color: '#16a34a', borderRadius: '20px', fontSize: '13px', marginBottom: '16px' }}>
-            {competition.status === 'registration' ? '📝 Đang mở đăng ký' : competition.status}
-          </span>
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: '0 0 12px' }}>{competition.title}</h1>
-          <p style={{ color: '#475569', fontSize: '16px', margin: 0 }}>{competition.description}</p>
+        {/* Quest Briefing Header */}
+        <div className="tech-panel-glow p-8 mb-8 relative cyber-corners border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+          <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/30 tracking-widest">
+            ARENA QUEST BRIEFING // ID_{competition.id.slice(0, 8).toUpperCase()}
+          </div>
+          
+          <div className="inline-flex items-center gap-1.5 bg-cyan-950/40 border border-cyan-500/30 px-3 py-1 rounded-full text-xs font-bold text-cyan-400 tracking-wider mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            {competition.status === 'registration' ? 'ĐANG MỞ ĐĂNG KÝ THI' : competition.status?.toUpperCase()}
+          </div>
+
+          <h1 className="font-orbitron text-2xl md:text-3.5xl font-extrabold text-white tracking-wider uppercase mb-3 leading-snug">
+            {competition.title}
+          </h1>
+          <p className="text-slate-350 text-sm leading-relaxed max-w-3xl">
+            {competition.description}
+          </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 12px' }}>📜 Thể lệ</h2>
-            <p style={{ color: '#475569', whiteSpace: 'pre-line', margin: 0, lineHeight: 1.7 }}>{competition.rules || 'Đang cập nhật...'}</p>
+        {/* Details Grid (Rules & Prizes) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="tech-panel p-6 border-cyan-500/15 relative">
+            <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/20 tracking-widest">SECTION // 01</div>
+            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
+              <span>📜</span> THỂ LỆ THI ĐẤU
+            </h2>
+            <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+              {competition.rules || 'Nội dung thể lệ đang được cập nhật bởi ban tổ chức...'}
+            </p>
           </div>
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 12px' }}>🏆 Giải thưởng</h2>
-            <p style={{ color: '#475569', whiteSpace: 'pre-line', margin: 0, lineHeight: 1.7 }}>{competition.prizes || 'Đang cập nhật...'}</p>
+
+          <div className="tech-panel p-6 border-cyan-500/15 relative">
+            <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/20 tracking-widest">SECTION // 02</div>
+            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
+              <span>🏆</span> CƠ CẤU GIẢI THƯỞNG
+            </h2>
+            <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+              {competition.prizes || 'Thông tin giải thưởng chi tiết đang được cập nhật...'}
+            </p>
           </div>
         </div>
 
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 16px' }}>📅 Thời gian</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        {/* Timeline Timeline */}
+        <div className="tech-panel p-6 mb-8 border-cyan-500/15 relative">
+          <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/20 tracking-widest">SCHEDULER // LOG</div>
+          <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-1.5">
+            <span>📅</span> LỘ TRÌNH ĐẤU TRƯỜNG
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Mở đăng ký', value: competition.registration_start, bg: '#eff6ff' },
-              { label: 'Hết đăng ký', value: competition.registration_end, bg: '#eff6ff' },
-              { label: 'Bắt đầu nộp', value: competition.submission_start, bg: '#fff7ed' },
-              { label: 'Hạn nộp bài', value: competition.submission_end, bg: '#fef2f2' },
+              { label: 'Mở đăng ký', value: competition.registration_start, bg: 'bg-cyan-950/30 border-cyan-500/30 text-cyan-450' },
+              { label: 'Hết đăng ký', value: competition.registration_end, bg: 'bg-cyan-950/30 border-cyan-500/30 text-cyan-450' },
+              { label: 'Bắt đầu nộp', value: competition.submission_start, bg: 'bg-amber-950/20 border-amber-500/30 text-amber-450' },
+              { label: 'Hạn nộp bài', value: competition.submission_end, bg: 'bg-red-950/20 border-red-500/30 text-red-400' },
             ].map((item) => (
-              <div key={item.label} style={{ backgroundColor: item.bg, padding: '12px 16px', borderRadius: '8px', fontSize: '14px' }}>
-                <span style={{ color: '#64748b' }}>{item.label}: </span>
-                <strong>{item.value ? new Date(item.value).toLocaleDateString('vi-VN') : 'TBD'}</strong>
+              <div key={item.label} className={`border p-4 rounded-lg flex flex-col justify-between h-20 ${item.bg}`}>
+                <span className="text-xs font-bold uppercase tracking-wider opacity-85">{item.label}</span>
+                <span className="font-orbitron text-xs font-extrabold tracking-widest">
+                  {item.value ? new Date(item.value).toLocaleDateString('vi-VN') : 'CHƯA ĐỊNH NGÀY'}
+                </span>
               </div>
             ))}
           </div>
         </div>
 
         {message && (
-          <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px' }}>
-            {message}
+          <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-8 text-sm font-semibold tracking-wide flex items-center gap-2">
+            <span>📡</span> {message}
           </div>
         )}
 
+        {/* Register Alliance Section */}
         {!showForm ? (
           <button
             onClick={() => setShowForm(true)}
-            style={{ width: '100%', padding: '16px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
+            className="w-full tech-btn-accent py-4 rounded-lg font-orbitron font-extrabold text-base tracking-widest uppercase cursor-pointer"
           >
-            👥 Đăng Ký Đội Thi
+            👥 KHỞI TẠO LIÊN MINH CHIẾN ĐẤU (ĐĂNG KÝ ĐỘI THI)
           </button>
         ) : (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 16px' }}>Tạo đội thi mới</h2>
-            <form onSubmit={handleRegisterTeam}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>Tên đội *</label>
+          <div className="tech-panel p-6 border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
+              <span>👥</span> THÀNH LẬP ĐỘI NGŨ MỚI
+            </h2>
+            <form onSubmit={handleRegisterTeam} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Tên liên minh / đội *</label>
                 <input
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
                   required
-                  placeholder="VD: Team Innovation"
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box' }}
+                  placeholder="VD: Team Cybernetic Robot"
+                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
                 />
               </div>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>Mô tả đội</label>
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Mô tả đội hình</label>
                 <textarea
                   value={teamDesc}
                   onChange={(e) => setTeamDesc(e.target.value)}
                   rows={3}
-                  placeholder="Mô tả ngắn về đội của bạn..."
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box', resize: 'vertical' }}
+                  placeholder="Mô tả ngắn về các thành viên và mục tiêu đấu trường..."
+                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition resize-none"
                 />
               </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div className="flex gap-4">
                 <button
                   type="submit"
                   disabled={submitLoading}
-                  style={{ padding: '10px 24px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                  className="tech-btn-accent font-orbitron px-6 py-2.5 rounded-lg text-xs tracking-wider uppercase cursor-pointer text-black"
                 >
-                  {submitLoading ? '⏳ Đang tạo...' : 'Tạo đội'}
+                  {submitLoading ? '⏳ ĐANG KHỞI TẠO...' : 'TẠO LIÊN MINH'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  style={{ padding: '10px 24px', border: '1px solid #e2e8f0', backgroundColor: 'white', borderRadius: '8px', fontSize: '15px', cursor: 'pointer' }}
+                  className="px-6 py-2.5 border border-[#1e2d5a] bg-transparent hover:bg-slate-900/60 text-slate-300 text-xs font-semibold uppercase tracking-wider rounded-lg cursor-pointer transition"
                 >
-                  Huỷ
+                  HỦY LỆNH
                 </button>
               </div>
             </form>

@@ -41,110 +41,88 @@ export default function Navbar() {
   }
 
   const isAdmin = profile?.role === 'admin'
+  const isJudge = profile?.role === 'judge'
 
-  const linkStyle = (path: string) => ({
-    padding: '8px 14px',
-    borderRadius: '8px',
-    textDecoration: 'none',
-    color: (path !== '/' && pathname.startsWith(path)) || pathname === path ? '#2563eb' : '#475569',
-    backgroundColor: (path !== '/' && pathname.startsWith(path)) || pathname === path ? '#eff6ff' : 'transparent',
-    fontWeight: (path !== '/' && pathname.startsWith(path)) || pathname === path ? 600 : 500,
-    fontSize: '15px',
-    transition: 'all 0.15s',
-  })
+  const getLinkClass = (path: string) => {
+    const isActive = (path !== '/' && pathname.startsWith(path)) || pathname === path
+    return `px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+      isActive 
+        ? 'text-cyan-400 bg-cyan-950/30 border border-cyan-500/30 shadow-[0_0_10px_rgba(0,240,255,0.1)] font-bold' 
+        : 'text-slate-300 hover:text-cyan-400 hover:bg-cyan-950/10'
+    }`
+  }
+
+  const getAdminLinkClass = () => {
+    const isActive = pathname.startsWith('/admin')
+    return `px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+      isActive 
+        ? 'text-red-400 bg-red-950/30 border border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.1)] font-bold' 
+        : 'text-slate-300 hover:text-red-400 hover:bg-red-950/10'
+    }`
+  }
 
   return (
-    <nav style={{
-      backgroundColor: 'white',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-      padding: '14px 32px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-    }}>
-      <Link href="/" style={{
-        fontSize: '20px',
-        fontWeight: 'bold',
-        textDecoration: 'none',
-        color: '#0f172a',
-      }}>
-        🚀 GenD Arena
+    <nav className="bg-[#070c1e]/85 backdrop-blur-md border-b border-[#1e2d5a] px-8 py-3.5 flex justify-between items-center sticky top-0 z-50 shadow-[0_4px_30px_rgba(0,240,255,0.03)]">
+      <Link 
+        href="/" 
+        className="font-orbitron text-lg font-bold tracking-wider text-white hover:text-cyan-400 transition duration-300 flex items-center gap-2 group"
+      >
+        <span className="group-hover:animate-pulse">🤖</span>
+        <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-cyan-400 group-hover:neon-text-cyan">
+          GEND ARENA
+        </span>
       </Link>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Link href="/" style={linkStyle('/')}>Trang chủ</Link>
+      <div className="flex items-center gap-2">
+        <Link href="/" className={getLinkClass('/')}>Trang chủ</Link>
 
         {user && !isAdmin && (
           <>
-            <Link href="/dashboard" style={linkStyle('/dashboard')}>Dashboard</Link>
-            <Link href="/submissions" style={linkStyle('/submissions')}>Bài nộp</Link>
+            <Link href="/dashboard" className={getLinkClass('/dashboard')}>Dashboard</Link>
+            <Link href="/submissions" className={getLinkClass('/submissions')}>Bài nộp</Link>
           </>
         )}
 
-        {isAdmin && (
-          <Link href="/admin" style={{
-            ...linkStyle('/admin'),
-            color: pathname.startsWith('/admin') ? '#dc2626' : '#475569',
-            backgroundColor: pathname.startsWith('/admin') ? '#fef2f2' : 'transparent',
-          }}>
-            🛠️ Admin
+        {(isAdmin || isJudge) && (
+          <Link href="/admin" className={getAdminLinkClass()}>
+            ⚙️ Quản lý
           </Link>
         )}
 
-        <div style={{ width: '1px', height: '24px', backgroundColor: '#e2e8f0', margin: '0 8px' }} />
+        <div className="w-[1px] h-5 bg-[#1e2d5a] mx-2" />
 
         {loading ? (
-          <div style={{ width: '80px', height: '36px' }} />
+          <div className="w-20 h-9 bg-slate-800/30 animate-pulse rounded-lg" />
         ) : user ? (
-          <>
-            <span style={{ color: '#475569', fontSize: '14px' }}>
-              {isAdmin ? '👑' : '👋'} {profile?.full_name || 'Bạn'}
+          <div className="flex items-center gap-3.5">
+            <span className="text-slate-300 text-xs font-medium bg-[#131e3d] border border-[#1e2d5a] px-3 py-1.5 rounded-full flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              {isAdmin ? '👑 Admin:' : isJudge ? '⚖️ Giám khảo:' : '👤'} {profile?.full_name || 'Đấu thủ'}
             </span>
             <button
               onClick={handleLogout}
-              style={{
-                padding: '8px 16px',
-                border: '1px solid #fca5a5',
-                backgroundColor: 'white',
-                color: '#dc2626',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 500,
-              }}
+              className="px-4 py-2 border border-red-500/30 bg-red-950/20 hover:bg-red-500 hover:text-white text-red-400 text-xs font-semibold rounded-lg cursor-pointer transition-all duration-200 active:translate-y-px"
             >
               Đăng xuất
             </button>
-          </>
+          </div>
         ) : (
-          <>
-            <Link href="/login" style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              color: '#475569',
-              fontSize: '14px',
-              fontWeight: 500,
-            }}>
+          <div className="flex items-center gap-2">
+            <Link 
+              href="/login" 
+              className="px-4 py-2 rounded-lg text-slate-300 hover:text-white text-sm font-semibold transition"
+            >
               Đăng nhập
             </Link>
-            <Link href="/register" style={{
-              padding: '8px 16px',
-              backgroundColor: '#2563eb',
-              color: 'white',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 600,
-            }}>
-              Đăng ký
+            <Link 
+              href="/register" 
+              className="tech-btn-accent px-4 py-2 rounded-lg text-sm"
+            >
+              BƯỚC VÀO SÀN ĐẤU
             </Link>
-          </>
+          </div>
         )}
       </div>
     </nav>
   )
-}
+}

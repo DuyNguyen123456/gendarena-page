@@ -134,106 +134,149 @@ export default function SubmissionsPage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <p>⏳ Đang tải...</p>
+    <div className="min-h-screen bg-[#050814] text-white flex items-center justify-center font-orbitron tracking-widest">
+      <p className="animate-pulse">⏳ LOADING SYSTEMS...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 20px' }}>
+    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
+      {/* Decorative Glows */}
+      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-        <Link href="/dashboard" style={{ display: 'inline-block', marginBottom: '20px', color: '#2563eb', textDecoration: 'none', fontSize: '14px' }}>
-          ← Quay lại Dashboard
+      <div className="max-w-3xl mx-auto relative z-10">
+
+        <Link 
+          href="/dashboard" 
+          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-cyan-400 hover:text-cyan-300 transition-colors uppercase mb-8"
+        >
+          ← QUAY LẠI PILOT CONSOLE
         </Link>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>📝 Bài Nộp Của Tôi</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase">
+              📝 HỒ SƠ BẢN VẼ DỰ ÁN
+            </h1>
+            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
+              BLUEPRINT DOSSIERS // PROJECT ARCHIVES
+            </p>
+          </div>
           {myTeams.length > 0 && (
             <button
               onClick={() => setShowForm(!showForm)}
-              style={{ padding: '10px 20px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', cursor: 'pointer', fontWeight: 'bold' }}
+              className="tech-btn-accent font-orbitron px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase cursor-pointer"
             >
-              + Nộp bài mới
+              {showForm ? '✕ ĐÓNG FORM' : '+ NỘP BẢN VẼ MỚI'}
             </button>
           )}
         </div>
 
         {message && (
-          <div style={{ padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', backgroundColor: message.startsWith('✅') ? '#f0fdf4' : '#fef2f2', border: `1px solid ${message.startsWith('✅') ? '#86efac' : '#fecaca'}`, color: message.startsWith('✅') ? '#16a34a' : '#dc2626' }}>
-            {message}
+          <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-6 text-sm font-semibold tracking-wide flex items-center gap-2">
+            <span>📡</span> {message}
           </div>
         )}
 
         {myTeams.length === 0 && (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '48px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
-            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>Bạn chưa tham gia đội nào</h3>
-            <p style={{ color: '#64748b', marginBottom: '20px' }}>Hãy đăng ký đội thi trước khi nộp bài.</p>
-            <Link href="/dashboard" style={{ display: 'inline-block', padding: '10px 20px', backgroundColor: '#2563eb', color: 'white', borderRadius: '8px', textDecoration: 'none' }}>
-              Xem cuộc thi
+          <div className="tech-panel p-8 text-center relative cyber-corners border-amber-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)] text-white">
+            <div className="text-5xl mb-4 inline-block bg-amber-950/20 border border-amber-800/30 p-4 rounded-full text-amber-450">👥</div>
+            <h3 className="font-orbitron text-lg font-bold mb-2 uppercase tracking-wider text-amber-450">CHƯA GIA NHẬP LIÊN MINH</h3>
+            <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">
+              Bạn cần phải thành lập hoặc gia nhập một đội thi (Liên minh) trước khi có thể nộp bản vẽ kỹ thuật lên hệ thống.
+            </p>
+            <Link href="/dashboard" className="tech-btn-accent font-orbitron inline-block px-6 py-2.5 rounded-lg text-xs tracking-wider uppercase text-black">
+              XEM CÁC CUỘC THI
             </Link>
           </div>
         )}
 
         {showForm && (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 16px' }}>Nộp bài dự thi</h2>
-            <form onSubmit={handleSubmit}>
+          <div className="tech-panel p-6 mb-8 border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-2">
+              <span>📤</span> KHAI BÁO THÔNG TIN DỰ ÁN
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>Chọn đội *</label>
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-slate-350 mb-1.5">Chọn Liên Minh Nộp Bài *</label>
                 <select
                   value={selectedTeam}
                   onChange={(e) => setSelectedTeam(e.target.value)}
                   required
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box' }}
+                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
                 >
-                  <option value="">-- Chọn đội --</option>
+                  <option value="" className="bg-[#050814]">-- Chọn đội --</option>
                   {myTeams.map((team) => (
-                    <option key={team.id} value={team.id}>{team.name}</option>
+                    <option key={team.id} value={team.id} className="bg-[#050814]">{team.name}</option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>Tên dự án *</label>
-                <input name="title" required placeholder="VD: EcoApp - Ứng dụng sống xanh"
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box' }} />
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-slate-355 mb-1.5">Tên bản thiết kế dự án *</label>
+                <input 
+                  name="title" 
+                  required 
+                  placeholder="VD: Cybernetic Excavator - Robot xúc tự động"
+                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition" 
+                />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>Mô tả dự án *</label>
-                <textarea name="description" required rows={4} placeholder="Mô tả ý tưởng, vấn đề giải quyết, giải pháp..."
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box', resize: 'vertical' }} />
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-slate-355 mb-1.5">Mô tả giải pháp kĩ thuật *</label>
+                <textarea 
+                  name="description" 
+                  required 
+                  rows={4} 
+                  placeholder="Mô tả chi tiết ý tưởng, thuật toán điều khiển, thông số cơ khí, vấn đề giải quyết..."
+                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition resize-none" 
+                />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>📄 Pitch Deck (PDF, PPTX)</label>
-                <input name="pitchDeck" type="file" accept=".pdf,.pptx,.ppt"
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box' }} />
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-slate-355 mb-1.5">📄 Bản vẽ thiết kế Pitch Deck (PDF, PPTX) *</label>
+                <input 
+                  name="pitchDeck" 
+                  type="file" 
+                  accept=".pdf,.pptx,.ppt"
+                  className="w-full px-4 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-slate-300 focus:outline-none focus:border-cyan-400 transition file:mr-4 file:py-1.5 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-cyan-950 file:text-cyan-400 hover:file:bg-cyan-900" 
+                />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>🎥 Link Video Pitch</label>
-                <input name="videoUrl" placeholder="https://youtube.com/watch?v=..."
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box' }} />
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-slate-355 mb-1.5">🎥 Link Video Thuyết Trình Mô Phỏng</label>
+                <input 
+                  name="videoUrl" 
+                  placeholder="https://youtube.com/watch?v=..."
+                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition" 
+                />
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>🔗 Link Demo / Prototype</label>
-                <input name="prototypeUrl" placeholder="https://..."
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box' }} />
+              <div className="mb-6">
+                <label className="block text-xs font-bold tracking-widest uppercase text-slate-355 mb-1.5">🔗 Link Mã Nguồn / Bản Demo / Prototype</label>
+                <input 
+                  name="prototypeUrl" 
+                  placeholder="https://github.com/... hoặc https://..."
+                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition" 
+                />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" disabled={submitLoading}
-                  style={{ padding: '12px 24px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}>
-                  {submitLoading ? '⏳ Đang nộp...' : '📤 Nộp bài'}
+              <div className="flex gap-4 pt-2">
+                <button 
+                  type="submit" 
+                  disabled={submitLoading}
+                  className="tech-btn-accent font-orbitron px-6 py-2.5 rounded-lg text-xs tracking-wider uppercase cursor-pointer text-black"
+                >
+                  {submitLoading ? '⏳ ĐANG TẢI LÊN...' : '📤 PHÁT HÀNH BẢN VẼ'}
                 </button>
-                <button type="button" onClick={() => setShowForm(false)}
-                  style={{ padding: '12px 24px', border: '1px solid #e2e8f0', backgroundColor: 'white', borderRadius: '8px', fontSize: '15px', cursor: 'pointer' }}>
-                  Huỷ
+                <button 
+                  type="button" 
+                  onClick={() => setShowForm(false)}
+                  className="px-6 py-2.5 border border-[#1e2d5a] bg-transparent hover:bg-slate-900/60 text-slate-300 text-xs font-semibold uppercase tracking-wider rounded-lg cursor-pointer transition"
+                >
+                  HUỶ
                 </button>
               </div>
 
@@ -242,23 +285,55 @@ export default function SubmissionsPage() {
         )}
 
         {submissions.length > 0 && (
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>Bài đã nộp</h2>
+          <div className="space-y-4">
+            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
+              <span>📋</span> DANH SÁCH BẢN THIẾT KẾ ĐÃ PHÁT HÀNH
+            </h2>
             {submissions.map((sub) => (
-              <div key={sub.id} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', marginBottom: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <h3 style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 'bold' }}>{sub.title}</h3>
-                    <p style={{ margin: '0 0 8px', color: '#64748b', fontSize: '14px' }}>Đội: {sub.teams?.name}</p>
-                    <p style={{ margin: '0 0 12px', color: '#475569' }}>{sub.description}</p>
-                    <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
-                      {sub.pitch_deck_url && <a href={sub.pitch_deck_url} target="_blank" style={{ color: '#2563eb' }}>📄 Pitch Deck</a>}
-                      {sub.video_url && <a href={sub.video_url} target="_blank" style={{ color: '#2563eb' }}>🎥 Video</a>}
-                      {sub.prototype_url && <a href={sub.prototype_url} target="_blank" style={{ color: '#2563eb' }}>🔗 Demo</a>}
+              <div key={sub.id} className="tech-panel-glow border-cyan-500/15 p-6 rounded-xl relative hover:border-cyan-400/30 transition">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                  <div className="space-y-2.5 flex-1">
+                    <h3 className="font-orbitron text-lg font-bold text-white tracking-wide uppercase">{sub.title}</h3>
+                    <div className="text-xs text-slate-400 font-semibold tracking-wider bg-[#131e3d]/60 border border-[#1e2d5a]/60 px-3 py-1 rounded inline-block">
+                      LIÊN MINH: {sub.teams?.name}
+                    </div>
+                    <p className="text-slate-300 text-sm leading-relaxed">{sub.description}</p>
+                    <div className="flex flex-wrap gap-3 pt-2 text-xs font-bold tracking-wider font-orbitron uppercase">
+                      {sub.pitch_deck_url && (
+                        <a 
+                          href={sub.pitch_deck_url} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-400 text-cyan-400 hover:text-white px-3 py-2 rounded-lg flex items-center gap-1.5 transition"
+                        >
+                          📄 PITCH DECK
+                        </a>
+                      )}
+                      {sub.video_url && (
+                        <a 
+                          href={sub.video_url} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-400 text-cyan-400 hover:text-white px-3 py-2 rounded-lg flex items-center gap-1.5 transition"
+                        >
+                          🎥 VIDEO DEMO
+                        </a>
+                      )}
+                      {sub.prototype_url && (
+                        <a 
+                          href={sub.prototype_url} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-400 text-cyan-400 hover:text-white px-3 py-2 rounded-lg flex items-center gap-1.5 transition"
+                        >
+                          🔗 PROTOTYPE
+                        </a>
+                      )}
                     </div>
                   </div>
-                  <span style={{ padding: '4px 12px', backgroundColor: '#dcfce7', color: '#16a34a', borderRadius: '20px', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                    ✅ Đã nộp
+                  <span className="bg-emerald-950/40 border border-emerald-500/30 text-emerald-450 px-3 py-1 rounded-full text-xs font-extrabold tracking-widest font-orbitron uppercase flex items-center gap-1.5 self-start whitespace-nowrap">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-450 animate-pulse" />
+                    SUBMITTED
                   </span>
                 </div>
               </div>
