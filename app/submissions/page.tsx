@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import useSWR from 'swr'
 
 type Team = {
   id: string
@@ -29,7 +30,6 @@ type Submission = {
 export default function SubmissionsPage() {
   const [user, setUser] = useState<User | null>(null)
   const [myTeams, setMyTeams] = useState<Team[]>([])
-  const [submissions, setSubmissions] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState('')
@@ -38,16 +38,22 @@ export default function SubmissionsPage() {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
-  const loadSubmissions = useCallback(async (teams: Team[]) => {
-    if (teams.length === 0) return
-    const teamIds = teams.map((t) => t.id)
+  // SWR fetcher for submissions based on team IDs
+  const fetcher = async (teamIds: string[]) => {
+    if (teamIds.length === 0) return []
     const { data: subs } = await supabase
       .from('submissions')
       .select('*, teams(name)')
       .in('team_id', teamIds)
       .order('created_at', { ascending: false })
-    setSubmissions(subs || [])
-  }, [supabase])
+    return subs || []
+  }
+
+  const { data: submissions = [], isValidating: submissionsLoading, mutate: reloadSubmissions } = useSWR<Submission[]>(
+    myTeams.map(t => t.id),
+    (ids: string[]) => fetcher(ids),
+    { revalidateOnFocus: false }
+  )
 
   useEffect(() => {
     async function loadData() {
@@ -65,14 +71,12 @@ export default function SubmissionsPage() {
         .select('team_id, teams(id, name, competition_id)')
         .eq('user_id', user.id) as { data: TeamMemberRecord[] | null }
 
-      const teams = (memberData ?? [])
-        .flatMap((m) => m.teams ?? [])
+      const teams = (memberData ?? []).flatMap(m => m.teams ?? [])
       setMyTeams(teams)
-      await loadSubmissions(teams)
       setLoading(false)
     }
     loadData()
-  }, [loadSubmissions, router, supabase])
+  }, [router, supabase])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -128,7 +132,7 @@ export default function SubmissionsPage() {
     } else {
       setMessage('✅ Nộp bài thành công!')
       setShowForm(false)
-      await loadSubmissions(myTeams)
+      await reloadSubmissions()
     }
     setSubmitLoading(false)
   }
@@ -289,7 +293,7 @@ export default function SubmissionsPage() {
             <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
               <span>📋</span> DANH SÁCH BẢN THIẾT KẾ ĐÃ PHÁT HÀNH
             </h2>
-            {submissions.map((sub) => (
+            {submissions.map((sub: Submission) => (
               <div key={sub.id} className="tech-panel-glow border-cyan-500/15 p-6 rounded-xl relative hover:border-cyan-400/30 transition">
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                   <div className="space-y-2.5 flex-1">

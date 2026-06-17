@@ -1,9 +1,8 @@
-'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { supabaseServer } from '@/lib/supabaseServer'
 
 type Profile = {
   id: string
@@ -20,47 +19,24 @@ type Competition = {
   status?: string
 }
 
-export default function DashboardPage() {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [competitions, setCompetitions] = useState<Competition[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
-
-  useEffect(() => {
-    const supabase = createClient()
-
-    async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      setProfile(profileData)
-
-      const { data: comps } = await supabase
-        .from('competitions')
-        .select('*')
-        .order('created_at', { ascending: false })
-      setCompetitions(comps || [])
-
-      setLoading(false)
-    }
-    loadData()
-  }, [router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050814] text-white flex items-center justify-center font-orbitron tracking-widest">
-        <p className="animate-pulse">⏳ LOADING SYSTEMS...</p>
-      </div>
-    )
+export default async function DashboardPage() {
+  // Server‑side data fetching
+  const { data: { user } } = await supabaseServer.auth.getUser()
+  if (!user) {
+    redirect('/login')
   }
+
+  const { data: profile } = await supabaseServer
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  const { data: comps } = await supabaseServer
+    .from('competitions')
+    .select('*')
+    .order('created_at', { ascending: false })
+  const competitions = (comps ?? []) as Competition[]
 
   return (
     <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
@@ -91,7 +67,7 @@ export default function DashboardPage() {
           <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/30 tracking-widest">
             CONTESTANT PROFILE // IDENT_08
           </div>
-          <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
+          <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
             <span>📋</span> THÔNG TIN HỒ SƠ
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-semibold">
