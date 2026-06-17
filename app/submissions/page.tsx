@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import useSWR from 'swr'
+import LoadingScreen from '@/components/loading-screen'
 
 type Team = {
   id: string
@@ -137,11 +138,7 @@ export default function SubmissionsPage() {
     setSubmitLoading(false)
   }
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#050814] text-white flex items-center justify-center font-orbitron tracking-widest">
-      <p className="animate-pulse">⏳ LOADING SYSTEMS...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen text="LOADING MISSION SYSTEMS" />
 
   return (
     <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">

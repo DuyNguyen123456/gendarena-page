@@ -188,3 +188,104 @@
   0% { top: -4px; }
   100% { top: 100%; }
 }
+
+/* Shimmer animation for CTA buttons */
+@keyframes shimmer {
+  0% { transform: translateX(-150%) skewX(-15deg); }
+  100% { transform: translateX(250%) skewX(-15deg); }
+}
+
+/* Float animation for particles */
+@keyframes float-up {
+  0% { transform: translateY(0px) scale(1); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-100vh) scale(0.5); opacity: 0; }
+}
+
+/* Radar spin */
+@keyframes radar-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Radar ping expand */
+@keyframes radar-expand {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* Progress bar fill */
+@keyframes bar-fill {
+  from { width: 0%; }
+  to { width: var(--bar-width, 100%); }
+}
+
+/* Typewriter cursor blink */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Timeline pulse */
+@keyframes timeline-glow {
+  0%, 100% { box-shadow: 0 0 6px rgba(0, 240, 255, 0.5); }
+  50% { box-shadow: 0 0 18px rgba(0, 240, 255, 0.9), 0 0 30px rgba(0, 240, 255, 0.3); }
+}
+
+/* Hamburger line animation */
+@keyframes line-top-open {
+  0% { transform: translateY(0) rotate(0); }
+  100% { transform: translateY(7px) rotate(45deg); }
+}
+@keyframes line-bottom-open {
+  0% { transform: translateY(0) rotate(0); }
+  100% { transform: translateY(-7px) rotate(-45deg); }
+}
+
+/* Shimmer button utility */
+.shimmer-btn {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: shimmer 2.5s infinite;
+  pointer-events: none;
+}
+
+/* Radar loading */
+.radar-ring {
+  border-radius: 50%;
+  border: 2px solid rgba(0, 240, 255, 0.5);
+  animation: radar-expand 2s ease-out infinite;
+}
+
+/* Progress bar utility */
+.leaderboard-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #00F0FF, #112E81);
+  animation: bar-fill 1s ease-out forwards;
+  width: 0%;
+}
+
+/* Timeline node glow */
+.timeline-node {
+  animation: timeline-glow 2.5s ease-in-out infinite;
+}
+
+/* Mobile menu slide down */
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.mobile-menu-open {
+  animation: slide-down 0.2s ease-out forwards;
+}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import LoadingScreen from '@/components/loading-screen'
 
 interface Submission {
   id: string
@@ -22,6 +23,7 @@ interface Score {
 export default function Leaderboard() {
   const [rankings, setRankings] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
+  const [barsVisible, setBarsVisible] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -53,6 +55,8 @@ export default function Leaderboard() {
 
       setRankings(ranked)
       setLoading(false)
+      // Trigger bar animations after slight delay
+      setTimeout(() => setBarsVisible(true), 200)
     }
     init()
   }, [router])
@@ -64,18 +68,30 @@ export default function Leaderboard() {
     return `#${idx + 1}`
   }
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#050814] text-white flex items-center justify-center font-orbitron tracking-widest">
-      <p className="animate-pulse">⏳ LOADING LEADERBOARD DATABASES...</p>
-    </div>
-  )
+  if (loading) return <LoadingScreen text="LOADING LEADERBOARD DATABASES" />
+
+  const maxScore = rankings[0]?.avg_score || 100
+
+  const getBarColor = (idx: number) => {
+    if (idx === 0) return 'linear-gradient(90deg, #eab308, #fde68a)'
+    if (idx === 1) return 'linear-gradient(90deg, #94a3b8, #e2e8f0)'
+    if (idx === 2) return 'linear-gradient(90deg, #d97706, #fcd34d)'
+    return 'linear-gradient(90deg, #00F0FF, #112E81)'
+  }
+
+  const getBarGlow = (idx: number) => {
+    if (idx === 0) return '0 0 8px rgba(234, 179, 8, 0.5)'
+    if (idx === 1) return '0 0 8px rgba(148, 163, 184, 0.4)'
+    if (idx === 2) return '0 0 8px rgba(217, 119, 6, 0.5)'
+    return '0 0 8px rgba(0, 240, 255, 0.3)'
+  }
 
   const getRowClass = (idx: number) => {
-    let base = "flex items-center px-6 py-5 border-b border-[#1e2d5a]/45 relative transition "
-    if (idx === 0) return base + "bg-amber-950/20 border-l-4 border-l-yellow-500 shadow-[inset_4px_0_0_#eab308]"
-    if (idx === 1) return base + "bg-slate-800/20 border-l-4 border-l-slate-400 shadow-[inset_4px_0_0_#94a3b8]"
-    if (idx === 2) return base + "bg-amber-950/10 border-l-4 border-l-amber-600 shadow-[inset_4px_0_0_#d97706]"
-    return base + "hover:bg-cyan-950/5"
+    let base = 'px-6 py-5 border-b border-[#1e2d5a]/45 relative transition-all duration-200 hover:bg-cyan-950/5 '
+    if (idx === 0) return base + 'bg-amber-950/20 border-l-4 border-l-yellow-500'
+    if (idx === 1) return base + 'bg-slate-800/20 border-l-4 border-l-slate-400'
+    if (idx === 2) return base + 'bg-amber-950/10 border-l-4 border-l-amber-600'
+    return base
   }
 
   return (
@@ -86,8 +102,8 @@ export default function Leaderboard() {
 
       <div className="max-w-4xl mx-auto relative z-10">
 
-        <Link 
-          href="/admin" 
+        <Link
+          href="/admin"
           className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-red-400 hover:text-red-300 transition-colors uppercase mb-8"
         >
           ← QUAY LẠI PANEL ADMIN
@@ -112,21 +128,56 @@ export default function Leaderboard() {
             Chưa ghi nhận điểm số đánh giá dự án nào để xếp hạng.
           </div>
         ) : (
-          <div className="tech-panel border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden divide-y divide-[#1e2d5a]/45">
+          <div className="tech-panel border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden">
             {rankings.map((item, idx) => (
               <div key={item.id} className={getRowClass(idx)}>
-                <div className="w-16 font-orbitron text-2xl font-extrabold text-center text-slate-400 mr-4">
-                  {getMedal(idx)}
-                </div>
-                <div className="flex-1 min-w-0 pr-4">
-                  <h3 className="font-orbitron text-base font-bold text-white tracking-wide uppercase truncate mb-1">{item.title}</h3>
-                  <div className="text-xs text-slate-400 font-semibold truncate">
-                    Đội: <strong className="text-slate-350">{item.teams?.name}</strong> · Đấu trường: {item.competitions?.title} · {item.judge_count} Giám khảo chấm
+                <div className="flex items-center gap-4">
+                  {/* Rank medal */}
+                  <div className="w-12 font-orbitron text-2xl font-extrabold text-center text-slate-400 shrink-0">
+                    {getMedal(idx)}
                   </div>
-                </div>
-                <div className="text-right whitespace-nowrap">
-                  <div className="text-[9px] font-extrabold tracking-widest font-orbitron text-slate-450 uppercase mb-0.5">ĐIỂM TB</div>
-                  <div className="text-2.5xl font-extrabold font-orbitron tracking-widest text-emerald-450">{item.avg_score?.toFixed(2)}</div>
+
+                  {/* Info + progress bar */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                      <div>
+                        <h3 className="font-orbitron text-base font-bold text-white tracking-wide uppercase truncate mb-0.5">{item.title}</h3>
+                        <div className="text-xs text-slate-400 font-semibold truncate">
+                          Đội: <strong className="text-slate-300">{item.teams?.name}</strong>
+                          <span className="mx-1.5 text-slate-600">·</span>
+                          {item.competitions?.title}
+                          <span className="mx-1.5 text-slate-600">·</span>
+                          {item.judge_count} giám khảo
+                        </div>
+                      </div>
+                      {/* Score badge */}
+                      <div className="text-right shrink-0">
+                        <div className="text-[9px] font-extrabold tracking-widest font-orbitron text-slate-500 uppercase mb-0.5">ĐIỂM TB</div>
+                        <div
+                          className="text-2xl font-extrabold font-orbitron tracking-widest"
+                          style={{
+                            color: idx === 0 ? '#eab308' : idx === 1 ? '#94a3b8' : idx === 2 ? '#d97706' : '#00F0FF',
+                            textShadow: getBarGlow(idx),
+                          }}
+                        >
+                          {item.avg_score?.toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="h-1.5 w-full bg-[#1e2d5a]/60 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-1000 ease-out"
+                        style={{
+                          width: barsVisible ? `${((item.avg_score || 0) / maxScore) * 100}%` : '0%',
+                          background: getBarColor(idx),
+                          boxShadow: getBarGlow(idx),
+                          transitionDelay: `${idx * 100}ms`,
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -136,4 +187,4 @@ export default function Leaderboard() {
       </div>
     </div>
   )
-}
+}
