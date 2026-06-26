@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { supabaseServer } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
 type Profile = {
   id: string
@@ -21,18 +21,19 @@ type Competition = {
 
 export default async function DashboardPage() {
   // Server‑side data fetching
-  const { data: { user } } = await supabaseServer.auth.getUser()
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     redirect('/login')
   }
 
-  const { data: profile } = await supabaseServer
+  const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  const { data: comps } = await supabaseServer
+  const { data: comps } = await supabase
     .from('competitions')
     .select('*')
     .order('created_at', { ascending: false })

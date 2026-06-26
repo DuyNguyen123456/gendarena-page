@@ -63,29 +63,26 @@ export default function Navbar() {
 
   const getLinkClass = (path: string) => {
     const isActive = (path !== '/' && pathname.startsWith(path)) || pathname === path
-    return `px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-      isActive
+    return `px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${isActive
         ? 'text-cyan-400 bg-cyan-950/30 border border-cyan-500/30 shadow-[0_0_10px_rgba(0,240,255,0.1)] font-bold'
         : 'text-slate-300 hover:text-cyan-400 hover:bg-cyan-950/10'
-    }`
+      }`
   }
 
   const getMobileLinkClass = (path: string) => {
     const isActive = (path !== '/' && pathname.startsWith(path)) || pathname === path
-    return `block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
-      isActive
+    return `block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${isActive
         ? 'text-cyan-400 bg-cyan-950/30 border border-cyan-500/30 font-bold'
         : 'text-slate-300 hover:text-cyan-400 hover:bg-cyan-950/10'
-    }`
+      }`
   }
 
-  const getAdminLinkClass = () => {
-    const isActive = pathname.startsWith('/admin')
-    return `px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-      isActive
+  const getAdminLinkClass = (path: string) => {
+    const isActive = pathname === path
+    return `px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${isActive
         ? 'text-red-400 bg-red-950/30 border border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.1)] font-bold'
         : 'text-slate-300 hover:text-red-400 hover:bg-red-950/10'
-    }`
+      }`
   }
 
   return (
@@ -108,6 +105,7 @@ export default function Navbar() {
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-2">
           <Link href="/" className={getLinkClass('/')}>Trang chủ</Link>
+          <Link href="/organizers" className={getLinkClass('/organizers')}>Ban tổ chức</Link>
 
           {user && !isAdmin && (
             <>
@@ -117,8 +115,14 @@ export default function Navbar() {
           )}
 
           {(isAdmin || isJudge) && (
-            <Link href="/admin" className={getAdminLinkClass()}>
+            <Link href="/admin" className={getAdminLinkClass('/admin')}>
               ⚙️ Quản lý
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link href="/admin/phases" className={getAdminLinkClass('/admin/phases')}>
+              🗓️ Quản lý Timeline
             </Link>
           )}
 
@@ -184,6 +188,7 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden mobile-menu-open mt-3 pb-3 border-t border-[#1e2d5a] pt-3 space-y-1">
           <Link href="/" className={getMobileLinkClass('/')}>Trang chủ</Link>
+          <Link href="/organizers" className={getMobileLinkClass('/organizers')}>Ban tổ chức</Link>
 
           {user && !isAdmin && (
             <>
@@ -195,13 +200,24 @@ export default function Navbar() {
           {(isAdmin || isJudge) && (
             <Link
               href="/admin"
-              className={`block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                pathname.startsWith('/admin')
+              className={`block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname === '/admin'
                   ? 'text-red-400 bg-red-950/30 border border-red-500/30'
                   : 'text-slate-300 hover:text-red-400 hover:bg-red-950/10'
-              }`}
+                }`}
             >
               ⚙️ Quản lý
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              href="/admin/phases"
+              className={`block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname === '/admin/phases'
+                  ? 'text-red-400 bg-red-950/30 border border-red-500/30'
+                  : 'text-slate-300 hover:text-red-400 hover:bg-red-950/10'
+                }`}
+            >
+              🗓️ Quản lý Timeline
             </Link>
           )}
 

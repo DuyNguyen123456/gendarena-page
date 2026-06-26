@@ -16,16 +16,21 @@ function useCountUp(target: number, duration = 1800, start = false) {
   useEffect(() => {
     if (!start) return
     let startTime: number | null = null
+    let animId: number
     const step = (timestamp: number) => {
       if (!startTime) startTime = timestamp
       const progress = Math.min((timestamp - startTime) / duration, 1)
       // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3)
       setCount(Math.floor(eased * target))
-      if (progress < 1) requestAnimationFrame(step)
-      else setCount(target)
+      if (progress < 1) {
+        animId = requestAnimationFrame(step)
+      } else {
+        setCount(target)
+      }
     }
-    requestAnimationFrame(step)
+    animId = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(animId)
   }, [target, duration, start])
 
   return count

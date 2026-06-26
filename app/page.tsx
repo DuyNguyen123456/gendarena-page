@@ -1,46 +1,33 @@
 import Link from 'next/link'
 import ParticleField from '@/components/particle-field'
 import StatsCounter from '@/components/stats-counter'
+import Countdown from '@/components/countdown'
 
-const TIMELINE = [
-  {
-    phase: '01',
-    title: 'ĐĂNG KÝ THAM DỰ',
-    date: '01/07 – 31/07/2026',
-    desc: 'Nộp hồ sơ đội thi và đăng ký ý tưởng dự án. Mỗi đội từ 2–5 thành viên.',
-    status: 'open',
-    icon: '📋',
-  },
-  {
-    phase: '02',
-    title: 'VÒNG SƠ KHẢO',
-    date: '05/08 – 20/08/2026',
-    desc: 'Hội đồng chuyên gia đánh giá đề xuất kỹ thuật. Top 30 đội lọt vào vòng trong.',
-    status: 'upcoming',
-    icon: '🔬',
-  },
-  {
-    phase: '03',
-    title: 'VÒNG KHU VỰC',
-    date: '01/09 – 15/09/2026',
-    desc: 'Trình bày và demo sản phẩm trực tiếp trước ban giám khảo. Top 10 vào chung kết.',
-    status: 'upcoming',
-    icon: '🏟️',
-  },
-  {
-    phase: '04',
-    title: 'CHUNG KẾT ARENA',
-    date: '01/10/2026',
-    desc: 'Đại sự kiện tranh tài cuối cùng. Giải thưởng 100 triệu VNĐ và cơ hội gọi vốn.',
-    status: 'upcoming',
-    icon: '🏆',
-  },
-]
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import TimelineSection from '@/components/timeline-section'
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createSupabaseServerClient()
+  const { data: phases } = await supabase
+    .from('competition_phases')
+    .select('*')
+    .order('display_order', { ascending: true })
+
+  // Find the registration/application start date dynamically
+  const registrationPhase = phases?.find(p => 
+    p.title.toLowerCase().includes('mở đơn') ||
+    p.title.toLowerCase().includes('đăng ký') ||
+    p.title.toLowerCase().includes('sơ loại') ||
+    p.title.toLowerCase().includes('dream')
+  ) || phases?.[1] || phases?.[0]
+
+  const targetDate = registrationPhase?.start_date 
+    ? `${registrationPhase.start_date}T00:00:00+07:00` 
+    : '2026-09-01T00:00:00+07:00'
+  const phaseTitle = registrationPhase?.title || 'Vòng Sơ Loại'
+
   return (
     <div className="min-h-screen bg-[#050814] text-white relative overflow-hidden pb-0">
-
       {/* Hero Section */}
       <section className="relative min-h-[88vh] flex flex-col items-center justify-center px-6 pt-12 pb-20 text-center overflow-hidden scanline-container">
 
@@ -68,9 +55,14 @@ export default function HomePage() {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+          <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed font-medium">
             Giải đấu khoa học kỹ thuật dành cho những bộ óc sáng tạo. Thiết kế robot, lập trình chiến thuật và chinh phục sàn đấu công nghệ đỉnh cao.
           </p>
+
+          {/* Countdown Component */}
+          <div className="w-full max-w-2xl mb-10">
+            <Countdown targetDate={targetDate} phaseTitle={phaseTitle} />
+          </div>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 mb-20">
@@ -153,67 +145,7 @@ export default function HomePage() {
       </section>
 
       {/* Timeline Section */}
-      <section className="relative py-20 px-6 overflow-hidden">
-        {/* Section background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#070c1e]/80 to-transparent pointer-events-none" />
-        <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-[600px] bg-[#112E81]/5 blur-[80px] pointer-events-none" />
-
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="flex flex-col items-center mb-14">
-            <p className="text-xs font-orbitron tracking-[0.3em] text-cyan-500/70 uppercase mb-3">MISSION TIMELINE</p>
-            <h2 className="font-orbitron text-3xl font-bold tracking-widest uppercase mb-3">
-              LỊCH TRÌNH ĐẤU TRƯỜNG
-            </h2>
-            <div className="h-[2px] w-24 bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
-          </div>
-
-          {/* Timeline */}
-          <div className="relative">
-            {/* Vertical connector line */}
-            <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-cyan-500/60 via-blue-500/30 to-transparent md:-translate-x-1/2 pointer-events-none" />
-
-            <div className="space-y-10">
-              {TIMELINE.map((item, idx) => {
-                const isLeft = idx % 2 === 0
-                return (
-                  <div key={idx} className={`relative flex items-start gap-6 md:gap-0 ${isLeft ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
-                    {/* Content box */}
-                    <div className={`flex-1 ${isLeft ? 'md:pr-12 md:text-right' : 'md:pl-12'} pl-16 md:pl-0`}>
-                      <div className={`tech-panel-glow p-5 hover:border-cyan-400/40 transition-all duration-300 hover:-translate-y-1 ${item.status === 'open' ? 'border-cyan-400/30 shadow-[0_0_20px_rgba(0,240,255,0.08)]' : ''}`}>
-                        <div className={`flex items-center gap-2 mb-2 ${isLeft ? 'md:flex-row-reverse md:justify-start' : ''}`}>
-                          <span className="font-orbitron text-xs text-cyan-500/60 tracking-widest">PHASE {item.phase}</span>
-                          {item.status === 'open' && (
-                            <span className="bg-emerald-950/50 border border-emerald-500/40 text-emerald-400 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest font-orbitron">
-                              ● ĐANG MỞ
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="font-orbitron text-base font-bold text-white tracking-wide uppercase mb-1">{item.title}</h3>
-                        <div className="text-xs font-bold text-cyan-400 font-orbitron mb-2 tracking-wider">{item.date}</div>
-                        <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
-                      </div>
-                    </div>
-
-                    {/* Center node */}
-                    <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 top-5 flex items-center justify-center">
-                      <div className={`timeline-node w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 ${
-                        item.status === 'open'
-                          ? 'border-cyan-400 bg-cyan-950'
-                          : 'border-[#1e2d5a] bg-[#0b1124]'
-                      }`}>
-                        <span className="text-xs">{item.icon}</span>
-                      </div>
-                    </div>
-
-                    {/* Empty spacer for alternating layout on md+ */}
-                    <div className="hidden md:block flex-1" />
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
+      <TimelineSection phases={phases || []} />
 
       {/* Footer */}
       <footer className="relative border-t border-[#1e2d5a] mt-10 overflow-hidden">

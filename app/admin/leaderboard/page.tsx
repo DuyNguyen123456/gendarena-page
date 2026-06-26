@@ -28,20 +28,26 @@ export default function Leaderboard() {
 
   useEffect(() => {
     const supabase = createClient()
+    let isMounted = true
+    let timeoutId: NodeJS.Timeout | null = null
 
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
+      if (!isMounted) return
       if (!user) { router.push('/login'); return }
 
       const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
-      if (!['admin', 'judge'].includes(profile?.role)) { router.push('/dashboard'); return }
+        .from('profiles').select('role').eq('id', user.id).single() as { data: { role: string } | null, error: unknown }
+      if (!isMounted) return
+      if (!['admin', 'judge'].includes(profile?.role ?? '')) { router.push('/dashboard'); return }
 
       const { data: subs } = await supabase
         .from('submissions')
         .select('*, teams(name), competitions(title)')
 
       const { data: scoresData } = await supabase.from('scores').select('*')
+
+      if (!isMounted) return
 
       const ranked = (subs || []).map((sub: Submission) => {
         const subScores = (scoresData as Score[] || []).filter((s: Score) => s.submission_id === sub.id)
@@ -56,9 +62,16 @@ export default function Leaderboard() {
       setRankings(ranked)
       setLoading(false)
       // Trigger bar animations after slight delay
-      setTimeout(() => setBarsVisible(true), 200)
+      timeoutId = setTimeout(() => {
+        if (isMounted) setBarsVisible(true)
+      }, 200)
     }
     init()
+
+    return () => {
+      isMounted = false
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [router])
 
   const getMedal = (idx: number) => {

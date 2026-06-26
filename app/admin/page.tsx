@@ -17,9 +17,9 @@ export default function AdminDashboard() {
       if (!user) { router.push('/login'); return }
 
       const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
+        .from('profiles').select('role').eq('id', user.id).single() as { data: { role: string } | null }
 
-      if (profile?.role !== 'admin') {
+      if (!profile || profile.role !== 'admin') {
         router.push('/dashboard')
         return
       }
@@ -43,15 +43,15 @@ export default function AdminDashboard() {
   }, [router, supabase])
 
   if (loading) return (
-    <div className="min-h-screen bg-[#050814] text-white flex items-center justify-center font-orbitron tracking-widest">
+    <div className="min-h-screen bg-dark-bg text-white flex items-center justify-center font-orbitron tracking-widest">
       <p className="animate-pulse">⏳ LOADING SECURE DATABASE...</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
+    <div className="min-h-screen bg-dark-bg text-white py-12 px-4 relative scanline-container">
       {/* Decorative Glows */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-10 left-10 w-80 h-80 bg-brand-blue/15 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="max-w-5xl mx-auto relative z-10">
@@ -96,6 +96,7 @@ export default function AdminDashboard() {
             { href: '/admin/users', icon: '👥', title: 'QUẢN LÝ NGƯỜI DÙNG', desc: 'Giám sát đấu thủ và phân quyền truy cập' },
             { href: '/admin/submissions', icon: '📝', title: 'CHẤM ĐIỂM DỰ ÁN', desc: 'Đánh giá kỹ thuật và ghi nhận kết quả' },
             { href: '/admin/leaderboard', icon: '🏅', title: 'BẢNG XẾP HẠNG CHUNG', desc: 'Xếp hạng hiệu năng của các liên minh' },
+            { href: '/admin/phases', icon: '🗓️', title: 'QUẢN LÝ LỊCH TRÌNH', desc: 'Sắp xếp, thay đổi thông tin các giai đoạn thi đấu' },
           ].map((item) => (
             <Link
               key={item.href}
@@ -118,4 +119,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   )
-}
+}

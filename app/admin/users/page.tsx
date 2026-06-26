@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -15,6 +15,10 @@ interface User {
   created_at: string
 }
 
+interface Profile {
+  role?: string
+}
+
 export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -23,31 +27,37 @@ export default function AdminUsers() {
   const router = useRouter()
   const supabase = createClient()
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  async function loadUsers() {
+  const loadUsers = useCallback(async () => {
     const { data } = await supabase
       .from('profiles').select('*').order('created_at', { ascending: false })
     setUsers(data || [])
-  }
+  }, [supabase])
 
   useEffect(() => {
+    let isMounted = true
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
+      if (!isMounted) return
       if (!user) { router.push('/login'); return }
 
       const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
+        .from('profiles').select('role').eq('id', user.id).single() as { data: Profile | null }
+      if (!isMounted) return
       if (profile?.role !== 'admin') { router.push('/dashboard'); return }
 
       await loadUsers()
+      if (!isMounted) return
       setLoading(false)
     }
     init()
+    return () => {
+      isMounted = false
+    }
   }, [supabase, router, loadUsers])
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     const { error } = await supabase
-      .from('profiles').update({ role: newRole }).eq('id', userId)
+      .from('profiles').update({ role: newRole } as never).eq('id', userId)
     if (error) setMessage('❌ Lỗi: ' + error.message)
     else { setMessage('✅ Đã cập nhật quyền'); await loadUsers() }
   }
@@ -59,15 +69,15 @@ export default function AdminUsers() {
   )
 
   if (loading) return (
-    <div className="min-h-screen bg-[#050814] text-white flex items-center justify-center font-orbitron tracking-widest">
+    <div className="min-h-screen bg-dark-bg text-white flex items-center justify-center font-orbitron tracking-widest">
       <p className="animate-pulse">⏳ LOADING USERS REGISTER...</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
+    <div className="min-h-screen bg-dark-bg text-white py-12 px-4 relative scanline-container">
       {/* Decorative Glows */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-10 left-10 w-80 h-80 bg-brand-blue/15 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto relative z-10">
@@ -112,7 +122,7 @@ export default function AdminUsers() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm text-slate-350">
               <thead>
-                <tr className="bg-[#0b1124] border-b border-[#1e2d5a] text-slate-300 font-bold tracking-widest uppercase text-xs">
+                <tr className="bg-dark-panel border-b border-[#1e2d5a] text-slate-300 font-bold tracking-widest uppercase text-xs">
                   <th className="padding-table px-6 py-4">Họ tên</th>
                   <th className="padding-table px-6 py-4">Email</th>
                   <th className="padding-table px-6 py-4">SĐT</th>
@@ -133,9 +143,9 @@ export default function AdminUsers() {
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
                         className="bg-slate-950/80 border border-[#1e2d5a] text-xs font-bold font-orbitron tracking-wide uppercase rounded px-3 py-1.5 focus:outline-none focus:border-cyan-400 text-white cursor-pointer transition"
                       >
-                        <option value="participant" className="bg-[#050814]">Thí sinh (PILOT)</option>
-                        <option value="judge" className="bg-[#050814]">Giám khảo (JUDGE)</option>
-                        <option value="admin" className="bg-[#050814]">Quản trị (ADMIN)</option>
+                        <option value="participant" className="bg-dark-bg">Thí sinh (PILOT)</option>
+                        <option value="judge" className="bg-dark-bg">Giám khảo (JUDGE)</option>
+                        <option value="admin" className="bg-dark-bg">Quản trị (ADMIN)</option>
                       </select>
                     </td>
                   </tr>
@@ -154,4 +164,4 @@ export default function AdminUsers() {
       </div>
     </div>
   )
-}
+}

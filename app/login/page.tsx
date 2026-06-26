@@ -31,6 +31,9 @@ export default function LoginPage() {
       return
     }
 
+    // router.refresh() forces the server to re-check the session cookie
+    // before navigating — required for Server Components to see the new session
+    router.refresh()
     router.push('/dashboard')
   }
 
@@ -105,4 +108,4 @@ export default function LoginPage() {
       </div>
     </div>
   )
-}
+}

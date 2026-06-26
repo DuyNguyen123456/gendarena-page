@@ -36,20 +36,26 @@ export default function CompetitionDetailPage() {
   const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
+    let isMounted = true
     async function loadData() {
       const { data: { user } } = await supabase.auth.getUser()
+      if (!isMounted) return
       if (!user) { router.push('/login'); return }
       setUser(user)
 
       const { data } = await supabase
         .from('competitions')
         .select('*')
-        .eq('id', params.id)
+        .eq('id', params.id as string)
         .single()
+      if (!isMounted) return
       setCompetition(data)
       setLoading(false)
     }
     loadData()
+    return () => {
+      isMounted = false
+    }
   }, [params.id, router, supabase])
 
   const handleRegisterTeam = async (e: React.FormEvent) => {
@@ -64,15 +70,28 @@ export default function CompetitionDetailPage() {
 
     const { data: team, error: teamError } = await supabase
       .from('teams')
-      .insert({ name: teamName, description: teamDesc, competition_id: params.id, leader_id: user.id })
+      .insert([
+        {
+          name: teamName,
+          description: teamDesc,
+          competition_id: params.id as string,
+          leader_id: user.id,
+        },
+      ] as never)
       .select()
-      .single()
+      .single() as { data: { id: string } | null; error: { message: string } | null }
 
-    if (teamError) { setMessage('❌ Lỗi: ' + teamError.message); setSubmitLoading(false); return }
+    if (teamError || !team) { setMessage('❌ Lỗi: ' + teamError?.message); setSubmitLoading(false); return }
 
     const { error: memberError } = await supabase
       .from('team_members')
-      .insert({ team_id: team.id, user_id: user.id, role: 'leader' })
+      .insert([
+        {
+          team_id: team.id,
+          user_id: user.id,
+          role: 'leader',
+        },
+      ] as never)
 
     if (memberError) { setMessage('❌ Lỗi: ' + memberError.message); setSubmitLoading(false); return }
 
@@ -96,9 +115,9 @@ export default function CompetitionDetailPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
+    <div className="min-h-screen bg-dark-bg text-white py-12 px-4 relative scanline-container">
       {/* Decorative Glows */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-10 left-10 w-80 h-80 bg-brand-blue/15 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="max-w-4xl mx-auto relative z-10">

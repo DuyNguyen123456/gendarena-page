@@ -10,7 +10,7 @@ export async function checkIsAdmin() {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single()
+    .single() as { data: { role: string; [key: string]: unknown } | null; error: unknown }
 
   return {
     isAdmin: profile?.role === 'admin',

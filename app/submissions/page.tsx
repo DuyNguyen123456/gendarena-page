@@ -57,8 +57,10 @@ export default function SubmissionsPage() {
   )
 
   useEffect(() => {
+    let isMounted = true
     async function loadData() {
       const { data: { user } } = await supabase.auth.getUser()
+      if (!isMounted) return
       if (!user) { router.push('/login'); return }
       setUser(user)
 
@@ -72,11 +74,15 @@ export default function SubmissionsPage() {
         .select('team_id, teams(id, name, competition_id)')
         .eq('user_id', user.id) as { data: TeamMemberRecord[] | null }
 
+      if (!isMounted) return
       const teams = (memberData ?? []).flatMap(m => m.teams ?? [])
       setMyTeams(teams)
       setLoading(false)
     }
     loadData()
+    return () => {
+      isMounted = false
+    }
   }, [router, supabase])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -126,7 +132,7 @@ export default function SubmissionsPage() {
         prototype_url: formData.get('prototypeUrl'),
         status: 'submitted',
         submitted_at: new Date().toISOString(),
-      })
+      } as never)
 
     if (error) {
       setMessage('❌ Lỗi: ' + error.message)

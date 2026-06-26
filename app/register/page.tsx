@@ -49,7 +49,7 @@ export default function RegisterPage() {
           email: email,
           phone: phone,
           organization: organization,
-        })
+        } as never)
 
       if (profileError) {
         setError(profileError.message)

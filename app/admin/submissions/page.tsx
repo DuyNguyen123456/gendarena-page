@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -39,35 +39,41 @@ export default function AdminSubmissions() {
   const router = useRouter()
   const supabase = createClient()
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  async function loadData() {
+  const loadData = useCallback(async () => {
     const { data: subs } = await supabase
       .from('submissions')
       .select('*, teams(name), competitions(title)')
       .order('created_at', { ascending: false })
 
-    const { data: scoresData } = await supabase.from('scores').select('*')
+    const { data: scoresData } = await supabase.from('scores').select('*') as { data: Score[] | null }
     const scoresMap: Record<string, Score> = {}
     scoresData?.forEach((s) => { scoresMap[s.submission_id] = s })
 
-    setSubmissions(subs || [])
+    setSubmissions((subs as unknown as Submission[]) || [])
     setScores(scoresMap)
-  }
+  }, [supabase])
 
   useEffect(() => {
+    let isMounted = true
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
+      if (!isMounted) return
       if (!user) { router.push('/login'); return }
       setUser(user)
 
       const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
-      if (!['admin', 'judge'].includes(profile?.role)) { router.push('/dashboard'); return }
+        .from('profiles').select('role').eq('id', user.id).single() as { data: { role: string } | null, error: unknown }
+      if (!isMounted) return
+      if (!['admin', 'judge'].includes(profile?.role ?? '')) { router.push('/dashboard'); return }
 
       await loadData()
+      if (!isMounted) return
       setLoading(false)
     }
     init()
+    return () => {
+      isMounted = false
+    }
   }, [supabase, router, loadData])
 
   const handleScore = async (e: React.FormEvent<HTMLFormElement>, submissionId: string) => {
@@ -94,8 +100,8 @@ export default function AdminSubmissions() {
 
     const existing = scores[submissionId]
     const { error } = existing
-      ? await supabase.from('scores').update(payload).eq('id', existing.id)
-      : await supabase.from('scores').insert(payload)
+      ? await supabase.from('scores').update(payload as never).eq('id', existing.id)
+      : await supabase.from('scores').insert(payload as never)
 
     if (error) {
       setMessage('❌ Lỗi: ' + error.message)

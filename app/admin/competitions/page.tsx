@@ -42,8 +42,15 @@ export default function AdminCompetitions() {
       if (!user) { router.push('/login'); return }
 
       const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
-      if (profile?.role !== 'admin') { router.push('/dashboard'); return }
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single<{ role: string }>()
+
+      if (profile?.role !== 'admin') {
+        router.push('/dashboard')
+        return
+      }
 
       await loadCompetitions()
       setLoading(false)
@@ -63,16 +70,16 @@ export default function AdminCompetitions() {
       rules: formData.get('rules') as string,
       prizes: formData.get('prizes') as string,
       status: formData.get('status') as string,
-      registration_start: formData.get('registration_start') || null,
-      registration_end: formData.get('registration_end') || null,
-      submission_start: formData.get('submission_start') || null,
-      submission_end: formData.get('submission_end') || null,
+      registration_start: (formData.get('registration_start') as string) || null,
+      registration_end: (formData.get('registration_end') as string) || null,
+      submission_start: (formData.get('submission_start') as string) || null,
+      submission_end: (formData.get('submission_end') as string) || null,
       max_team_size: parseInt(formData.get('max_team_size') as string) || 5,
     }
 
     const { error } = editingId
-      ? await supabase.from('competitions').update(payload).eq('id', editingId)
-      : await supabase.from('competitions').insert(payload)
+      ? await supabase.from('competitions').update(payload as never).eq('id', editingId)
+      : await supabase.from('competitions').insert(payload as never)
 
     if (error) {
       setMessage('❌ Lỗi: ' + error.message)
@@ -119,8 +126,8 @@ export default function AdminCompetitions() {
 
       <div className="max-w-4xl mx-auto relative z-10">
 
-        <Link 
-          href="/admin" 
+        <Link
+          href="/admin"
           className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-red-400 hover:text-red-300 transition-colors uppercase mb-8"
         >
           ← QUAY LẠI PANEL ADMIN
@@ -160,46 +167,46 @@ export default function AdminCompetitions() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Tên đấu trường / cuộc thi *</label>
-                <input 
-                  name="title" 
-                  required 
+                <input
+                  name="title"
+                  required
                   defaultValue={editingComp?.title || ''}
                   placeholder="VD: GenD Arena Robot Championship"
-                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition" 
+                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Mô tả ngắn gọn *</label>
-                <textarea 
-                  name="description" 
-                  required 
-                  rows={2} 
+                <textarea
+                  name="description"
+                  required
+                  rows={2}
                   defaultValue={editingComp?.description || ''}
                   placeholder="Mô tả tóm tắt nội dung thi đấu..."
-                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition resize-none" 
+                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Thể lệ thi đấu chi tiết</label>
-                  <textarea 
-                    name="rules" 
-                    rows={5} 
+                  <textarea
+                    name="rules"
+                    rows={5}
                     defaultValue={editingComp?.rules || ''}
                     placeholder="Các quy định và luật chơi trên sàn đấu..."
-                    className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition resize-none" 
+                    className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition resize-none"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Cơ cấu giải thưởng</label>
-                  <textarea 
-                    name="prizes" 
-                    rows={5} 
+                  <textarea
+                    name="prizes"
+                    rows={5}
                     defaultValue={editingComp?.prizes || ''}
                     placeholder="Danh sách phần thưởng cho các thứ hạng..."
-                    className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition resize-none" 
+                    className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition resize-none"
                   />
                 </div>
               </div>
@@ -207,8 +214,8 @@ export default function AdminCompetitions() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Trạng thái hệ thống</label>
-                  <select 
-                    name="status" 
+                  <select
+                    name="status"
                     defaultValue={editingComp?.status || 'upcoming'}
                     className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
                   >
@@ -221,13 +228,13 @@ export default function AdminCompetitions() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Số thành viên tối đa / liên minh</label>
-                  <input 
-                    name="max_team_size" 
-                    type="number" 
-                    min="1" 
-                    max="20" 
+                  <input
+                    name="max_team_size"
+                    type="number"
+                    min="1"
+                    max="20"
                     defaultValue={editingComp?.max_team_size || 5}
-                    className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition" 
+                    className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
                   />
                 </div>
               </div>
@@ -235,20 +242,20 @@ export default function AdminCompetitions() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Mở cổng đăng ký</label>
-                  <input 
-                    name="registration_start" 
-                    type="datetime-local" 
+                  <input
+                    name="registration_start"
+                    type="datetime-local"
                     defaultValue={formatDateTimeLocal(editingComp?.registration_start)}
-                    className="w-full px-4 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition" 
+                    className="w-full px-4 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Đóng cổng đăng ký</label>
-                  <input 
-                    name="registration_end" 
-                    type="datetime-local" 
+                  <input
+                    name="registration_end"
+                    type="datetime-local"
                     defaultValue={formatDateTimeLocal(editingComp?.registration_end)}
-                    className="w-full px-4 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition" 
+                    className="w-full px-4 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition"
                   />
                 </div>
               </div>
@@ -256,34 +263,34 @@ export default function AdminCompetitions() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Bắt đầu nộp bài dự thi</label>
-                  <input 
-                    name="submission_start" 
-                    type="datetime-local" 
+                  <input
+                    name="submission_start"
+                    type="datetime-local"
                     defaultValue={formatDateTimeLocal(editingComp?.submission_start)}
-                    className="w-full px-4 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition" 
+                    className="w-full px-4 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Thời hạn nộp bài cuối cùng</label>
-                  <input 
-                    name="submission_end" 
-                    type="datetime-local" 
+                  <input
+                    name="submission_end"
+                    type="datetime-local"
                     defaultValue={formatDateTimeLocal(editingComp?.submission_end)}
-                    className="w-full px-4 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition" 
+                    className="w-full px-4 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition"
                   />
                 </div>
               </div>
 
               <div className="flex gap-4 pt-2">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={submitLoading}
                   className="tech-btn-accent font-orbitron px-6 py-2.5 rounded-lg text-xs tracking-wider uppercase cursor-pointer text-black"
                 >
                   {submitLoading ? '⏳ ĐANG LƯU THÔNG SỐ...' : (editingId ? '💾 LƯU THAY ĐỔI' : '➕ TẠO PHÂN KHU')}
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => { setShowForm(false); setEditingId(null) }}
                   className="px-6 py-2.5 border border-[#1e2d5a] bg-transparent hover:bg-slate-900/60 text-slate-300 text-xs font-semibold uppercase tracking-wider rounded-lg cursor-pointer transition"
                 >
@@ -316,13 +323,13 @@ export default function AdminCompetitions() {
                     <p className="text-slate-400 text-sm leading-relaxed">{comp.description}</p>
                   </div>
                   <div className="flex gap-2.5 self-end sm:self-center">
-                    <button 
+                    <button
                       onClick={() => handleEdit(comp)}
                       className="px-4 py-2 border border-cyan-500/30 bg-cyan-950/20 hover:bg-cyan-500 hover:text-black text-cyan-400 text-xs font-bold tracking-wider uppercase rounded-lg cursor-pointer transition"
                     >
                       ✏️ SỬA
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(comp.id, comp.title)}
                       className="px-4 py-2 border border-red-500/30 bg-red-950/20 hover:bg-red-500 hover:text-white text-red-400 text-xs font-bold tracking-wider uppercase rounded-lg cursor-pointer transition"
                     >
