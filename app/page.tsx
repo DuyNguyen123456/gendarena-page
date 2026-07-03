@@ -2,9 +2,13 @@ import Link from 'next/link'
 import ParticleField from '@/components/particle-field'
 import StatsCounter from '@/components/stats-counter'
 import Countdown from '@/components/countdown'
+import Footer from '@/components/footer'
+import SpeakersSection from '@/components/speakers-section'
+import SponsorsSection from '@/components/sponsors-section'
 
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import TimelineSection from '@/components/timeline-section'
+import { siteConfig } from '@/config/site'
 
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient()
@@ -47,16 +51,21 @@ export default async function HomePage() {
           </div>
 
           {/* Title */}
-          <h1 className="font-orbitron text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight uppercase">
+          <h1 className="font-orbitron text-5xl md:text-7xl font-extrabold tracking-tight mb-4 leading-tight uppercase">
             ĐẤU TRƯỜNG <br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 neon-text-cyan drop-shadow-[0_0_30px_rgba(0,240,255,0.3)]">
-              GEND ARENA 2026
+              {siteConfig.name}
             </span>
           </h1>
 
+          {/* Tagline */}
+          <div className="font-orbitron text-cyan-400 text-sm md:text-base font-bold tracking-[0.25em] uppercase mb-8 animate-pulse">
+            {siteConfig.tagline}
+          </div>
+
           {/* Subtitle */}
-          <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed font-medium">
-            Giải đấu khoa học kỹ thuật dành cho những bộ óc sáng tạo. Thiết kế robot, lập trình chiến thuật và chinh phục sàn đấu công nghệ đỉnh cao.
+          <p className="text-slate-400 text-base md:text-lg max-w-3xl mx-auto mb-8 leading-relaxed font-medium">
+            {siteConfig.description}
           </p>
 
           {/* Countdown Component */}
@@ -147,84 +156,13 @@ export default async function HomePage() {
       {/* Timeline Section */}
       <TimelineSection phases={phases || []} />
 
-      {/* Footer */}
-      <footer className="relative border-t border-[#1e2d5a] mt-10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#050814]/80 pointer-events-none" />
-        <div className="max-w-6xl mx-auto px-6 py-14 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
-            {/* Brand */}
-            <div className="md:col-span-1">
-              <div className="font-orbitron text-xl font-extrabold tracking-wider text-white mb-2 flex items-center gap-2">
-                🤖 <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-400">GEND ARENA</span>
-              </div>
-              <p className="text-slate-500 text-xs leading-relaxed mb-4">
-                Đấu trường khoa học kỹ thuật dành cho thế hệ sáng tạo Việt Nam 2026.
-              </p>
-              {/* Social links */}
-              <div className="flex gap-3">
-                <a href="#" aria-label="Facebook" className="w-8 h-8 rounded-lg bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-500/40 hover:text-cyan-400 flex items-center justify-center text-slate-400 transition-all duration-200 hover:shadow-[0_0_10px_rgba(0,240,255,0.1)] text-sm">
-                  f
-                </a>
-                <a href="#" aria-label="YouTube" className="w-8 h-8 rounded-lg bg-[#131e3d] border border-[#1e2d5a] hover:border-red-500/40 hover:text-red-400 flex items-center justify-center text-slate-400 transition-all duration-200 text-sm">
-                  ▶
-                </a>
-                <a href="#" aria-label="GitHub" className="w-8 h-8 rounded-lg bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-500/40 hover:text-cyan-400 flex items-center justify-center text-slate-400 transition-all duration-200 text-sm">
-                  ⌥
-                </a>
-              </div>
-            </div>
+      {/* Speakers & Judges Carousel */}
+      <SpeakersSection />
 
-            {/* Cuộc thi */}
-            <div>
-              <h4 className="font-orbitron text-xs font-bold tracking-widest text-cyan-400 uppercase mb-4">Cuộc Thi</h4>
-              <ul className="space-y-2.5 text-xs text-slate-400">
-                <li><Link href="/register" className="hover:text-cyan-400 transition-colors">Đăng ký tham dự</Link></li>
-                <li><Link href="/dashboard" className="hover:text-cyan-400 transition-colors">Bảng điều khiển</Link></li>
-                <li><Link href="/submissions" className="hover:text-cyan-400 transition-colors">Nộp bài dự thi</Link></li>
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">Thể lệ cuộc thi</a></li>
-              </ul>
-            </div>
+      {/* Sponsors Marquee */}
+      <SponsorsSection />
 
-            {/* Tài nguyên */}
-            <div>
-              <h4 className="font-orbitron text-xs font-bold tracking-widest text-cyan-400 uppercase mb-4">Tài Nguyên</h4>
-              <ul className="space-y-2.5 text-xs text-slate-400">
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">Hướng dẫn đăng ký</a></li>
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">Tiêu chí chấm điểm</a></li>
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">Template báo cáo</a></li>
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">FAQ</a></li>
-              </ul>
-            </div>
-
-            {/* Liên hệ */}
-            <div>
-              <h4 className="font-orbitron text-xs font-bold tracking-widest text-cyan-400 uppercase mb-4">Liên Hệ</h4>
-              <ul className="space-y-2.5 text-xs text-slate-400">
-                <li className="flex items-start gap-2">
-                  <span className="text-cyan-500/60">📧</span>
-                  <span>info@gendarena.vn</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-cyan-500/60">📞</span>
-                  <span>0123 456 789</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-cyan-500/60">📍</span>
-                  <span>Hà Nội, Việt Nam</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom bar */}
-          <div className="border-t border-[#1e2d5a] pt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div className="font-orbitron text-[10px] tracking-widest text-[#112E81] font-semibold uppercase">
-              GEND ARENA SECURITY TERMINAL • V2.0
-            </div>
-            <p className="text-slate-600 text-xs">© 2026 GenD Arena. Bản quyền thuộc về Ban Tổ Chức Cuộc Thi.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

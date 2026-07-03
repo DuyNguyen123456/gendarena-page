@@ -37,6 +37,8 @@ export async function createPhase(
     ...formData,
     start_date: formData.start_date || null,
     end_date: formData.end_date || null,
+    submission_opens_at: formData.submission_opens_at || null,
+    submission_closes_at: formData.submission_closes_at || null,
   })
   return { error: error?.message ?? null }
 }
@@ -52,8 +54,26 @@ export async function updatePhase(
       ...formData,
       start_date: formData.start_date || null,
       end_date: formData.end_date || null,
+      submission_opens_at: formData.submission_opens_at || null,
+      submission_closes_at: formData.submission_closes_at || null,
       updated_at: new Date().toISOString(),
     })
+    .eq('id', id)
+  return { error: error?.message ?? null }
+}
+
+/**
+ * Quick toggle — updates only submission_open for a single phase.
+ * Used by the admin toggle switch for instant feedback without opening the full modal.
+ */
+export async function toggleSubmissionOpen(
+  id: string,
+  open: boolean
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('competition_phases')
+    .update({ submission_open: open, updated_at: new Date().toISOString() })
     .eq('id', id)
   return { error: error?.message ?? null }
 }

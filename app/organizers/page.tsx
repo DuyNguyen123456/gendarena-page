@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Mail, Globe, ArrowUpRight, Award, ShieldCheck, Users } from 'lucide-react'
+import { siteConfig } from '@/config/site'
+import Footer from '@/components/footer'
 
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -45,13 +47,13 @@ interface Organizer {
 const ORGANIZERS: Organizer[] = [
   {
     id: 'sse-uth',
-    name: 'CLB Khởi nghiệp Trường Đại học Giao thông vận tải TP. Hồ Chí Minh (SSE-UTH)',
+    name: siteConfig.organizers.sse.name,
     role: 'Đơn vị đồng tổ chức',
     description: 'Đơn vị đi đầu trong việc truyền cảm hứng, bồi dưỡng tư duy khởi nghiệp sáng tạo và nâng cao năng lực thực chiến cho sinh viên. SSE-UTH tự hào là cầu nối tin cậy giữa nhà trường, doanh nghiệp và các dự án sinh viên triển vọng, chắp cánh cho những ý tưởng công nghệ và dịch vụ mang tính ứng dụng cao.',
     logoPath: '/organizers/logo-clb.png',
     initials: 'SSE',
-    facebook: 'https://www.facebook.com/SSE.GTS',
-    email: 'clbsse.uth@gmail.com',
+    facebook: siteConfig.organizers.sse.facebook,
+    email: siteConfig.organizers.sse.email,
     colorTheme: {
       from: 'from-cyan-500/20',
       to: 'to-blue-600/10',
@@ -65,13 +67,13 @@ const ORGANIZERS: Organizer[] = [
   },
   {
     id: 'fic',
-    name: 'CLB Entrepreneurship (FIC)',
+    name: siteConfig.organizers.fic.name,
     role: 'Đơn vị đồng tổ chức',
     description: 'Nơi hội tụ những tâm hồn đam mê kinh doanh, sáng tạo và sẵn sàng đương đầu với thử thách. FIC mang sứ mệnh lan tỏa tinh thần khởi nghiệp, hỗ trợ các ý tưởng kinh doanh từ giai đoạn sơ khởi cho đến khi định hình, thông qua các buổi hội thảo chuyên sâu, workshop kỹ năng và kết nối mạng lưới cố vấn chất lượng.',
     logoPath: '/organizers/logo-doitac.png',
     initials: 'FIC',
-    facebook: 'https://www.facebook.com/ficstart',
-    email: 'fic@hub.edu.vn',
+    facebook: siteConfig.organizers.fic.facebook,
+    email: siteConfig.organizers.fic.email,
     colorTheme: {
       from: 'from-indigo-500/20',
       to: 'to-purple-600/10',
@@ -343,6 +345,7 @@ export default function OrganizersPage() {
         </div>
 
       </div>
+      <Footer />
     </div>
   )
 }

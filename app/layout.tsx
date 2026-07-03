@@ -3,6 +3,7 @@ import Navbar from "@/components/navbar"
 import { Analytics } from "@vercel/analytics/next"
 import { Be_Vietnam_Pro, Inter, JetBrains_Mono } from "next/font/google"
 import NextTopLoader from "nextjs-toploader"
+import { siteConfig } from "@/config/site"
 import "./globals.css"
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -27,8 +28,8 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "GenD Arena 2026 - Đấu Trường Khởi Nghiệp Công Nghệ",
-  description: "Cuộc thi khởi nghiệp sáng tạo robot, AI và công nghệ hàng đầu năm 2026",
+  title: `${siteConfig.name} - Đấu Trường Khởi Nghiệp Công Nghệ`,
+  description: siteConfig.description,
 }
 
 export default function RootLayout({

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Loading from '@/components/loading'
 
 type Competition = {
   id: string
@@ -112,11 +113,7 @@ export default function AdminCompetitions() {
     return new Date(iso).toISOString().slice(0, 16)
   }
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#050814] text-white flex items-center justify-center font-orbitron tracking-widest">
-      <p className="animate-pulse">⏳ LOADING SECURE DATABASE...</p>
-    </div>
-  )
+  if (loading) return <Loading text="LOADING COMPETITION DATABASE" />
 
   return (
     <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
+import { siteConfig } from '@/config/site'
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null)
@@ -98,19 +99,25 @@ export default function Navbar() {
         >
           <span className="group-hover:animate-pulse">🤖</span>
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-cyan-400">
-            GEND ARENA
+            {siteConfig.name.toUpperCase()}
           </span>
         </Link>
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-2">
-          <Link href="/" className={getLinkClass('/')}>Trang chủ</Link>
-          <Link href="/organizers" className={getLinkClass('/organizers')}>Ban tổ chức</Link>
+          {siteConfig.navItems.map((item) => (
+            <Link key={item.href} href={item.href} className={getLinkClass(item.href)}>
+              {item.label}
+            </Link>
+          ))}
 
           {user && !isAdmin && (
             <>
-              <Link href="/dashboard" className={getLinkClass('/dashboard')}>Dashboard</Link>
-              <Link href="/submissions" className={getLinkClass('/submissions')}>Bài nộp</Link>
+              {siteConfig.authNavItems.map((item) => (
+                <Link key={item.href} href={item.href} className={getLinkClass(item.href)}>
+                  {item.label}
+                </Link>
+              ))}
             </>
           )}
 
@@ -187,13 +194,19 @@ export default function Navbar() {
       {/* Mobile Dropdown Menu */}
       {menuOpen && (
         <div className="md:hidden mobile-menu-open mt-3 pb-3 border-t border-[#1e2d5a] pt-3 space-y-1">
-          <Link href="/" className={getMobileLinkClass('/')}>Trang chủ</Link>
-          <Link href="/organizers" className={getMobileLinkClass('/organizers')}>Ban tổ chức</Link>
+          {siteConfig.navItems.map((item) => (
+            <Link key={item.href} href={item.href} className={getMobileLinkClass(item.href)}>
+              {item.label}
+            </Link>
+          ))}
 
           {user && !isAdmin && (
             <>
-              <Link href="/dashboard" className={getMobileLinkClass('/dashboard')}>Dashboard</Link>
-              <Link href="/submissions" className={getMobileLinkClass('/submissions')}>Bài nộp</Link>
+              {siteConfig.authNavItems.map((item) => (
+                <Link key={item.href} href={item.href} className={getMobileLinkClass(item.href)}>
+                  {item.label}
+                </Link>
+              ))}
             </>
           )}
 

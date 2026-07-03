@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Loading from '@/components/loading'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ users: 0, competitions: 0, teams: 0, submissions: 0 })
@@ -42,11 +43,7 @@ export default function AdminDashboard() {
     loadData()
   }, [router, supabase])
 
-  if (loading) return (
-    <div className="min-h-screen bg-dark-bg text-white flex items-center justify-center font-orbitron tracking-widest">
-      <p className="animate-pulse">⏳ LOADING SECURE DATABASE...</p>
-    </div>
-  )
+  if (loading) return <Loading text="LOADING SECURE DATABASE" />
 
   return (
     <div className="min-h-screen bg-dark-bg text-white py-12 px-4 relative scanline-container">
@@ -97,6 +94,8 @@ export default function AdminDashboard() {
             { href: '/admin/submissions', icon: '📝', title: 'CHẤM ĐIỂM DỰ ÁN', desc: 'Đánh giá kỹ thuật và ghi nhận kết quả' },
             { href: '/admin/leaderboard', icon: '🏅', title: 'BẢNG XẾP HẠNG CHUNG', desc: 'Xếp hạng hiệu năng của các liên minh' },
             { href: '/admin/phases', icon: '🗓️', title: 'QUẢN LÝ LỊCH TRÌNH', desc: 'Sắp xếp, thay đổi thông tin các giai đoạn thi đấu' },
+            { href: '/admin/speakers', icon: '🎤', title: 'QUẢN LÝ DIỄN GIẢ', desc: 'Thêm, chỉnh sửa diễn giả, giám khảo và cố vấn' },
+            { href: '/admin/sponsors', icon: '🤝', title: 'QUẢN LÝ NHÀ TÀI TRỢ', desc: 'Quản lý logo và thông tin các đối tác tài trợ' },
           ].map((item) => (
             <Link
               key={item.href}

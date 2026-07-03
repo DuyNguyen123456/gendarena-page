@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import Loading from '@/components/loading'
 
 type Competition = {
   id: string
@@ -26,10 +27,6 @@ export default function CompetitionDetailPage() {
   const [competition, setCompetition] = useState<Competition | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [teamName, setTeamName] = useState('')
-  const [teamDesc, setTeamDesc] = useState('')
-  const [submitLoading, setSubmitLoading] = useState(false)
   const [message, setMessage] = useState('')
   const router = useRouter()
   const params = useParams()
@@ -58,59 +55,14 @@ export default function CompetitionDetailPage() {
     }
   }, [params.id, router, supabase])
 
-  const handleRegisterTeam = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user) {
-      setMessage('❌ Người dùng chưa đăng nhập.')
-      return
-    }
-
-    setSubmitLoading(true)
-    setMessage('')
-
-    const { data: team, error: teamError } = await supabase
-      .from('teams')
-      .insert([
-        {
-          name: teamName,
-          description: teamDesc,
-          competition_id: params.id as string,
-          leader_id: user.id,
-        },
-      ] as never)
-      .select()
-      .single() as { data: { id: string } | null; error: { message: string } | null }
-
-    if (teamError || !team) { setMessage('❌ Lỗi: ' + teamError?.message); setSubmitLoading(false); return }
-
-    const { error: memberError } = await supabase
-      .from('team_members')
-      .insert([
-        {
-          team_id: team.id,
-          user_id: user.id,
-          role: 'leader',
-        },
-      ] as never)
-
-    if (memberError) { setMessage('❌ Lỗi: ' + memberError.message); setSubmitLoading(false); return }
-
-    setMessage('✅ Tạo đội thành công! Bạn đã đăng ký tham gia cuộc thi.')
-    setShowForm(false)
-    setTeamName('')
-    setTeamDesc('')
-    setSubmitLoading(false)
-  }
-
-  if (loading) return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <p>⏳ Đang tải...</p>
-    </div>
-  )
+  if (loading) return <Loading text="LOADING COMPETITION DATA" />
 
   if (!competition) return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <p>Không tìm thấy cuộc thi.</p>
+    <div className="min-h-screen bg-[#050814] text-white flex flex-col items-center justify-center gap-4">
+      <p className="font-orbitron text-lg text-red-400 tracking-widest uppercase">⚠ Không tìm thấy cuộc thi</p>
+      <Link href="/dashboard" className="tech-btn-primary px-6 py-2.5 rounded-lg text-xs font-bold tracking-widest font-orbitron uppercase">
+        ← Quay lại Dashboard
+      </Link>
     </div>
   )
 
@@ -202,58 +154,12 @@ export default function CompetitionDetailPage() {
         )}
 
         {/* Register Alliance Section */}
-        {!showForm ? (
-          <button
-            onClick={() => setShowForm(true)}
-            className="w-full tech-btn-accent py-4 rounded-lg font-orbitron font-extrabold text-base tracking-widest uppercase cursor-pointer"
-          >
-            👥 KHỞI TẠO LIÊN MINH CHIẾN ĐẤU (ĐĂNG KÝ ĐỘI THI)
-          </button>
-        ) : (
-          <div className="tech-panel p-6 border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
-            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
-              <span>👥</span> THÀNH LẬP ĐỘI NGŨ MỚI
-            </h2>
-            <form onSubmit={handleRegisterTeam} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Tên liên minh / đội *</label>
-                <input
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  required
-                  placeholder="VD: Team Cybernetic Robot"
-                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">Mô tả đội hình</label>
-                <textarea
-                  value={teamDesc}
-                  onChange={(e) => setTeamDesc(e.target.value)}
-                  rows={3}
-                  placeholder="Mô tả ngắn về các thành viên và mục tiêu đấu trường..."
-                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition resize-none"
-                />
-              </div>
-              <div className="flex gap-4">
-                <button
-                  type="submit"
-                  disabled={submitLoading}
-                  className="tech-btn-accent font-orbitron px-6 py-2.5 rounded-lg text-xs tracking-wider uppercase cursor-pointer text-black"
-                >
-                  {submitLoading ? '⏳ ĐANG KHỞI TẠO...' : 'TẠO LIÊN MINH'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="px-6 py-2.5 border border-[#1e2d5a] bg-transparent hover:bg-slate-900/60 text-slate-300 text-xs font-semibold uppercase tracking-wider rounded-lg cursor-pointer transition"
-                >
-                  HỦY LỆNH
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+        <Link
+          href={`/team/create?competitionId=${competition.id}`}
+          className="w-full tech-btn-accent py-4 rounded-lg font-orbitron font-extrabold text-base tracking-widest uppercase cursor-pointer text-center block text-black hover:scale-[1.01] transition-transform duration-200"
+        >
+          👥 KHỞI TẠO LIÊN MINH CHIẾN ĐẤU (ĐĂNG KÝ ĐỘI THI)
+        </Link>
 
       </div>
     </div>

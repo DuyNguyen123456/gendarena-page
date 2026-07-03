@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Loading from '@/components/loading'
 
 interface User {
   id: string
@@ -68,11 +69,7 @@ export default function AdminUsers() {
     u.organization?.toLowerCase().includes(search.toLowerCase())
   )
 
-  if (loading) return (
-    <div className="min-h-screen bg-dark-bg text-white flex items-center justify-center font-orbitron tracking-widest">
-      <p className="animate-pulse">⏳ LOADING USERS REGISTER...</p>
-    </div>
-  )
+  if (loading) return <Loading text="LOADING USER REGISTRY" />
 
   return (
     <div className="min-h-screen bg-dark-bg text-white py-12 px-4 relative scanline-container">
