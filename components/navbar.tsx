@@ -111,7 +111,7 @@ export default function Navbar() {
             </Link>
           ))}
 
-          {user && !isAdmin && (
+          {user && !isAdmin && !isJudge && (
             <>
               {siteConfig.authNavItems.map((item) => (
                 <Link key={item.href} href={item.href} className={getLinkClass(item.href)}>
@@ -121,9 +121,15 @@ export default function Navbar() {
             </>
           )}
 
-          {(isAdmin || isJudge) && (
+          {isAdmin && (
             <Link href="/admin" className={getAdminLinkClass('/admin')}>
               ⚙️ Quản lý
+            </Link>
+          )}
+
+          {isJudge && (
+            <Link href="/judge" className={getAdminLinkClass('/judge')}>
+              ⚖️ Giám khảo
             </Link>
           )}
 
@@ -200,7 +206,7 @@ export default function Navbar() {
             </Link>
           ))}
 
-          {user && !isAdmin && (
+          {user && !isAdmin && !isJudge && (
             <>
               {siteConfig.authNavItems.map((item) => (
                 <Link key={item.href} href={item.href} className={getMobileLinkClass(item.href)}>
@@ -210,7 +216,7 @@ export default function Navbar() {
             </>
           )}
 
-          {(isAdmin || isJudge) && (
+          {isAdmin && (
             <Link
               href="/admin"
               className={`block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname === '/admin'
@@ -219,6 +225,18 @@ export default function Navbar() {
                 }`}
             >
               ⚙️ Quản lý
+            </Link>
+          )}
+
+          {isJudge && (
+            <Link
+              href="/judge"
+              className={`block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname.startsWith('/judge')
+                  ? 'text-purple-400 bg-purple-950/30 border border-purple-500/30'
+                  : 'text-slate-300 hover:text-purple-400 hover:bg-purple-950/10'
+                }`}
+            >
+              ⚖️ Giám khảo
             </Link>
           )}
 

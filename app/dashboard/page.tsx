@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/loading'
+import { getPostLoginPath } from '@/lib/auth/routing'
+import { updateProfile, uploadAvatar, validateFacebookUrl, validatePhone } from '@/services/profile'
 
 type Profile = {
   id: string
@@ -13,6 +15,8 @@ type Profile = {
   phone: string | null
   organization: string | null
   uid: string | null
+  facebook_url: string | null
+  avatar_url: string | null
 }
 
 type Competition = {
@@ -40,11 +44,15 @@ export default function DashboardPage() {
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [invites, setInvites] = useState<TeamInvite[]>([])
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ id: string } | null>(null)
   
   // Interactive action states
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [profileForm, setProfileForm] = useState({ phone: '', facebook_url: '' })
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [profileSaving, setProfileSaving] = useState(false)
 
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -56,6 +64,18 @@ export default function DashboardPage() {
       return
     }
     setUser(user)
+
+    // Role-based redirect (admin/judge should not land on contestant dashboard)
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (profileData?.role && profileData.role !== 'participant') {
+      router.push(getPostLoginPath(profileData.role))
+      return
+    }
 
     // 1. Check if user already has a team. If yes, redirect immediately.
     const { data: memberRecord } = await supabase
@@ -69,15 +89,13 @@ export default function DashboardPage() {
       return
     }
 
-    // 2. Fetch profile details
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
+    // 2. Fetch profile details (already loaded above for role check)
     if (profileData) {
       setProfile(profileData as unknown as Profile)
+      setProfileForm({
+        phone: profileData.phone ?? '',
+        facebook_url: profileData.facebook_url ?? '',
+      })
       
       // 3. Fetch active team invitations using user's UID
       if (profileData.uid) {
@@ -111,7 +129,11 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    loadDashboardData()
+    const fetchData = async () => {
+      await loadDashboardData()
+    }
+
+    void fetchData()
   }, [router, supabase])
 
   // Accept or Reject Invitation
@@ -194,6 +216,46 @@ export default function DashboardPage() {
     setActionLoading(null)
   }
 
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !profile) return
+
+    const fbErr = validateFacebookUrl(profileForm.facebook_url)
+    if (fbErr) { setMessage('❌ ' + fbErr); return }
+    const phoneErr = validatePhone(profileForm.phone)
+    if (phoneErr) { setMessage('❌ ' + phoneErr); return }
+
+    setProfileSaving(true)
+    setMessage('')
+
+    let avatarUrl = profile.avatar_url
+    if (avatarFile) {
+      const upload = await uploadAvatar(user.id, avatarFile)
+      if (!upload.ok) {
+        setMessage('❌ ' + upload.error)
+        setProfileSaving(false)
+        return
+      }
+      avatarUrl = upload.url
+    }
+
+    const result = await updateProfile(user.id, {
+      phone: profileForm.phone.trim() || null,
+      facebook_url: profileForm.facebook_url.trim() || null,
+      avatar_url: avatarUrl,
+    })
+
+    if (!result.ok) {
+      setMessage('❌ ' + result.error)
+    } else {
+      setMessage('✅ Đã cập nhật hồ sơ!')
+      setEditingProfile(false)
+      setAvatarFile(null)
+      await loadDashboardData()
+    }
+    setProfileSaving(false)
+  }
+
   if (loading) return <Loading text="LOADING TERMINAL PARAMETERS" />
 
   return (
@@ -236,15 +298,78 @@ export default function DashboardPage() {
             <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase flex items-center gap-1.5">
               <span>📋</span> THÔNG TIN HỒ SƠ
             </h2>
-            {/* Displaying UID prominently */}
-            {profile?.uid && (
-              <div className="bg-cyan-950/40 border border-cyan-500/30 rounded-lg px-4 py-2 flex items-center gap-3">
-                <span className="text-slate-400 text-xs font-semibold tracking-wider uppercase">MÃ ĐẤU THỦ (UID):</span>
-                <span className="font-mono text-sm font-black text-white bg-slate-950 px-2.5 py-1 rounded border border-cyan-400/40 select-all tracking-widest">{profile.uid}</span>
-              </div>
+            <div className="flex items-center gap-3">
+              {profile?.uid && (
+                <div className="bg-cyan-950/40 border border-cyan-500/30 rounded-lg px-4 py-2 flex items-center gap-3">
+                  <span className="text-slate-400 text-xs font-semibold tracking-wider uppercase">UID:</span>
+                  <span className="font-mono text-sm font-black text-white bg-slate-950 px-2.5 py-1 rounded border border-cyan-400/40 select-all">{profile.uid}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setEditingProfile((v) => !v)}
+                className="text-xs font-orbitron border border-cyan-500/30 text-cyan-400 px-3 py-2 rounded-lg hover:bg-cyan-950/30"
+              >
+                {editingProfile ? 'Huỷ' : '✏️ Cập nhật'}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-6 mb-6">
+            <div className="shrink-0 w-20 h-20 rounded-full border-2 border-cyan-500/30 bg-[#131e3d] overflow-hidden flex items-center justify-center">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-3xl text-slate-500">👤</span>
+              )}
+            </div>
+            {profile?.facebook_url && !editingProfile && (
+              <a href={profile.facebook_url} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-400 hover:underline mt-2">
+                Facebook →
+              </a>
             )}
           </div>
 
+          {editingProfile ? (
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 mb-1">Số điện thoại</label>
+                  <input
+                    value={profileForm.phone}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
+                    placeholder="09xxxxxxxx"
+                    className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 mb-1">Facebook URL</label>
+                  <input
+                    value={profileForm.facebook_url}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, facebook_url: e.target.value }))}
+                    placeholder="https://facebook.com/..."
+                    className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase text-slate-400 mb-1">Avatar (JPEG/PNG/WebP, max 2MB)</label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+                  className="text-xs text-slate-400"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={profileSaving}
+                className="tech-btn-accent px-6 py-2 rounded-lg text-xs font-bold uppercase text-black disabled:opacity-50"
+              >
+                {profileSaving ? 'Đang lưu...' : '💾 Lưu hồ sơ'}
+              </button>
+            </form>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-semibold">
             <div className="bg-[#131e3d]/40 border border-[#1e2d5a]/60 px-4 py-3 rounded-lg flex items-center justify-between">
               <span className="text-slate-400 text-xs tracking-wider uppercase">Họ và tên:</span>
@@ -259,10 +384,15 @@ export default function DashboardPage() {
               <span className="text-white">{profile?.phone || 'Chưa cập nhật'}</span>
             </div>
             <div className="bg-[#131e3d]/40 border border-[#1e2d5a]/60 px-4 py-3 rounded-lg flex items-center justify-between">
+              <span className="text-slate-400 text-xs tracking-wider uppercase">Facebook:</span>
+              <span className="text-white truncate max-w-[200px]">{profile?.facebook_url || 'Chưa cập nhật'}</span>
+            </div>
+            <div className="bg-[#131e3d]/40 border border-[#1e2d5a]/60 px-4 py-3 rounded-lg flex items-center justify-between md:col-span-2">
               <span className="text-slate-400 text-xs tracking-wider uppercase">Đơn vị công tác:</span>
               <span className="text-white">{profile?.organization || 'Chưa cập nhật'}</span>
             </div>
           </div>
+          )}
         </div>
 
         {/* Dynamic CTA Sections for Team Management */}

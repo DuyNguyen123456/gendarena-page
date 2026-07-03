@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 
 type Sponsor = {
@@ -56,8 +56,6 @@ function SponsorLogo({ sponsor }: { sponsor: Sponsor }) {
 export default function SponsorsSection() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([])
   const [loading, setLoading] = useState(true)
-  const trackRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     const supabase = createClient()
     supabase
@@ -73,8 +71,7 @@ export default function SponsorsSection() {
 
   if (!loading && sponsors.length === 0) return null
 
-  // Duplicate array for seamless infinite marquee
-  const marqueeItems = [...sponsors, ...sponsors]
+  const duration = sponsors.length * 3
 
   return (
     <section className="relative py-16 px-6 overflow-hidden border-t border-b border-[#1e2d5a]/40">
@@ -98,25 +95,32 @@ export default function SponsorsSection() {
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden">
+        <div className="overflow-hidden group/marquee">
           <div
-            ref={trackRef}
-            className="flex gap-6 w-max"
-            style={{
-              animation: `marquee-scroll ${sponsors.length * 3}s linear infinite`,
-            }}
+            className="flex w-max marquee-track"
+            style={{ ['--marquee-duration' as string]: `${duration}s` }}
           >
-            {marqueeItems.map((sponsor, idx) => (
-              <SponsorLogo key={`${sponsor.id}-${idx}`} sponsor={sponsor} />
+            {[0, 1].map((copy) => (
+              <div key={copy} className="flex shrink-0 gap-6" aria-hidden={copy === 1 ? true : undefined}>
+                {sponsors.map((sponsor) => (
+                  <SponsorLogo key={`${sponsor.id}-${copy}`} sponsor={sponsor} />
+                ))}
+              </div>
             ))}
           </div>
         </div>
       )}
 
       <style jsx>{`
+        .marquee-track {
+          animation: marquee-scroll var(--marquee-duration) linear infinite;
+        }
+        .group\\/marquee:hover .marquee-track {
+          animation-play-state: paused;
+        }
         @keyframes marquee-scroll {
           from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
+          to { transform: translateX(-50%); }
         }
       `}</style>
     </section>

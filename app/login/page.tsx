@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+import { getPostLoginPath } from '@/lib/auth/routing'
+
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -20,7 +22,7 @@ export default function LoginPage() {
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -31,10 +33,14 @@ export default function LoginPage() {
       return
     }
 
-    // router.refresh() forces the server to re-check the session cookie
-    // before navigating — required for Server Components to see the new session
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', authData.user!.id)
+      .single()
+
     router.refresh()
-    router.push('/dashboard')
+    router.push(getPostLoginPath(profile?.role))
   }
 
   return (

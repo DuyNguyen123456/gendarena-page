@@ -7,7 +7,7 @@ import Link from 'next/link'
 import Loading from '@/components/loading'
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ users: 0, competitions: 0, teams: 0, submissions: 0 })
+  const [stats, setStats] = useState({ users: 0, competitions: 0, teams: 0, submissions: 0, pendingSubmissions: 0 })
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
@@ -25,11 +25,12 @@ export default function AdminDashboard() {
         return
       }
 
-      const [users, comps, teams, subs] = await Promise.all([
+      const [users, comps, teams, subs, pendingSubs] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('competitions').select('id', { count: 'exact', head: true }),
         supabase.from('teams').select('id', { count: 'exact', head: true }),
         supabase.from('submissions').select('id', { count: 'exact', head: true }),
+        supabase.from('submissions').select('id', { count: 'exact', head: true }).in('status', ['pending', 'submitted']),
       ])
 
       setStats({
@@ -37,6 +38,7 @@ export default function AdminDashboard() {
         competitions: comps.count || 0,
         teams: teams.count || 0,
         submissions: subs.count || 0,
+        pendingSubmissions: pendingSubs.count || 0,
       })
       setLoading(false)
     }
@@ -69,20 +71,31 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-8">
           {[
-            { icon: '👥', label: 'THÍ SINH ĐĂNG KÝ', value: stats.users, color: 'text-cyan-400', border: 'border-cyan-500/20' },
-            { icon: '🏆', label: 'CUỘC THI THIẾT LẬP', value: stats.competitions, color: 'text-yellow-500', border: 'border-yellow-500/20' },
-            { icon: '🧩', label: 'LIÊN MINH KHỞI TẠO', value: stats.teams, color: 'text-purple-400', border: 'border-purple-500/20' },
-            { icon: '📝', label: 'BẢN THIẾT KẾ ĐÃ NHẬN', value: stats.submissions, color: 'text-emerald-400', border: 'border-emerald-500/20' },
+            { icon: '👥', label: 'THÍ SINH ĐĂNG KÝ', value: stats.users, color: 'text-cyan-400', border: 'border-cyan-500/20', href: '/admin/users' },
+            { icon: '🏆', label: 'CUỘC THI THIẾT LẬP', value: stats.competitions, color: 'text-yellow-500', border: 'border-yellow-500/20', href: '/admin/competitions' },
+            { icon: '🧩', label: 'LIÊN MINH KHỞI TẠO', value: stats.teams, color: 'text-purple-400', border: 'border-purple-500/20', href: null },
+            { icon: '📝', label: 'BÀI NỘP TỔNG', value: stats.submissions, color: 'text-emerald-400', border: 'border-emerald-500/20', href: '/admin/submissions' },
+            { icon: '⏳', label: 'BÀI CHỜ CHẤM', value: stats.pendingSubmissions, color: 'text-amber-400', border: 'border-amber-500/20', href: '/admin/submissions' },
           ].map((stat) => (
-            <div key={stat.label} className={`tech-panel-glow p-6 relative flex flex-col justify-between h-32 cyber-corners ${stat.border}`}>
-              <div className="text-2xl">{stat.icon}</div>
-              <div>
-                <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-1">{stat.label}</div>
-                <div className={`font-orbitron text-3xl font-extrabold tracking-widest leading-none ${stat.color}`}>{stat.value}</div>
+            stat.href ? (
+              <Link key={stat.label} href={stat.href} className={`tech-panel-glow p-6 relative flex flex-col justify-between h-32 cyber-corners ${stat.border} hover:brightness-110 transition`}>
+                <div className="text-2xl">{stat.icon}</div>
+                <div>
+                  <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-1">{stat.label}</div>
+                  <div className={`font-orbitron text-3xl font-extrabold tracking-widest leading-none ${stat.color}`}>{stat.value}</div>
+                </div>
+              </Link>
+            ) : (
+              <div key={stat.label} className={`tech-panel-glow p-6 relative flex flex-col justify-between h-32 cyber-corners ${stat.border}`}>
+                <div className="text-2xl">{stat.icon}</div>
+                <div>
+                  <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-1">{stat.label}</div>
+                  <div className={`font-orbitron text-3xl font-extrabold tracking-widest leading-none ${stat.color}`}>{stat.value}</div>
+                </div>
               </div>
-            </div>
+            )
           ))}
         </div>
 
@@ -91,7 +104,9 @@ export default function AdminDashboard() {
           {[
             { href: '/admin/competitions', icon: '🏆', title: 'QUẢN LÝ CUỘC THI', desc: 'Thiết lập, hiệu chỉnh thông số các Arena' },
             { href: '/admin/users', icon: '👥', title: 'QUẢN LÝ NGƯỜI DÙNG', desc: 'Giám sát đấu thủ và phân quyền truy cập' },
-            { href: '/admin/submissions', icon: '📝', title: 'CHẤM ĐIỂM DỰ ÁN', desc: 'Đánh giá kỹ thuật và ghi nhận kết quả' },
+            { href: '/admin/submissions', icon: '📝', title: 'QUẢN LÝ BÀI NỘP', desc: 'Xem danh sách bài nộp theo giai đoạn, lọc chờ chấm' },
+            { href: '/admin/assign', icon: '👥', title: 'PHÂN CÔNG GIÁM KHẢO', desc: 'Gán giám khảo chấm điểm cho từng bài nộp' },
+            { href: '/admin/scoring', icon: '⚖️', title: 'CẤU HÌNH CHẤM ĐIỂM', desc: 'Trọng số, mở/đóng chấm, quản lý vòng chấm' },
             { href: '/admin/leaderboard', icon: '🏅', title: 'BẢNG XẾP HẠNG CHUNG', desc: 'Xếp hạng hiệu năng của các liên minh' },
             { href: '/admin/phases', icon: '🗓️', title: 'QUẢN LÝ LỊCH TRÌNH', desc: 'Sắp xếp, thay đổi thông tin các giai đoạn thi đấu' },
             { href: '/admin/speakers', icon: '🎤', title: 'QUẢN LÝ DIỄN GIẢ', desc: 'Thêm, chỉnh sửa diễn giả, giám khảo và cố vấn' },

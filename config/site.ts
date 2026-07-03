@@ -4,15 +4,15 @@ export const siteConfig = {
   description: "GenD Arena 2026 là sàn đấu khởi nghiệp hiện đại, nơi thế hệ số Việt Nam giải quyết những vấn đề thị trường khó nhằn bằng các bài toán công nghệ tối ưu. Cuộc thi được đồng tổ chức bởi CLB Khởi nghiệp (SSE) và CLB Entrepreneurship (FIC) cùng đội ngũ chuyên gia đông đảo đến từ đa lĩnh vực.",
   
   contact: {
-    email: "TODO_FILL_EMAIL",
+    email: "gendarena.sse.fic@gmail.com",
     phone: "TODO_FILL_PHONE",
-    address: "TODO_FILL_ADDRESS",
+    address: "56 Hoàng Diệu 2, Phường Thủ Đức, TP. Hồ Chí Minh",
   },
   
   socials: {
-    facebook: "TODO_FILL_FACEBOOK_URL",
-    facebookSSE: "TODO_FILL_SSE_FACEBOOK",
-    facebookFIC: "TODO_FILL_FIC_FACEBOOK",
+    facebook: "https://www.facebook.com/gend.arena",
+    facebookSSE: "https://www.facebook.com/SSE.GTS",
+    facebookFIC: "https://www.facebook.com/ficstart",
     instagram: "TODO_FILL_INSTAGRAM",
     youtube: "TODO_FILL_YOUTUBE",
     tiktok: "TODO_FILL_TIKTOK",
@@ -21,13 +21,13 @@ export const siteConfig = {
   organizers: {
     sse: {
       name: "CLB Khởi nghiệp SSE",
-      facebook: "TODO_FILL",
-      email: "TODO_FILL",
+      facebook: "https://www.facebook.com/SSE.GTS",
+      email: "clbsse.uth@gmail.com",
     },
     fic: {
       name: "CLB Entrepreneurship FIC",
-      facebook: "TODO_FILL",
-      email: "TODO_FILL",
+      facebook: "https://www.facebook.com/ficstart",
+      email: "fic@hub.edu.vn",
     },
   },
   

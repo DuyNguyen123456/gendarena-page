@@ -1,11 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getPostLoginPath } from '@/lib/auth/routing'
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   })
 
   const supabase = createServerClient(
@@ -17,7 +16,6 @@ export async function proxy(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          // Must set on BOTH request and response to propagate session cookies
           request.cookies.set({ name, value, ...options })
           response = NextResponse.next({
             request: { headers: request.headers },
@@ -32,33 +30,61 @@ export async function proxy(request: NextRequest) {
           response.cookies.set({ name, value: '', ...options })
         },
       },
-    }
+    },
   )
 
-  // Refresh session — required for Server Components to see the latest auth state.
-  // getUser() makes a network call to Supabase to verify the token and
-  // refresh it if expired, then writes the new cookies to the response.
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Redirect unauthenticated users away from protected routes
+  const pathname = request.nextUrl.pathname
+
   if (
     !user &&
-    (request.nextUrl.pathname.startsWith('/dashboard') ||
-      request.nextUrl.pathname.startsWith('/submissions') ||
-      request.nextUrl.pathname.startsWith('/admin'))
+    (pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/submissions') ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/judge') ||
+      pathname.startsWith('/team/'))
   ) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect authenticated users away from login/register
-  if (
-    user &&
-    (request.nextUrl.pathname === '/login' ||
-      request.nextUrl.pathname === '/register')
-  ) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  if (user && (pathname === '/login' || pathname === '/register')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const dest = getPostLoginPath(profile?.role)
+    return NextResponse.redirect(new URL(dest, request.url))
+  }
+
+  if (user && pathname.startsWith('/admin')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      const dest = getPostLoginPath(profile?.role)
+      return NextResponse.redirect(new URL(dest, request.url))
+    }
+  }
+
+  if (user && pathname.startsWith('/judge')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'judge') {
+      const dest = getPostLoginPath(profile?.role)
+      return NextResponse.redirect(new URL(dest, request.url))
+    }
   }
 
   return response
@@ -66,12 +92,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }

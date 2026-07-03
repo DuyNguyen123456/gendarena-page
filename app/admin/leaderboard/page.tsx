@@ -5,63 +5,41 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import LoadingScreen from '@/components/loading-screen'
-
-interface Submission {
-  id: string
-  title: string
-  avg_score: number | null
-  judge_count: number
-  teams?: { name: string }
-  competitions?: { title: string }
-}
-
-interface Score {
-  submission_id: string
-  total_score: number
-}
+import { getLeaderboard, type LeaderboardRow } from '@/services/scoring'
 
 export default function Leaderboard() {
-  const [rankings, setRankings] = useState<Submission[]>([])
+  const [rankings, setRankings] = useState<LeaderboardRow[]>([])
   const [loading, setLoading] = useState(true)
   const [barsVisible, setBarsVisible] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    const supabase = createClient()
     let isMounted = true
     let timeoutId: NodeJS.Timeout | null = null
 
     async function init() {
+      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!isMounted) return
       if (!user) { router.push('/login'); return }
 
       const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single() as { data: { role: string } | null, error: unknown }
-      if (!isMounted) return
-      if (!['admin', 'judge'].includes(profile?.role ?? '')) { router.push('/dashboard'); return }
-
-      const { data: subs } = await supabase
-        .from('submissions')
-        .select('*, teams(name), competitions(title)')
-
-      const { data: scoresData } = await supabase.from('scores').select('*')
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
 
       if (!isMounted) return
+      if (profile?.role !== 'admin') {
+        router.push('/dashboard')
+        return
+      }
 
-      const ranked = (subs || []).map((sub: Submission) => {
-        const subScores = (scoresData as Score[] || []).filter((s: Score) => s.submission_id === sub.id)
-        const avgScore = subScores.length > 0
-          ? subScores.reduce((sum: number, s: Score) => sum + (s.total_score || 0), 0) / subScores.length
-          : null
-        return { ...sub, avg_score: avgScore, judge_count: subScores.length }
-      })
-      .filter((s: Submission) => s.avg_score !== null)
-      .sort((a: Submission, b: Submission) => (b.avg_score || 0) - (a.avg_score || 0))
+      const ranked = await getLeaderboard()
+      if (!isMounted) return
 
       setRankings(ranked)
       setLoading(false)
-      // Trigger bar animations after slight delay
       timeoutId = setTimeout(() => {
         if (isMounted) setBarsVisible(true)
       }, 200)
@@ -109,15 +87,10 @@ export default function Leaderboard() {
 
   return (
     <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
-      {/* Decorative Glows */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
-
       <div className="max-w-4xl mx-auto relative z-10">
-
         <Link
           href="/admin"
-          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-red-400 hover:text-red-300 transition-colors uppercase mb-8"
+          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-red-400 hover:text-red-300 uppercase mb-8"
         >
           ← QUAY LẠI PANEL ADMIN
         </Link>
@@ -128,44 +101,40 @@ export default function Leaderboard() {
               🏅 BẢNG VINH DANH ĐẤU TRƯỜNG
             </h1>
             <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-              ARENA LEADERBOARD // HONOR ROLL
+              ARENA LEADERBOARD // ADMIN ONLY
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-orbitron bg-cyan-950/30 border border-cyan-500/30 px-4 py-2 rounded-lg text-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.05)]">
-            ĐÃ XẾP HẠNG: {rankings.length} LIÊN MINH
+          <div className="text-xs font-orbitron bg-cyan-950/30 border border-cyan-500/30 px-4 py-2 rounded-lg text-cyan-400">
+            ĐÃ XẾP HẠNG: {rankings.length} BÀI
           </div>
         </div>
 
         {rankings.length === 0 ? (
-          <div className="tech-panel p-8 text-center relative border-cyan-500/20 text-slate-400 text-sm font-semibold">
+          <div className="tech-panel p-8 text-center text-slate-400 text-sm font-semibold">
             Chưa ghi nhận điểm số đánh giá dự án nào để xếp hạng.
           </div>
         ) : (
-          <div className="tech-panel border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden">
+          <div className="tech-panel border-cyan-500/20 rounded-xl overflow-hidden">
             {rankings.map((item, idx) => (
-              <div key={item.id} className={getRowClass(idx)}>
+              <div key={item.submission_id} className={getRowClass(idx)}>
                 <div className="flex items-center gap-4">
-                  {/* Rank medal */}
                   <div className="w-12 font-orbitron text-2xl font-extrabold text-center text-slate-400 shrink-0">
                     {getMedal(idx)}
                   </div>
-
-                  {/* Info + progress bar */}
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                       <div>
-                        <h3 className="font-orbitron text-base font-bold text-white tracking-wide uppercase truncate mb-0.5">{item.title}</h3>
+                        <h3 className="font-orbitron text-base font-bold text-white tracking-wide uppercase truncate">
+                          {item.team_name}
+                        </h3>
                         <div className="text-xs text-slate-400 font-semibold truncate">
-                          Đội: <strong className="text-slate-300">{item.teams?.name}</strong>
-                          <span className="mx-1.5 text-slate-600">·</span>
-                          {item.competitions?.title}
+                          {item.phase_title}
                           <span className="mx-1.5 text-slate-600">·</span>
                           {item.judge_count} giám khảo
                         </div>
                       </div>
-                      {/* Score badge */}
                       <div className="text-right shrink-0">
-                        <div className="text-[9px] font-extrabold tracking-widest font-orbitron text-slate-500 uppercase mb-0.5">ĐIỂM TB</div>
+                        <div className="text-[9px] font-extrabold tracking-widest font-orbitron text-slate-500 uppercase">ĐIỂM TB</div>
                         <div
                           className="text-2xl font-extrabold font-orbitron tracking-widest"
                           style={{
@@ -173,17 +142,15 @@ export default function Leaderboard() {
                             textShadow: getBarGlow(idx),
                           }}
                         >
-                          {item.avg_score?.toFixed(2)}
+                          {Number(item.avg_score).toFixed(2)}
                         </div>
                       </div>
                     </div>
-
-                    {/* Progress bar */}
                     <div className="h-1.5 w-full bg-[#1e2d5a]/60 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-1000 ease-out"
                         style={{
-                          width: barsVisible ? `${((item.avg_score || 0) / maxScore) * 100}%` : '0%',
+                          width: barsVisible ? `${(Number(item.avg_score) / maxScore) * 100}%` : '0%',
                           background: getBarColor(idx),
                           boxShadow: getBarGlow(idx),
                           transitionDelay: `${idx * 100}ms`,
@@ -196,7 +163,6 @@ export default function Leaderboard() {
             ))}
           </div>
         )}
-
       </div>
     </div>
   )
