@@ -9,7 +9,7 @@ import Loading from '@/components/loading'
 type TeamMember = {
   user_id: string
   role: string
-  created_at: string
+  joined_at: string
   profiles?: {
     full_name: string | null
     email: string | null
@@ -72,6 +72,93 @@ export default function TeamDashboardPage() {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
+  const fetchJoinRequests = async (teamId: string) => {
+    // Step 1: fetch pending join requests (no profile join to avoid FK cache issues)
+    const { data: requests, error } = await supabase
+      .from('team_join_requests')
+      .select('id, requester_id, message, status, created_at')
+      .eq('team_id', teamId)
+      .eq('status', 'pending')
+
+    if (error) {
+      console.error('Fetch join requests error:', error)
+      setErrorMessage(`❌ Lỗi truy vấn yêu cầu gia nhập: ${error.message}`)
+      return
+    }
+
+    if (!requests || requests.length === 0) {
+      setJoinRequests([])
+      return
+    }
+
+    // Step 2: fetch profiles for requesters separately
+    const requesterIds = requests.map((r) => r.requester_id)
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, phone')
+      .in('id', requesterIds)
+
+    if (profilesError) {
+      console.error('Fetch requester profiles error:', profilesError)
+    }
+
+    // Step 3: merge profiles into requests
+    const profileMap: Record<string, { full_name: string | null; email: string | null; phone: string | null }> = {}
+    profilesData?.forEach((p) => {
+      profileMap[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone }
+    })
+
+    const merged = requests.map((r) => ({
+      ...r,
+      profiles: profileMap[r.requester_id] ?? null,
+    }))
+
+    setJoinRequests(merged as unknown as JoinRequest[])
+  }
+
+  const fetchMembers = async (teamId: string) => {
+    // Step 1: fetch team members without profile join
+    const { data: membersData, error: membersError } = await supabase
+      .from('team_members')
+      .select('user_id, role, joined_at')
+      .eq('team_id', teamId)
+
+    if (membersError) {
+      console.error('Fetch members error:', membersError)
+      setErrorMessage(`❌ Lỗi tải danh sách thành viên: ${membersError.message} (code: ${membersError.code})`)
+      return
+    }
+
+    if (!membersData || membersData.length === 0) {
+      setMembers([])
+      return
+    }
+
+    // Step 2: fetch profiles for those members separately
+    const userIds = membersData.map((m) => m.user_id)
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, phone, organization')
+      .in('id', userIds)
+
+    if (profilesError) {
+      console.error('Fetch member profiles error:', profilesError)
+    }
+
+    // Step 3: merge profiles into member records
+    const profileMap: Record<string, { full_name: string | null; email: string | null; phone: string | null; organization: string | null }> = {}
+    profilesData?.forEach((p) => {
+      profileMap[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone, organization: p.organization }
+    })
+
+    const merged = membersData.map((m) => ({
+      ...m,
+      profiles: profileMap[m.user_id] ?? null,
+    }))
+
+    setMembers(merged as unknown as TeamMember[])
+  }
+
   const loadTeamData = async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -111,33 +198,22 @@ export default function TeamDashboardPage() {
 
     setTeam(teamData as unknown as Team)
 
-    // Fetch all members
-    const { data: membersData } = await supabase
-      .from('team_members')
-      .select('user_id, role, created_at, profiles(full_name, email, phone, organization)')
-      .eq('team_id', memberRecord.team_id)
-
-    if (membersData) {
-      setMembers(membersData as unknown as TeamMember[])
-    }
+    // Fetch all members (uses fetchMembers helper — consistent with handleRequestAction)
+    await fetchMembers(memberRecord.team_id)
 
     // If leader, fetch requests & invites
     if (memberRecord.role === 'leader') {
-      const { data: requests } = await supabase
-        .from('team_join_requests')
-        .select('id, requester_id, message, status, created_at, profiles:requester_id(full_name, email, phone)')
-        .eq('team_id', memberRecord.team_id)
-        .eq('status', 'pending')
+      await fetchJoinRequests(memberRecord.team_id)
 
-      if (requests) {
-        setJoinRequests(requests as unknown as JoinRequest[])
-      }
-
-      const { data: teamInvites } = await supabase
+      const { data: teamInvites, error: invitesError } = await supabase
         .from('team_invites')
         .select('id, invited_uid, status, created_at')
         .eq('team_id', memberRecord.team_id)
         .eq('status', 'pending')
+
+      if (invitesError) {
+        console.error('Fetch invites error:', invitesError)
+      }
 
       if (teamInvites) {
         setInvites(teamInvites as unknown as Invite[])
@@ -150,6 +226,31 @@ export default function TeamDashboardPage() {
   useEffect(() => {
     loadTeamData()
   }, [router, supabase])
+
+  // Realtime subscription for team join requests
+  useEffect(() => {
+    if (!team || !isLeader) return
+
+    const channel = supabase
+      .channel('team-join-requests-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'team_join_requests',
+          filter: `team_id=eq.${team.id}`,
+        },
+        () => {
+          fetchJoinRequests(team.id)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [team?.id, isLeader, supabase])
 
   // Handle invitation submission
   const handleSendInvite = async (e: React.FormEvent) => {
@@ -242,26 +343,38 @@ export default function TeamDashboardPage() {
 
       if (memberError) {
         console.error('Accept add member error:', memberError)
-        setErrorMessage(`❌ Lỗi thêm thành viên: ${memberError.message}`)
+        setErrorMessage(`❌ Lỗi thêm thành viên: ${memberError.message} — Code: ${memberError.code}`)
         setActionLoading(null)
         return
       }
 
-      // Update request status
-      await supabase
+      // Update request status to accepted
+      const { error: acceptErr } = await supabase
         .from('team_join_requests')
         .update({ status: 'accepted', responded_at: new Date().toISOString(), responded_by: user.id })
         .eq('id', requestId)
+
+      if (acceptErr) {
+        console.error('Accept update request error:', acceptErr)
+      }
     } else {
-      // Reject
-      await supabase
+      // Reject — update status
+      const { error: rejectErr } = await supabase
         .from('team_join_requests')
         .update({ status: 'rejected', responded_at: new Date().toISOString(), responded_by: user.id })
         .eq('id', requestId)
+
+      if (rejectErr) {
+        console.error('Reject update request error:', rejectErr)
+      }
     }
 
-    // Reload all data
-    await loadTeamData()
+    // Targeted re-fetch: only refresh members list and pending join requests
+    // (avoids full page re-init which can silently fail on FK join errors)
+    await Promise.all([
+      fetchMembers(team.id),
+      fetchJoinRequests(team.id),
+    ])
     setActionLoading(null)
   }
 
@@ -417,7 +530,7 @@ export default function TeamDashboardPage() {
                       )}
                     </div>
                     <span className="text-[10px] text-slate-500 font-orbitron font-semibold">
-                      JOINED: {new Date(member.created_at).toLocaleDateString('vi-VN')}
+                      JOINED: {new Date(member.joined_at).toLocaleDateString('vi-VN')}
                     </span>
                   </div>
                 ))}
@@ -493,7 +606,18 @@ export default function TeamDashboardPage() {
                   CONTROL // APPROVALS
                 </span>
                 <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
-                  <span>📥</span> ĐƠN XIN GIA NHẬP ({joinRequests.length})
+                  <span>📥</span> ĐƠN XIN GIA NHẬP
+                  {joinRequests.length > 0 && (
+                    <span className="relative flex h-2 w-2 ml-1">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                  )}
+                  {joinRequests.length > 0 && (
+                    <span className="ml-1 bg-red-950/60 border border-red-500/40 text-red-400 px-1.5 py-0.5 rounded-full text-[10px] font-bold font-orbitron">
+                      {joinRequests.length}
+                    </span>
+                  )}
                 </h2>
                 
                 {joinRequests.length === 0 ? (
