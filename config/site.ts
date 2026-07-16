@@ -5,7 +5,6 @@ export const siteConfig = {
   
   contact: {
     email: "gendarena.sse.fic@gmail.com",
-    phone: "TODO_FILL_PHONE",
     address: "56 Hoàng Diệu 2, Phường Thủ Đức, TP. Hồ Chí Minh",
   },
   
@@ -13,9 +12,12 @@ export const siteConfig = {
     facebook: "https://www.facebook.com/gend.arena",
     facebookSSE: "https://www.facebook.com/SSE.GTS",
     facebookFIC: "https://www.facebook.com/ficstart",
-    instagram: "TODO_FILL_INSTAGRAM",
-    youtube: "TODO_FILL_YOUTUBE",
-    tiktok: "TODO_FILL_TIKTOK",
+  },
+
+  resources: {
+    registrationGuide: "TODO_FILL_REGISTRATION_GUIDE",
+    scoringCriteria: "https://docs.google.com/spreadsheets/d/1PFaxIxeLSrSF1kKyHM9lCiuRNuOneWv9x0Y3R6u-4Qs/edit?usp=sharing",
+    reportTemplate: "https://docs.google.com/document/d/1K1CCS-pkzxmPu2Qww6RRNB5SuAIJ08bQAzf03jWRVZQ/edit?usp=sharing",
   },
   
   organizers: {

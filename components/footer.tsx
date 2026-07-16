@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { siteConfig } from '@/config/site'
+import Image from 'next/image'
 
 /**
  * Site-wide cyberpunk footer.
@@ -19,7 +20,13 @@ export default function Footer() {
           {/* Brand column */}
           <div className="md:col-span-1">
             <div className="font-orbitron text-xl font-extrabold tracking-wider text-white mb-2 flex items-center gap-2">
-              🤖{' '}
+              <Image
+                src="/logo/gendarena-logo.png"
+                alt="GenD Arena Logo"
+                width={32}
+                height={32}
+                className="object-contain"
+              />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-400">
                 {siteConfig.name.toUpperCase()}
               </span>
@@ -38,36 +45,21 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Facebook"
-                className="w-8 h-8 rounded-lg bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-500/40 hover:text-cyan-400 flex items-center justify-center text-slate-400 transition-all duration-200 hover:shadow-[0_0_10px_rgba(0,240,255,0.1)] text-sm"
+                className="w-8 h-8 rounded-lg bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-500/40 hover:text-cyan-400 flex items-center justify-center text-slate-400 transition-all duration-200 hover:shadow-[0_0_10px_rgba(0,240,255,0.1)]"
               >
-                f
-              </a>
-              <a
-                href={siteConfig.socials.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Instagram"
-                className="w-8 h-8 rounded-lg bg-[#131e3d] border border-[#1e2d5a] hover:border-pink-500/40 hover:text-pink-400 flex items-center justify-center text-slate-400 transition-all duration-200 text-sm"
-              >
-                IG
-              </a>
-              <a
-                href={siteConfig.socials.youtube}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="YouTube"
-                className="w-8 h-8 rounded-lg bg-[#131e3d] border border-[#1e2d5a] hover:border-red-500/40 hover:text-red-400 flex items-center justify-center text-slate-400 transition-all duration-200 text-sm"
-              >
-                ▶
-              </a>
-              <a
-                href={siteConfig.socials.tiktok}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="TikTok"
-                className="w-8 h-8 rounded-lg bg-[#131e3d] border border-[#1e2d5a] hover:border-slate-400/40 hover:text-white flex items-center justify-center text-slate-400 transition-all duration-200 text-sm"
-              >
-                ♪
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                </svg>
               </a>
             </div>
           </div>
@@ -91,10 +83,10 @@ export default function Footer() {
               Tài Nguyên
             </h4>
             <ul className="space-y-2.5 text-xs text-slate-400">
-              <li><a href="#" className="hover:text-cyan-400 transition-colors">Hướng dẫn đăng ký</a></li>
-              <li><a href="#" className="hover:text-cyan-400 transition-colors">Tiêu chí chấm điểm</a></li>
-              <li><a href="#" className="hover:text-cyan-400 transition-colors">Template báo cáo</a></li>
-              <li><a href="#" className="hover:text-cyan-400 transition-colors">FAQ</a></li>
+              <li><a href={siteConfig.resources.registrationGuide} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">Hướng dẫn đăng ký</a></li>
+              <li><a href={siteConfig.resources.scoringCriteria} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">Tiêu chí chấm điểm</a></li>
+              <li><a href={siteConfig.resources.reportTemplate} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">Template báo cáo</a></li>
+              <li><Link href="/organizers" className="hover:text-cyan-400 transition-colors">FAQ (Ban tổ chức)</Link></li>
             </ul>
           </div>
 
@@ -109,10 +101,6 @@ export default function Footer() {
                 <span>{siteConfig.contact.email}</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-cyan-500/60">📞</span>
-                <span>{siteConfig.contact.phone}</span>
-              </li>
-              <li className="flex items-start gap-2">
                 <span className="text-cyan-500/60">📍</span>
                 <span>{siteConfig.contact.address}</span>
               </li>
@@ -122,11 +110,8 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="border-t border-[#1e2d5a] pt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <div className="font-orbitron text-[10px] tracking-widest text-[#112E81] font-semibold uppercase">
-            GEND ARENA SECURITY TERMINAL • V2.0
-          </div>
           <p className="text-slate-600 text-xs">
-            © {year} {siteConfig.name}. Bản quyền thuộc về Ban Tổ Chức Cuộc Thi.
+            © {year} {siteConfig.name}. Bản quyền thuộc về GenD Arena.
           </p>
         </div>
       </div>

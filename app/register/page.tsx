@@ -92,10 +92,6 @@ export default function RegisterPage() {
 
       <div className="tech-panel-glow p-8 max-w-md w-full relative cyber-corners border-cyan-500/20 shadow-[0_0_30px_rgba(0,240,255,0.05)] text-white">
         
-        {/* Terminal Header */}
-        <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/30 tracking-widest">
-          SECURE REGISTER // REG_02
-        </div>
 
         <h2 className="font-orbitron text-2xl font-extrabold text-center text-white mb-1 uppercase tracking-wider">
           🚀 ĐĂNG KÝ ĐẤU THỦ

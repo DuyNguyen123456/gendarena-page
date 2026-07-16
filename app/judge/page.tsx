@@ -48,7 +48,7 @@ export default function JudgeHomePage() {
     init()
   }, [router, supabase])
 
-  if (loading) return <Loading text="LOADING JUDGE CONSOLE" />
+  if (loading) return <Loading text="Đang tải dữ liệu..." />
 
   return (
     <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
@@ -58,9 +58,6 @@ export default function JudgeHomePage() {
           <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider uppercase">
             ⚖️ BẢNG ĐIỀU KHIỂN GIÁM KHẢO
           </h1>
-          <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-            JUDGE TERMINAL // {profileName}
-          </p>
         </div>
 
         <div className="grid gap-6 mb-8">

@@ -125,7 +125,7 @@ export default function JudgeScoringPage() {
     }
   }
 
-  if (loading) return <Loading text="LOADING ASSIGNED SUBMISSIONS" />
+  if (loading) return <Loading text="Đang tải dữ liệu..." />
 
   return (
     <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">

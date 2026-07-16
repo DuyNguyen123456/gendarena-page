@@ -6,7 +6,7 @@ interface LoadingScreenProps {
   text?: string
 }
 
-export default function LoadingScreen({ text = 'INITIALIZING ARENA SYSTEMS' }: LoadingScreenProps) {
+export default function LoadingScreen({ text = 'Đang tải hệ thống...' }: LoadingScreenProps) {
   const [dots, setDots] = useState('')
   const [progress, setProgress] = useState(0)
 
@@ -73,9 +73,6 @@ export default function LoadingScreen({ text = 'INITIALIZING ARENA SYSTEMS' }: L
         <p className="font-orbitron text-base font-bold tracking-widest text-cyan-400 uppercase">
           {text}
           <span className="inline-block w-8 text-left">{dots}</span>
-        </p>
-        <p className="text-slate-500 text-xs tracking-widest uppercase">
-          GEND ARENA • SECURE ACCESS TERMINAL
         </p>
       </div>
 

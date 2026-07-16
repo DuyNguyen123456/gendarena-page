@@ -58,8 +58,8 @@ function StatCard({ stat, animated }: { stat: Stat; animated: boolean }) {
 }
 
 const STATS: Stat[] = [
-  { value: '500+', label: 'ĐẤU THỦ THAM GIA', desc: 'Các thí sinh trên toàn quốc', border: 'border-cyan-500/20' },
-  { value: '100 TR', label: 'TỔNG GIẢI THƯỞNG', desc: 'Hỗ trợ vốn & cơ hội đầu tư', border: 'border-yellow-500/20', textGlow: 'neon-text-yellow' },
+  { value: '500+', label: 'ĐẤU THỦ THAM GIA', desc: 'Các thí sinh trên toàn thành phố', border: 'border-cyan-500/20' },
+  { value: '100.000.000', label: 'TỔNG GIẢI THƯỞNG', desc: 'Hỗ trợ vốn và cơ hội đầu tư', border: 'border-yellow-500/20', textGlow: 'neon-text-yellow' },
   { value: '50+', label: 'HỘI ĐỒNG CHUYÊN GIA', desc: 'Mentors và ban giám khảo công nghệ', border: 'border-cyan-500/20' },
 ]
 

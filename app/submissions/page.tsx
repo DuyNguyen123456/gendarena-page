@@ -751,7 +751,7 @@ export default function SubmissionsPage() {
     return () => { isMounted = false }
   }, [router, supabase])
 
-  if (loading) return <LoadingScreen text="LOADING MISSION SYSTEMS" />
+  if (loading) return <LoadingScreen text="Đang tải dữ liệu..." />
 
   return (
     <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
@@ -769,9 +769,6 @@ export default function SubmissionsPage() {
           <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase">
             📝 BÀI NỘP CỦA TÔI
           </h1>
-          <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-            SUBMISSION TERMINAL // PHASE ARCHIVES
-          </p>
         </div>
 
         {/* No team state */}

@@ -55,7 +55,7 @@ export default function CompetitionDetailPage() {
     }
   }, [params.id, router, supabase])
 
-  if (loading) return <Loading text="LOADING COMPETITION DATA" />
+  if (loading) return <Loading text="Đang tải dữ liệu..." />
 
   if (!competition) return (
     <div className="min-h-screen bg-[#050814] text-white flex flex-col items-center justify-center gap-4">
@@ -84,9 +84,6 @@ export default function CompetitionDetailPage() {
 
         {/* Quest Briefing Header */}
         <div className="tech-panel-glow p-8 mb-8 relative cyber-corners border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
-          <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/30 tracking-widest">
-            ARENA QUEST BRIEFING // ID_{competition.id.slice(0, 8).toUpperCase()}
-          </div>
           
           <div className="inline-flex items-center gap-1.5 bg-cyan-950/40 border border-cyan-500/30 px-3 py-1 rounded-full text-xs font-bold text-cyan-400 tracking-wider mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
@@ -104,7 +101,6 @@ export default function CompetitionDetailPage() {
         {/* Details Grid (Rules & Prizes) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="tech-panel p-6 border-cyan-500/15 relative">
-            <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/20 tracking-widest">SECTION // 01</div>
             <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
               <span>📜</span> THỂ LỆ THI ĐẤU
             </h2>
@@ -114,7 +110,6 @@ export default function CompetitionDetailPage() {
           </div>
 
           <div className="tech-panel p-6 border-cyan-500/15 relative">
-            <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/20 tracking-widest">SECTION // 02</div>
             <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
               <span>🏆</span> CƠ CẤU GIẢI THƯỞNG
             </h2>
@@ -126,7 +121,6 @@ export default function CompetitionDetailPage() {
 
         {/* Timeline Timeline */}
         <div className="tech-panel p-6 mb-8 border-cyan-500/15 relative">
-          <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/20 tracking-widest">SCHEDULER // LOG</div>
           <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-1.5">
             <span>📅</span> LỘ TRÌNH ĐẤU TRƯỜNG
           </h2>

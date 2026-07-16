@@ -87,11 +87,7 @@ export default function Loading({ variant = 'page', text }: LoadingProps) {
 
       <div className="flex flex-col items-center gap-2">
         <p className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase animate-pulse">
-          {text ?? 'INITIALIZING ARENA SYSTEMS'}
-          <span className="inline-block w-6 text-left" />
-        </p>
-        <p className="text-slate-500 text-[10px] tracking-widest uppercase">
-          GEND ARENA • SECURE ACCESS TERMINAL
+          {text ?? 'Đang tải...'}
         </p>
       </div>
 

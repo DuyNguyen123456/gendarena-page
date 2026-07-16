@@ -97,7 +97,7 @@ function CreateTeamForm() {
     router.refresh()
   }
 
-  if (loading) return <Loading text="LOADING CREATION SYSTEMS" />
+  if (loading) return <Loading text="Đang tải dữ liệu..." />
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#050814] p-4 relative scanline-container">
@@ -107,10 +107,7 @@ function CreateTeamForm() {
 
       <div className="tech-panel-glow p-8 max-w-lg w-full relative cyber-corners border-cyan-500/20 shadow-[0_0_30px_rgba(0,240,255,0.05)]">
         
-        {/* Terminal Header */}
-        <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/30 tracking-widest">
-          ALLIANCE CREATOR // VER_2.0
-        </div>
+
 
         <h2 className="font-orbitron text-2xl font-extrabold text-center text-white mb-1 uppercase tracking-wider">
           👥 THÀNH LẬP LIÊN MINH
@@ -229,7 +226,7 @@ function CreateTeamForm() {
 
 export default function CreateTeamPage() {
   return (
-    <Suspense fallback={<Loading text="INITIALIZING..." />}>
+    <Suspense fallback={<Loading />}>
       <CreateTeamForm />
     </Suspense>
   )

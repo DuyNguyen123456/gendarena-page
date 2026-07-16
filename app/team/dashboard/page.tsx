@@ -51,14 +51,20 @@ type Invite = {
   created_at: string
 }
 
+type MemberDuplicate = {
+  user_id: string
+  full_name: string | null
+}
+
 export default function TeamDashboardPage() {
   const [team, setTeam] = useState<Team | null>(null)
   const [members, setMembers] = useState<TeamMember[]>([])
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([])
   const [invites, setInvites] = useState<Invite[]>([])
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ id: string } | null>(null)
   const [isLeader, setIsLeader] = useState(false)
+  const [dupeMembers, setDupeMembers] = useState<MemberDuplicate[]>([])
 
   // Invite by UID form
   const [inviteUid, setInviteUid] = useState('')
@@ -157,6 +163,29 @@ export default function TeamDashboardPage() {
     }))
 
     setMembers(merged as unknown as TeamMember[])
+
+    // Check for duplicate memberships among roster members
+    if (merged.length > 0) {
+      const userIds = merged.map(m => m.user_id)
+      const { data: dupCheck } = await supabase
+        .from('team_members')
+        .select('user_id')
+        .in('user_id', userIds)
+
+      // Group by user_id and find any appearing more than once
+      const countMap: Record<string, number> = {}
+      dupCheck?.forEach(r => { countMap[r.user_id] = (countMap[r.user_id] ?? 0) + 1 })
+      const dupeIds = Object.keys(countMap).filter(uid => countMap[uid] > 1)
+
+      if (dupeIds.length > 0) {
+        setDupeMembers(merged
+          .filter(m => dupeIds.includes(m.user_id))
+          .map(m => ({ user_id: m.user_id, full_name: m.profiles?.full_name ?? null }))
+        )
+      } else {
+        setDupeMembers([])
+      }
+    }
   }
 
   const loadTeamData = async () => {
@@ -255,7 +284,7 @@ export default function TeamDashboardPage() {
   // Handle invitation submission
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!team || !inviteUid.trim()) return
+    if (!team || !inviteUid.trim() || !user) return
 
     setInviteLoading(true)
     setInviteMessage('')
@@ -320,7 +349,7 @@ export default function TeamDashboardPage() {
 
   // Handle join request actions
   const handleRequestAction = async (requestId: string, requesterId: string, action: 'accept' | 'reject') => {
-    if (!team) return
+    if (!team || !user) return
     setActionLoading(requestId)
     setErrorMessage('')
 
@@ -406,7 +435,7 @@ export default function TeamDashboardPage() {
     }
   }
 
-  if (loading) return <Loading text="BOOTING TEAM INTERFACE" />
+  if (loading) return <Loading text="Đang tải..." />
   if (!team) return null
 
   return (
@@ -431,9 +460,6 @@ export default function TeamDashboardPage() {
             <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase flex items-center gap-2">
               <span>👥</span> BẢNG ĐIỀU KHIỂN LIÊN MINH: <span className="text-cyan-400 drop-shadow-[0_0_15px_rgba(0,240,255,0.2)]">{team.name}</span>
             </h1>
-            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-              ALLIANCE DASHBOARD // COMBAT STATUS
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <Link
@@ -459,6 +485,26 @@ export default function TeamDashboardPage() {
           </div>
         )}
 
+        {/* Duplicate Member Warning Banner (Leader only) */}
+        {isLeader && dupeMembers.length > 0 && (
+          <div className="bg-amber-950/40 border border-amber-500/50 rounded-xl p-5 mb-6 shadow-[0_0_20px_rgba(234,179,8,0.15)]">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl shrink-0">⚠️</span>
+              <div>
+                <h2 className="font-orbitron text-sm font-bold text-amber-400 uppercase tracking-wider">Cảnh báo: Thành viên đang ở nhiều đội</h2>
+                <p className="text-slate-400 text-xs mt-1 mb-2">
+                  Các thành viên sau đang có trong nhiều đội cùng lúc. Hãy yêu cầu họ vào trang cá nhân để tự giải quyết.
+                </p>
+                <ul className="space-y-1">
+                  {dupeMembers.map(dm => (
+                    <li key={dm.user_id} className="text-xs text-amber-300 font-semibold">• {dm.full_name ?? dm.user_id}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main Dashboard Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
@@ -467,9 +513,6 @@ export default function TeamDashboardPage() {
             
             {/* Team info */}
             <div className="tech-panel p-6 border-cyan-500/15 relative">
-              <span className="text-[10px] font-orbitron font-bold text-cyan-500/30 tracking-widest absolute top-2 right-4">
-                SECTOR // PROFILE
-              </span>
               <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
                 <span>📋</span> THÔNG TIN LIÊN MINH
               </h2>
@@ -499,9 +542,6 @@ export default function TeamDashboardPage() {
 
             {/* Members List */}
             <div className="tech-panel p-6 border-cyan-500/15 relative">
-              <span className="text-[10px] font-orbitron font-bold text-cyan-500/30 tracking-widest absolute top-2 right-4">
-                SECTOR // ROSTER
-              </span>
               <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-1.5">
                 <span>👥</span> THÀNH VIÊN LIÊN MINH ({members.length} / {team.max_members})
               </h2>
@@ -545,9 +585,6 @@ export default function TeamDashboardPage() {
             {/* Invite by UID Form */}
             {isLeader && (
               <div className="tech-panel p-6 border-cyan-500/15 relative">
-                <span className="text-[10px] font-orbitron font-bold text-cyan-500/30 tracking-widest absolute top-2 right-4">
-                  CONTROL // DISPATCH
-                </span>
                 <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
                   <span>✉</span> MỜI THÀNH VIÊN BẰNG UID
                 </h2>
@@ -602,9 +639,6 @@ export default function TeamDashboardPage() {
             {/* Join Requests Pending */}
             {isLeader && (
               <div className="tech-panel p-6 border-cyan-500/15 relative">
-                <span className="text-[10px] font-orbitron font-bold text-cyan-500/30 tracking-widest absolute top-2 right-4">
-                  CONTROL // APPROVALS
-                </span>
                 <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
                   <span>📥</span> ĐƠN XIN GIA NHẬP
                   {joinRequests.length > 0 && (
@@ -664,9 +698,6 @@ export default function TeamDashboardPage() {
             {/* Status overview for members */}
             {!isLeader && (
               <div className="tech-panel p-6 border-cyan-500/15 relative">
-                <span className="text-[10px] font-orbitron font-bold text-cyan-500/30 tracking-widest absolute top-2 right-4">
-                  STATUS // INFO
-                </span>
                 <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
                   <span>🛡</span> QUYỀN TRUY CẬP
                 </h2>

@@ -25,7 +25,7 @@ function SponsorLogo({ sponsor }: { sponsor: Sponsor }) {
 
   const inner = (
     <div
-      className={`shrink-0 h-16 px-6 bg-[#0a1025] border rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-105 hover:border-cyan-500/40 ${tier.border} ${tier.glow}`}
+      className={`shrink-0 h-16 px-6 mr-6 bg-[#0a1025] border rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-105 hover:border-cyan-500/40 ${tier.border} ${tier.glow}`}
       title={`${sponsor.name} (${tier.label})`}
     >
       {sponsor.logo_url && !imgError ? (
@@ -101,7 +101,7 @@ export default function SponsorsSection() {
             style={{ ['--marquee-duration' as string]: `${duration}s` }}
           >
             {[0, 1].map((copy) => (
-              <div key={copy} className="flex shrink-0 gap-6" aria-hidden={copy === 1 ? true : undefined}>
+              <div key={copy} className="flex shrink-0" aria-hidden={copy === 1 ? true : undefined}>
                 {sponsors.map((sponsor) => (
                   <SponsorLogo key={`${sponsor.id}-${copy}`} sponsor={sponsor} />
                 ))}

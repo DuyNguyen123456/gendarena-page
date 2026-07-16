@@ -39,12 +39,21 @@ type TeamInvite = {
   } | null
 }
 
+type DuplicateMembership = {
+  team_id: string
+  team_name: string
+  role: string
+  joined_at: string
+}
+
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [invites, setInvites] = useState<TeamInvite[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<{ id: string } | null>(null)
+  const [duplicateTeams, setDuplicateTeams] = useState<DuplicateMembership[]>([])
+  const [resolvingTeam, setResolvingTeam] = useState<string | null>(null)
   
   // Interactive action states
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -77,14 +86,31 @@ export default function DashboardPage() {
       return
     }
 
-    // 1. Check if user already has a team. If yes, redirect immediately.
-    const { data: memberRecord } = await supabase
+    // 1. Check ALL team memberships of this user (not just single)
+    const { data: allMemberships } = await supabase
       .from('team_members')
-      .select('team_id')
+      .select('team_id, role, joined_at')
       .eq('user_id', user.id)
-      .maybeSingle()
 
-    if (memberRecord) {
+    if (allMemberships && allMemberships.length > 1) {
+      // Duplicate membership detected — fetch team names
+      const teamIds = allMemberships.map(m => m.team_id)
+      const { data: teamsData } = await supabase
+        .from('teams')
+        .select('id, name')
+        .in('id', teamIds)
+
+      const teamsMap: Record<string, string> = {}
+      teamsData?.forEach(t => { teamsMap[t.id] = t.name })
+
+      setDuplicateTeams(allMemberships.map(m => ({
+        team_id: m.team_id,
+        team_name: teamsMap[m.team_id] ?? m.team_id,
+        role: m.role,
+        joined_at: m.joined_at,
+      })))
+      // Don't redirect — let user choose which team to keep
+    } else if (allMemberships && allMemberships.length === 1) {
       router.push('/team/dashboard')
       return
     }
@@ -137,6 +163,26 @@ export default function DashboardPage() {
   }, [router, supabase])
 
   // Accept or Reject Invitation
+  const handleKeepTeam = async (keepTeamId: string) => {
+    if (!user) return
+    setResolvingTeam(keepTeamId)
+    setMessage('')
+
+    // Delete memberships from all OTHER teams
+    const toRemove = duplicateTeams.filter(m => m.team_id !== keepTeamId)
+    for (const m of toRemove) {
+      await supabase
+        .from('team_members')
+        .delete()
+        .eq('team_id', m.team_id)
+        .eq('user_id', user.id)
+    }
+
+    setResolvingTeam(null)
+    router.push('/team/dashboard')
+    router.refresh()
+  }
+
   const handleInviteAction = async (invite: TeamInvite, action: 'accept' | 'reject') => {
     if (!user || !profile) return
     setActionLoading(invite.id)
@@ -272,15 +318,45 @@ export default function DashboardPage() {
             <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase flex items-center gap-2">
               <span className="text-cyan-400 animate-pulse">⚙️</span> BẢNG ĐIỀU KHIỂN ĐẤU THỦ
             </h1>
-            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-              PILOT CONSOLE // SECURE ACCESS GRANTED
-            </p>
           </div>
           <div className="flex items-center gap-2 text-xs font-orbitron bg-cyan-950/30 border border-cyan-500/30 px-4 py-2 rounded-lg text-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.05)]">
             <span className="w-2 h-2 rounded-full bg-emerald-405 animate-ping" />
             HỆ THỐNG HOẠT ĐỘNG
           </div>
         </div>
+
+        {/* Duplicate Team Warning Banner */}
+        {duplicateTeams.length > 1 && (
+          <div className="bg-amber-950/40 border border-amber-500/50 rounded-xl p-5 mb-8 shadow-[0_0_20px_rgba(234,179,8,0.15)]">
+            <div className="flex items-start gap-3 mb-4">
+              <span className="text-2xl shrink-0">⚠️</span>
+              <div>
+                <h2 className="font-orbitron text-sm font-bold text-amber-400 uppercase tracking-wider">Phát hiện bạn đang ở nhiều đội cùng lúc</h2>
+                <p className="text-slate-400 text-xs mt-1">
+                  Hệ thống phát hiện bạn đang là thành viên của {duplicateTeams.length} đội. Vui lòng chọn 1 đội để giữ lại. Các đội khác sẽ bị xóa khỏi danh sách thành viên của bạn.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {duplicateTeams.map(m => (
+                <div key={m.team_id} className="flex items-center justify-between p-3 bg-[#0a1128]/60 border border-amber-500/20 rounded-lg">
+                  <div>
+                    <span className="font-bold text-white text-sm">{m.team_name}</span>
+                    <span className="ml-2 text-[10px] text-amber-400 font-orbitron uppercase">{m.role}</span>
+                    <div className="text-[11px] text-slate-500 mt-0.5">Tham gia: {new Date(m.joined_at).toLocaleDateString('vi-VN')}</div>
+                  </div>
+                  <button
+                    onClick={() => handleKeepTeam(m.team_id)}
+                    disabled={resolvingTeam !== null}
+                    className="px-4 py-2 bg-amber-950/40 border border-amber-500/40 hover:bg-amber-500 hover:text-black text-amber-400 text-xs font-bold uppercase tracking-wider rounded-lg transition cursor-pointer disabled:opacity-50 font-orbitron"
+                  >
+                    {resolvingTeam === m.team_id ? '⏳ Đang xử lý...' : 'GIỮ ĐỘI NÀY'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {message && (
           <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-8 text-sm font-semibold tracking-wide flex items-center gap-2">
@@ -290,9 +366,6 @@ export default function DashboardPage() {
 
         {/* Profile Card */}
         <div className="tech-panel p-6 mb-8 relative cyber-corners border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
-          <div className="absolute top-2 right-4 text-[9px] font-orbitron font-bold text-cyan-500/30 tracking-widest">
-            CONTESTANT PROFILE // IDENT_08
-          </div>
           
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
             <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase flex items-center gap-1.5">
@@ -435,9 +508,6 @@ export default function DashboardPage() {
         {/* Pending Invitations list */}
         {invites.length > 0 && (
           <div className="tech-panel p-6 mb-8 border-cyan-500/15 relative">
-            <span className="text-[10px] font-orbitron font-bold text-cyan-500/30 tracking-widest absolute top-2 right-4">
-              ALERT // INVITATIONS
-            </span>
             <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
               <span>📥</span> LỜI MỜI GIA NHẬP ĐANG CHỜ ({invites.length})
             </h2>

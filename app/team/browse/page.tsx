@@ -133,7 +133,7 @@ export default function BrowseTeamsPage() {
     setActionLoading(null)
   }
 
-  if (loading) return <Loading text="SYNCHRONIZING ARENA TEAMS" />
+  if (loading) return <Loading text="Đang tải dữ liệu..." />
 
   return (
     <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
@@ -157,9 +157,6 @@ export default function BrowseTeamsPage() {
             <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase flex items-center gap-2">
               <span>🌐</span> LIÊN MINH ĐANG TUYỂN MỘ
             </h1>
-            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-              RECRUITMENT TERMINAL // FIND YOUR SQUAD
-            </p>
           </div>
           {userHasTeam && (
             <div className="flex items-center gap-2 text-xs font-orbitron bg-emerald-950/30 border border-emerald-500/30 px-4 py-2 rounded-lg text-emerald-450 shadow-[0_0_10px_rgba(16,185,129,0.05)]">

@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { siteConfig } from '@/config/site'
+import Image from 'next/image'
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null)
@@ -97,7 +98,13 @@ export default function Navbar() {
           href="/"
           className="font-orbitron text-lg font-bold tracking-wider text-white hover:text-cyan-400 transition duration-300 flex items-center gap-2 group"
         >
-          <span className="group-hover:animate-pulse">🤖</span>
+          <Image
+            src="/logo/gendarena-logo.png"
+            alt="GenD Arena Logo"
+            width={28}
+            height={28}
+            className="object-contain group-hover:animate-pulse"
+          />
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-cyan-400">
             {siteConfig.name.toUpperCase()}
           </span>

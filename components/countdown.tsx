@@ -75,13 +75,12 @@ export default function Countdown({ targetDate, phaseTitle = 'VÒNG SƠ LOẠI' 
         {/* Scanline overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(18,24,48,0)_96%,rgba(0,240,255,0.06)_98%)] bg-[length:100%_4px] pointer-events-none" />
         
-        {/* Cyber hud lines */}
+        {/* Cyber hud dot indicator */}
         <div className="absolute top-2 left-6 right-6 flex justify-between items-center text-[9px] text-cyan-400/40 font-mono tracking-widest pointer-events-none select-none">
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-            SYS_STATUS: ACTIVE // TARGET_PHASE: {phaseTitle.toUpperCase()}
+            <span className="text-cyan-400/50 uppercase">{phaseTitle}</span>
           </span>
-          <span>COORDINATES: 21.0285° N, 105.8542° E</span>
         </div>
 
         {timeLeft.isExpired ? (
@@ -143,11 +142,7 @@ export default function Countdown({ targetDate, phaseTitle = 'VÒNG SƠ LOẠI' 
           </div>
         )}
 
-        {/* Lower tech info line */}
-        <div className="mt-3 flex justify-between items-center text-[8px] text-slate-500 font-mono tracking-widest border-t border-slate-800/60 pt-2 select-none pointer-events-none">
-          <span>COGNITIVE CORE INTELLECT v2.06</span>
-          <span className="text-cyan-500/50 animate-pulse">● ENGINE OPERATIONAL</span>
-        </div>
+
       </div>
     </div>
   )

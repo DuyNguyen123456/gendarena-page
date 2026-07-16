@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Mail, Globe, ArrowUpRight, Award, ShieldCheck, Users } from 'lucide-react'
+import { Mail, ArrowUpRight, Users } from 'lucide-react'
 import { siteConfig } from '@/config/site'
 import Footer from '@/components/footer'
 
@@ -24,7 +24,6 @@ const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
-// Define the type for organizer data
 interface Organizer {
   id: string
   name: string
@@ -33,15 +32,25 @@ interface Organizer {
   logoPath: string
   initials: string
   facebook: string
-  website?: string
   email?: string
   colorTheme: {
-    from: string
-    to: string
     accent: string
-    glow: string
+    badgeBg: string
+    badgeBorder: string
+    hoverBorder: string
+    hoverGlow: string
+    hoverOverlay: string
+    scanline: string
+    logoBorder: string
+    logoFallbackGrad: string
+    logoFallbackText: string
+    linkBg: string
+    linkBorder: string
+    linkHoverBorder: string
+    linkHoverBg: string
+    linkText: string
+    topLine: string
   }
-  stats: { label: string; value: string }[]
 }
 
 const ORGANIZERS: Organizer[] = [
@@ -49,43 +58,157 @@ const ORGANIZERS: Organizer[] = [
     id: 'sse-uth',
     name: siteConfig.organizers.sse.name,
     role: 'Đơn vị đồng tổ chức',
-    description: 'Đơn vị đi đầu trong việc truyền cảm hứng, bồi dưỡng tư duy khởi nghiệp sáng tạo và nâng cao năng lực thực chiến cho sinh viên. SSE-UTH tự hào là cầu nối tin cậy giữa nhà trường, doanh nghiệp và các dự án sinh viên triển vọng, chắp cánh cho những ý tưởng công nghệ và dịch vụ mang tính ứng dụng cao.',
+    description:
+      'Đơn vị đi đầu trong việc truyền cảm hứng, bồi dưỡng tư duy khởi nghiệp sáng tạo và nâng cao năng lực thực chiến cho sinh viên. SSE-UTH tự hào là cầu nối tin cậy giữa nhà trường, doanh nghiệp và các dự án sinh viên triển vọng, chắp cánh cho những ý tưởng công nghệ và dịch vụ mang tính ứng dụng cao.',
     logoPath: '/organizers/logo-clb.png',
     initials: 'SSE',
     facebook: siteConfig.organizers.sse.facebook,
     email: siteConfig.organizers.sse.email,
     colorTheme: {
-      from: 'from-cyan-500/20',
-      to: 'to-blue-600/10',
       accent: 'text-cyan-400',
-      glow: 'shadow-[0_0_25px_rgba(6,182,212,0.15)]',
+      badgeBg: 'bg-cyan-950/40',
+      badgeBorder: 'border-cyan-500/30',
+      hoverBorder: 'hover:border-cyan-500/40',
+      hoverGlow: 'hover:shadow-[0_15px_30px_rgba(0,240,255,0.15)]',
+      hoverOverlay: 'from-cyan-500/10',
+      scanline: 'via-cyan-500/30',
+      logoBorder: 'group-hover:border-cyan-500/30',
+      logoFallbackGrad: 'from-cyan-500/20 to-blue-600/30',
+      logoFallbackText: 'text-cyan-400',
+      linkBg: 'bg-cyan-950/20',
+      linkBorder: 'border-cyan-500/10',
+      linkHoverBorder: 'hover:border-cyan-500/40',
+      linkHoverBg: 'hover:bg-cyan-500/10',
+      linkText: 'text-cyan-400',
+      topLine: 'via-cyan-500/30',
     },
-    stats: [
-      { label: 'Thành viên active', value: '50+' },
-      { label: 'Sự kiện đã tổ chức', value: '20+' },
-    ],
   },
   {
     id: 'fic',
     name: siteConfig.organizers.fic.name,
     role: 'Đơn vị đồng tổ chức',
-    description: 'Nơi hội tụ những tâm hồn đam mê kinh doanh, sáng tạo và sẵn sàng đương đầu với thử thách. FIC mang sứ mệnh lan tỏa tinh thần khởi nghiệp, hỗ trợ các ý tưởng kinh doanh từ giai đoạn sơ khởi cho đến khi định hình, thông qua các buổi hội thảo chuyên sâu, workshop kỹ năng và kết nối mạng lưới cố vấn chất lượng.',
+    description:
+      'Nơi hội tụ những tâm hồn đam mê kinh doanh, sáng tạo và sẵn sàng đương đầu với thử thách. FIC mang sứ mệnh lan tỏa tinh thần khởi nghiệp, hỗ trợ các ý tưởng kinh doanh từ giai đoạn sơ khởi cho đến khi định hình, thông qua các buổi hội thảo chuyên sâu, workshop kỹ năng và kết nối mạng lưới cố vấn chất lượng.',
     logoPath: '/organizers/logo-doitac.png',
     initials: 'FIC',
     facebook: siteConfig.organizers.fic.facebook,
     email: siteConfig.organizers.fic.email,
     colorTheme: {
-      from: 'from-indigo-500/20',
-      to: 'to-purple-600/10',
       accent: 'text-indigo-400',
-      glow: 'shadow-[0_0_25px_rgba(99,102,241,0.15)]',
+      badgeBg: 'bg-indigo-950/40',
+      badgeBorder: 'border-indigo-500/30',
+      hoverBorder: 'hover:border-indigo-500/40',
+      hoverGlow: 'hover:shadow-[0_15px_30px_rgba(99,102,241,0.15)]',
+      hoverOverlay: 'from-indigo-500/10',
+      scanline: 'via-indigo-500/30',
+      logoBorder: 'group-hover:border-indigo-500/30',
+      logoFallbackGrad: 'from-indigo-500/20 to-purple-600/30',
+      logoFallbackText: 'text-indigo-400',
+      linkBg: 'bg-indigo-950/20',
+      linkBorder: 'border-indigo-500/10',
+      linkHoverBorder: 'hover:border-indigo-500/40',
+      linkHoverBg: 'hover:bg-indigo-500/10',
+      linkText: 'text-indigo-400',
+      topLine: 'via-indigo-500/30',
     },
-    stats: [
-      { label: 'Cố vấn chuyên môn', value: '10+' },
-      { label: 'Năm hoạt động', value: '4+' },
-    ],
   },
 ]
+
+interface OrganizerCardProps {
+  org: Organizer
+  logoError: boolean
+  onImageError: (id: string) => void
+}
+
+function OrganizerCard({ org, logoError, onImageError }: OrganizerCardProps) {
+  const c = org.colorTheme
+  return (
+    <div
+      className={`group relative rounded-2xl bg-gradient-to-br from-[#0b1124] to-[#070c1e] border border-[#1e2d5a] ${c.hoverBorder} transition-all duration-500 overflow-hidden shadow-2xl hover:-translate-y-1.5 ${c.hoverGlow} flex flex-col justify-between`}
+    >
+      {/* Ambient hover glow */}
+      <div
+        className={`absolute inset-0 bg-gradient-to-br ${c.hoverOverlay} via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`}
+      />
+
+      {/* Top scanline accent */}
+      <div
+        className={`absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent ${c.scanline} to-transparent`}
+      />
+
+      {/* Body */}
+      <div className="p-8 sm:p-10 space-y-6 relative z-10">
+        {/* Role badge */}
+        <div
+          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md ${c.badgeBg} border ${c.badgeBorder} text-xs font-bold ${c.accent} uppercase tracking-wide`}
+        >
+          {org.role}
+        </div>
+
+        {/* Logo + name */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          <div
+            className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-[#131e3d] to-[#070c1e] border border-[#1e2d5a] flex items-center justify-center overflow-hidden shrink-0 shadow-lg ${c.logoBorder} transition-colors duration-300`}
+          >
+            {logoError ? (
+              <div
+                className={`w-full h-full bg-gradient-to-br ${c.logoFallbackGrad} flex items-center justify-center font-orbitron text-2xl font-black ${c.logoFallbackText} tracking-wider`}
+              >
+                {org.initials}
+              </div>
+            ) : (
+              <Image
+                src={org.logoPath}
+                alt={org.name}
+                fill
+                className="object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 768px) 80px, 96px"
+                onError={() => onImageError(org.id)}
+                priority
+              />
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <h2
+              className={`text-xl sm:text-2xl font-orbitron font-bold text-white tracking-wide leading-tight group-hover:${c.accent.replace('text-', 'text-').replace('400', '300')} transition-colors`}
+            >
+              {org.name}
+            </h2>
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="text-slate-300 text-sm sm:text-base leading-relaxed font-sans">
+          {org.description}
+        </p>
+      </div>
+
+      {/* Card footer with links */}
+      <div className="p-8 sm:p-10 pt-0 border-t border-[#1e2d5a]/40 bg-[#070c1e]/40 flex flex-wrap items-center gap-3 relative z-10">
+        <Link
+          href={org.facebook}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg ${c.linkBg} border ${c.linkBorder} ${c.linkHoverBorder} text-xs font-semibold ${c.linkText} transition-all duration-300 ${c.linkHoverBg} active:translate-y-px`}
+        >
+          <FacebookIcon className="w-4 h-4" />
+          <span>Facebook</span>
+        </Link>
+
+        {org.email && (
+          <Link
+            href={`mailto:${org.email}`}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#131e3d]/40 border border-[#1e2d5a] hover:border-slate-400 text-xs font-semibold text-slate-300 transition-all duration-300 hover:bg-[#131e3d]/80 active:translate-y-px"
+          >
+            <Mail className="w-4 h-4" />
+            <span>Email</span>
+          </Link>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function OrganizersPage() {
   const [logoErrors, setLogoErrors] = useState<Record<string, boolean>>({})
@@ -101,239 +224,39 @@ export default function OrganizersPage() {
       <div className="absolute bottom-10 right-10 w-[300px] h-[300px] bg-cyan-950/20 rounded-full blur-[80px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto relative z-10">
-        
-        {/* Header section with high-tech details and elegant fonts */}
+
+        {/* Page Header */}
         <div className="text-center mb-16 space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#131e3d] border border-[#1e2d5a] text-xs font-semibold text-cyan-400 uppercase tracking-widest animate-pulse">
             <Users className="w-3.5 h-3.5" />
             Ban tổ chức
           </div>
-          
+
           <h1 className="font-orbitron text-3xl sm:text-5xl font-black tracking-tight text-white uppercase bg-clip-text text-transparent bg-gradient-to-b from-white via-slate-100 to-slate-400">
             Đội Ngũ <span className="text-cyan-400 drop-shadow-[0_0_15px_rgba(0,240,255,0.3)]">Kiến Tạo</span>
           </h1>
-          
+
           <p className="max-w-2xl mx-auto text-slate-400 text-sm sm:text-base leading-relaxed">
-            Gặp gỡ các tổ chức nòng cốt đồng hành và xây dựng nên đấu trường công nghệ & khởi nghiệp <span className="font-orbitron font-semibold text-cyan-400">GenD Arena 2026</span>.
+            Gặp gỡ các tổ chức nòng cốt đồng hành và xây dựng nên đấu trường công nghệ &amp; khởi nghiệp{' '}
+            <span className="font-orbitron font-semibold text-cyan-400">GenD Arena 2026</span>.
           </p>
-          
+
           <div className="w-24 h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent mx-auto mt-4" />
         </div>
 
-        {/* Bento Grid Layout */}
+        {/* Organizer Cards Grid — 2 equal columns on md+ */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* Card 1: SSE-UTH (Main large card) */}
-          <div className="group relative rounded-2xl bg-gradient-to-br from-[#0b1124] to-[#070c1e] border border-[#1e2d5a] hover:border-cyan-500/40 transition-all duration-500 overflow-hidden shadow-2xl hover:-translate-y-1.5 hover:shadow-[0_15px_30px_rgba(0,240,255,0.15)] flex flex-col justify-between">
-            {/* Ambient hover glowing effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-            
-            {/* Scanline design detail */}
-            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
-            
-            <div className="p-8 sm:p-10 space-y-6 relative z-10">
-              {/* Card Badge and Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-cyan-950/40 border border-cyan-500/30 text-xs font-bold text-cyan-400 uppercase tracking-wide">
-                  <Award className="w-3.5 h-3.5" />
-                  {ORGANIZERS[0].role}
-                </div>
-                
-                {/* Stats info nested nicely in Bento cell */}
-                <div className="flex gap-4">
-                  {ORGANIZERS[0].stats.map((stat, idx) => (
-                    <div key={idx} className="border-l border-[#1e2d5a] pl-3">
-                      <div className="text-xl font-orbitron font-extrabold text-cyan-400">{stat.value}</div>
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Logo and Title Section */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pt-4">
-                {/* next/image container with aspect ratio and fallback */}
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-[#131e3d] to-[#070c1e] border border-[#1e2d5a] flex items-center justify-center overflow-hidden shrink-0 shadow-lg group-hover:border-cyan-500/30 transition-colors duration-300">
-                  {logoErrors[ORGANIZERS[0].id] ? (
-                    <div className="w-full h-full bg-gradient-to-br from-cyan-500/20 to-blue-600/30 flex items-center justify-center font-orbitron text-2xl font-black text-cyan-400 tracking-wider">
-                      {ORGANIZERS[0].initials}
-                    </div>
-                  ) : (
-                    <Image
-                      src={ORGANIZERS[0].logoPath}
-                      alt={ORGANIZERS[0].name}
-                      fill
-                      className="object-contain p-2 transition-transform duration-300 group-hover:scale-105"
-                      sizes="(max-width: 768px) 80px, 96px"
-                      onError={() => handleImageError(ORGANIZERS[0].id)}
-                      priority
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <h2 className="text-xl sm:text-2xl font-orbitron font-bold text-white tracking-wide leading-tight group-hover:text-cyan-300 transition-colors">
-                    {ORGANIZERS[0].name}
-                  </h2>
-                  <p className="text-xs text-slate-500 font-mono">ID: SSE-UTH.ORG</p>
-                </div>
-              </div>
-
-              {/* Description */}
-              <p className="text-slate-300 text-sm sm:text-base leading-relaxed font-sans">
-                {ORGANIZERS[0].description}
-              </p>
-            </div>
-
-            {/* Card Footer for Links */}
-            <div className="p-8 sm:p-10 pt-0 border-t border-[#1e2d5a]/40 bg-[#070c1e]/40 flex flex-wrap items-center justify-between gap-4 relative z-10">
-              <div className="flex gap-3">
-                <Link
-                  href={ORGANIZERS[0].facebook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-950/20 border border-cyan-500/10 hover:border-cyan-500/40 text-xs font-semibold text-cyan-400 transition-all duration-300 hover:bg-cyan-500/10 active:translate-y-px"
-                >
-                  <FacebookIcon className="w-4 h-4" />
-                  <span>Facebook</span>
-                </Link>
-                {ORGANIZERS[0].email && (
-                  <Link
-                    href={`mailto:${ORGANIZERS[0].email}`}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#131e3d]/40 border border-[#1e2d5a] hover:border-slate-400 text-xs font-semibold text-slate-300 transition-all duration-300 hover:bg-[#131e3d]/80 active:translate-y-px"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span>Email</span>
-                  </Link>
-                )}
-              </div>
-              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest hidden sm:inline-block">
-                Establishment: 2018 UTH
-              </span>
-            </div>
-          </div>
-
-          {/* Card 2: FIC (Secondary right card) */}
-          <div className="group relative rounded-2xl bg-gradient-to-br from-[#0b1124] to-[#070c1e] border border-[#1e2d5a] hover:border-indigo-500/40 transition-all duration-500 overflow-hidden shadow-2xl hover:-translate-y-1.5 hover:shadow-[0_15px_30px_rgba(99,102,241,0.15)] flex flex-col justify-between">
-            {/* Ambient hover glowing effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-            
-            {/* Decorative Cyber Line */}
-            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
-            
-            <div className="p-8 space-y-6 relative z-10">
-              {/* Card Badge */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-indigo-950/40 border border-indigo-500/30 text-xs font-bold text-indigo-400 uppercase tracking-wide">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  {ORGANIZERS[1].role}
-                </div>
-              </div>
-
-              {/* Logo and Title Section */}
-              <div className="flex items-center gap-4">
-                <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-[#131e3d] to-[#070c1e] border border-[#1e2d5a] flex items-center justify-center overflow-hidden shrink-0 shadow-lg group-hover:border-indigo-500/30 transition-colors duration-300">
-                  {logoErrors[ORGANIZERS[1].id] ? (
-                    <div className="w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-600/30 flex items-center justify-center font-orbitron text-xl font-black text-indigo-400 tracking-wider">
-                      {ORGANIZERS[1].initials}
-                    </div>
-                  ) : (
-                    <Image
-                      src={ORGANIZERS[1].logoPath}
-                      alt={ORGANIZERS[1].name}
-                      fill
-                      className="object-contain p-1.5 transition-transform duration-300 group-hover:scale-105"
-                      sizes="(max-width: 768px) 64px, 64px"
-                      onError={() => handleImageError(ORGANIZERS[1].id)}
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <h2 className="text-lg font-orbitron font-bold text-white tracking-wide leading-snug group-hover:text-indigo-300 transition-colors">
-                    {ORGANIZERS[1].name}
-                  </h2>
-                  <p className="text-[10px] text-slate-500 font-mono">ID: FIC.HUB</p>
-                </div>
-              </div>
-
-              {/* Description */}
-              <p className="text-slate-300 text-sm leading-relaxed font-sans">
-                {ORGANIZERS[1].description}
-              </p>
-            </div>
-
-            {/* Card Footer for Links */}
-            <div className="p-8 pt-0 border-t border-[#1e2d5a]/40 bg-[#070c1e]/40 flex flex-col gap-3 relative z-10">
-              {/* Stats row inside FIC card */}
-              <div className="flex justify-between border-b border-[#1e2d5a]/30 pb-3 text-xs">
-                {ORGANIZERS[1].stats.map((stat, idx) => (
-                  <div key={idx} className="flex justify-between w-full">
-                    <span className="text-slate-500">{stat.label}</span>
-                    <span className="font-orbitron font-bold text-indigo-400">{stat.value}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-2.5">
-                <Link
-                  href={ORGANIZERS[1].facebook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-indigo-950/20 border border-indigo-500/10 hover:border-indigo-500/40 text-xs font-semibold text-indigo-400 transition-all duration-300 hover:bg-indigo-500/10 active:translate-y-px"
-                >
-                  <FacebookIcon className="w-3.5 h-3.5" />
-                  <span>Facebook</span>
-                </Link>
-                {ORGANIZERS[1].email && (
-                  <Link
-                    href={`mailto:${ORGANIZERS[1].email}`}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#131e3d]/40 border border-[#1e2d5a] hover:border-slate-400 text-xs font-semibold text-slate-300 transition-all duration-300 hover:bg-[#131e3d]/80 active:translate-y-px"
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Email</span>
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Banner / Extra Bento Grid Card (Full width on large, beautifully containing stats and custom italic accents) */}
-          <div className="md:col-span-2 group relative rounded-2xl bg-gradient-to-r from-[#0b1124] to-[#111c3a] border border-[#1e2d5a] hover:border-emerald-500/30 transition-all duration-500 overflow-hidden shadow-2xl p-8 sm:p-10 flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-            
-            {/* Left part: Accent Slogan & Text with Italic Serif */}
-            <div className="space-y-3 text-center md:text-left max-w-xl">
-              <h3 className="text-xl sm:text-2xl text-white font-orbitron font-semibold tracking-wide">
-                Sứ Mệnh Đồng Hành
-              </h3>
-              
-              {/* Italic serif accents to avoid looking AI generic */}
-              <p className="text-emerald-400 font-serif italic text-base sm:text-lg leading-relaxed pl-2 border-l-2 border-emerald-500/40">
-                &ldquo;Đồng lòng kiến tạo sân chơi công nghệ lớn nhất dành cho sinh viên, nơi các ý tưởng khởi nghiệp sáng tạo cất cánh và vươn tầm cao mới.&rdquo;
-              </p>
-            </div>
-
-            {/* Right part: Action / General details */}
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto justify-center shrink-0">
-              <div className="p-4 rounded-xl bg-slate-900/50 border border-[#1e2d5a] text-center min-w-[120px] backdrop-blur-sm">
-                <div className="text-3xl font-orbitron font-extrabold text-white">02</div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Đồng tổ chức</div>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-900/50 border border-[#1e2d5a] text-center min-w-[120px] backdrop-blur-sm">
-                <div className="text-3xl font-orbitron font-extrabold text-cyan-400">100%</div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Nhiệt huyết</div>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-900/50 border border-[#1e2d5a] text-center min-w-[120px] backdrop-blur-sm">
-                <div className="text-3xl font-orbitron font-extrabold text-indigo-400">2026</div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Bứt phá</div>
-              </div>
-            </div>
-          </div>
-          
+          {ORGANIZERS.map((org) => (
+            <OrganizerCard
+              key={org.id}
+              org={org}
+              logoError={!!logoErrors[org.id]}
+              onImageError={handleImageError}
+            />
+          ))}
         </div>
 
-        {/* Floating Back to Home button */}
+        {/* Back to home */}
         <div className="text-center mt-12">
           <Link
             href="/"

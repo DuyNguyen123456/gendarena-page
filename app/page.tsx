@@ -47,7 +47,7 @@ export default async function HomePage() {
           {/* Arena Badge */}
           <div className="inline-flex items-center gap-2 bg-cyan-950/40 border border-cyan-500/30 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest text-cyan-400 uppercase mb-8 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            SYSTEM OPERATIONAL • SEASON 2026
+            GenD Arena • Season 2026
           </div>
 
           {/* Title */}
@@ -97,7 +97,6 @@ export default async function HomePage() {
       {/* Features Section */}
       <section className="relative max-w-5xl mx-auto px-6 py-20">
         <div className="flex flex-col items-center mb-12">
-          <p className="text-xs font-orbitron tracking-[0.3em] text-cyan-500/70 uppercase mb-3">MISSION BRIEFING</p>
           <h2 className="font-orbitron text-3xl font-bold tracking-widest uppercase mb-3">
             VỀ CUỘC THI
           </h2>
