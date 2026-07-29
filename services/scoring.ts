@@ -54,6 +54,7 @@ export type AssignedSubmission = {
   file_path: string | null
   uploaded_at: string
   status: string
+  topic?: string | null
   teams?: { name: string } | null
   competition_phases?: { title: string } | null
 }
@@ -327,6 +328,9 @@ export async function assignJudgeToSubmission(
   assignedBy: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = createClient()
+  // Remove existing assignment for this submission if any (single judge per submission constraint)
+  await supabase.from('judge_assignments').delete().eq('submission_id', submissionId)
+
   const { error } = await supabase.from('judge_assignments').insert({
     judge_id: judgeId,
     submission_id: submissionId,
@@ -334,13 +338,48 @@ export async function assignJudgeToSubmission(
   } as never)
 
   if (error) return { ok: false, error: error.message }
+
+  // Update submission status in DB to 'reviewing' (assigned)
+  await supabase
+    .from('submissions')
+    .update({ status: 'reviewing' } as never)
+    .eq('id', submissionId)
+
   return { ok: true }
 }
 
-export async function removeAssignment(assignmentId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function removeAssignment(assignmentId: string, submissionId?: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = createClient()
+
+  // Find submission_id first if not provided
+  let subId = submissionId
+  if (!subId) {
+    const { data } = await supabase
+      .from('judge_assignments')
+      .select('submission_id')
+      .eq('id', assignmentId)
+      .single()
+    subId = data?.submission_id
+  }
+
   const { error } = await supabase.from('judge_assignments').delete().eq('id', assignmentId)
   if (error) return { ok: false, error: error.message }
+
+  // Reset submission status to 'submitted' if no remaining assignments
+  if (subId) {
+    const { count } = await supabase
+      .from('judge_assignments')
+      .select('id', { count: 'exact', head: true })
+      .eq('submission_id', subId)
+
+    if (!count || count === 0) {
+      await supabase
+        .from('submissions')
+        .update({ status: 'submitted' } as never)
+        .eq('id', subId)
+    }
+  }
+
   return { ok: true }
 }
 

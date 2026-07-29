@@ -21,6 +21,12 @@ export interface CompetitionPhase {
   submission_opens_at: string | null
   /** Optional: deadline datetime (null = no deadline) */
   submission_closes_at: string | null
+  /** Admin toggle — true = judges can score this phase */
+  scoring_open?: boolean
+  /** Optional: earliest datetime judges can score (null = immediately) */
+  scoring_opens_at?: string | null
+  /** Optional: deadline for scoring (null = no deadline) */
+  scoring_closes_at?: string | null
   /** Type of competition phase: round, event, or webinar */
   event_type?: 'round' | 'event' | 'webinar'
 }
@@ -38,6 +44,9 @@ export interface PhaseFormData {
   submission_type: SubmissionType
   submission_opens_at: string | null
   submission_closes_at: string | null
+  scoring_open: boolean
+  scoring_opens_at: string | null
+  scoring_closes_at: string | null
   event_type?: 'round' | 'event' | 'webinar'
 }
 
@@ -62,6 +71,37 @@ export function getSubmissionGate(phase: CompetitionPhase): SubmissionGateStatus
 
   if (phase.submission_closes_at) {
     const closesAt = new Date(phase.submission_closes_at).getTime()
+    if (now > closesAt) return 'expired'
+  }
+
+  return 'open'
+}
+
+/**
+ * Gate result for judge scoring — computed from scoring_open / scoring_opens_at / scoring_closes_at.
+ */
+export type ScoringGateStatus =
+  | 'closed'       // scoring_open = false
+  | 'not_yet'      // scoring_opens_at is in the future
+  | 'expired'      // scoring_closes_at is in the past
+  | 'open'         // all good, judges can score
+
+export function getScoringGate(phase: CompetitionPhase | {
+  scoring_open?: boolean
+  scoring_opens_at?: string | null
+  scoring_closes_at?: string | null
+}): ScoringGateStatus {
+  if (!phase.scoring_open) return 'closed'
+
+  const now = Date.now()
+
+  if (phase.scoring_opens_at) {
+    const opensAt = new Date(phase.scoring_opens_at).getTime()
+    if (now < opensAt) return 'not_yet'
+  }
+
+  if (phase.scoring_closes_at) {
+    const closesAt = new Date(phase.scoring_closes_at).getTime()
     if (now > closesAt) return 'expired'
   }
 

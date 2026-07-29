@@ -39,6 +39,9 @@ export async function createPhase(
     end_date: formData.end_date || null,
     submission_opens_at: formData.submission_opens_at || null,
     submission_closes_at: formData.submission_closes_at || null,
+    scoring_open: formData.scoring_open ?? false,
+    scoring_opens_at: formData.scoring_opens_at || null,
+    scoring_closes_at: formData.scoring_closes_at || null,
   })
   return { error: error?.message ?? null }
 }
@@ -56,6 +59,9 @@ export async function updatePhase(
       end_date: formData.end_date || null,
       submission_opens_at: formData.submission_opens_at || null,
       submission_closes_at: formData.submission_closes_at || null,
+      scoring_open: formData.scoring_open ?? false,
+      scoring_opens_at: formData.scoring_opens_at || null,
+      scoring_closes_at: formData.scoring_closes_at || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -64,7 +70,6 @@ export async function updatePhase(
 
 /**
  * Quick toggle — updates only submission_open for a single phase.
- * Used by the admin toggle switch for instant feedback without opening the full modal.
  */
 export async function toggleSubmissionOpen(
   id: string,
@@ -74,6 +79,22 @@ export async function toggleSubmissionOpen(
   const { error } = await supabase
     .from('competition_phases')
     .update({ submission_open: open, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  return { error: error?.message ?? null }
+}
+
+/**
+ * Quick toggle — updates only scoring_open for a single phase.
+ * Also triggers sync to scoring_rounds.scoring_open via Postgres trigger.
+ */
+export async function toggleScoringOpen(
+  id: string,
+  open: boolean
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('competition_phases')
+    .update({ scoring_open: open, updated_at: new Date().toISOString() })
     .eq('id', id)
   return { error: error?.message ?? null }
 }

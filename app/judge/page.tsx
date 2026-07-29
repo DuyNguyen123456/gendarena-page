@@ -7,10 +7,18 @@ import Link from 'next/link'
 import Loading from '@/components/loading'
 import { getPostLoginPath } from '@/lib/auth/routing'
 import { getScoringRounds, type ScoringRound } from '@/services/scoring'
+import { updateProfileExpertise } from '@/services/profile'
+import type { TopicCategory } from '@/types/submission'
+import { TOPIC_CATEGORIES, TOPIC_CATEGORY_CONFIG } from '@/types/submission'
 
 export default function JudgeHomePage() {
   const [loading, setLoading] = useState(true)
   const [profileName, setProfileName] = useState('')
+  const [judgeId, setJudgeId] = useState('')
+  const [expertise, setExpertise] = useState<TopicCategory[]>([])
+  const [editingExpertise, setEditingExpertise] = useState(false)
+  const [expertiseDraft, setExpertiseDraft] = useState<TopicCategory[]>([])
+  const [savingExpertise, setSavingExpertise] = useState(false)
   const [activeRound, setActiveRound] = useState<ScoringRound | null>(null)
   const [assignmentCount, setAssignmentCount] = useState(0)
   const router = useRouter()
@@ -23,7 +31,7 @@ export default function JudgeHomePage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, role')
+        .select('full_name, role, expertise')
         .eq('id', user.id)
         .single()
 
@@ -33,6 +41,11 @@ export default function JudgeHomePage() {
       }
 
       setProfileName(profile.full_name ?? 'Giám khảo')
+      setJudgeId(user.id)
+      const savedExpertise: TopicCategory[] = ((profile.expertise ?? []) as string[]).filter(
+        (e): e is TopicCategory => TOPIC_CATEGORIES.includes(e as TopicCategory)
+      )
+      setExpertise(savedExpertise)
 
       const rounds = await getScoringRounds()
       setActiveRound(rounds.find((round) => round.scoring_open) ?? null)
@@ -48,6 +61,27 @@ export default function JudgeHomePage() {
     init()
   }, [router, supabase])
 
+  const handleOpenExpertiseEdit = () => {
+    setExpertiseDraft([...expertise])
+    setEditingExpertise(true)
+  }
+
+  const toggleDraft = (cat: TopicCategory) => {
+    setExpertiseDraft((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    )
+  }
+
+  const handleSaveExpertise = async () => {
+    setSavingExpertise(true)
+    const result = await updateProfileExpertise(judgeId, expertiseDraft)
+    setSavingExpertise(false)
+    if (result.ok) {
+      setExpertise(expertiseDraft)
+      setEditingExpertise(false)
+    }
+  }
+
   if (loading) return <Loading text="Đang tải dữ liệu..." />
 
   return (
@@ -58,9 +92,13 @@ export default function JudgeHomePage() {
           <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider uppercase">
             ⚖️ BẢNG ĐIỀU KHIỂN GIÁM KHẢO
           </h1>
+          <p className="text-xs text-slate-400 mt-1 font-semibold tracking-widest">
+            Xin chào, <span className="text-purple-300">{profileName}</span>
+          </p>
         </div>
 
         <div className="grid gap-6 mb-8">
+          {/* Status & Assignment Count */}
           <div className="tech-panel p-6 border-purple-500/20">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -74,6 +112,81 @@ export default function JudgeHomePage() {
                 <p className="font-orbitron text-2xl font-bold text-cyan-400">{assignmentCount}</p>
               </div>
             </div>
+          </div>
+
+          {/* Expertise Section */}
+          <div className="tech-panel p-6 border-purple-500/20">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-[10px] font-orbitron tracking-widest text-slate-500 uppercase mb-1">Lĩnh vực chuyên môn</p>
+                <p className="text-xs text-slate-400">Giúp BTC phân công bài phù hợp với chuyên môn của bạn</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenExpertiseEdit}
+                className="text-xs font-orbitron font-bold text-purple-400 border border-purple-500/30 px-3 py-1.5 rounded-lg hover:bg-purple-950/30 transition uppercase tracking-widest"
+              >
+                ✏ Cập nhật
+              </button>
+            </div>
+
+            {editingExpertise ? (
+              <div className="space-y-2">
+                {TOPIC_CATEGORIES.map((cat) => {
+                  const cfg = TOPIC_CATEGORY_CONFIG[cat]
+                  const isSelected = expertiseDraft.includes(cat)
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => toggleDraft(cat)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left text-xs font-bold tracking-wide transition ${
+                        isSelected
+                          ? `${cfg.cls} opacity-100`
+                          : 'border-[#1e2d5a] bg-slate-950/40 text-slate-400 hover:border-slate-600'
+                      }`}
+                    >
+                      <span className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition ${
+                        isSelected ? 'bg-current border-current' : 'border-slate-600'
+                      }`}>
+                        {isSelected && <span className="text-[8px] text-[#0b1124] font-black">✓</span>}
+                      </span>
+                      {cfg.label}
+                    </button>
+                  )
+                })}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveExpertise}
+                    disabled={savingExpertise}
+                    className="flex-1 px-4 py-2.5 bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white text-xs font-orbitron font-bold uppercase tracking-wider rounded-lg transition"
+                  >
+                    {savingExpertise ? '⏳ ĐANG LƯU...' : '💾 LƯU'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingExpertise(false)}
+                    className="px-4 py-2.5 border border-[#1e2d5a] text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-900/60 transition"
+                  >
+                    Huỷ
+                  </button>
+                </div>
+              </div>
+            ) : expertise.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {expertise.map((e) => {
+                  const cfg = TOPIC_CATEGORY_CONFIG[e]
+                  return (
+                    <span key={e} className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-xs font-bold ${cfg.cls}`}>
+                      {cfg.label}
+                    </span>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600 italic">Bạn chưa khai báo lĩnh vực chuyên môn. Bấm &quot;Cập nhật&quot; để chọn.</p>
+            )}
           </div>
 
           {activeRound?.rubric_url && (

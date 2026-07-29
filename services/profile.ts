@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase'
+import type { TopicCategory } from '@/types/submission'
 
 const AVATAR_BUCKET = 'avatars'
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024
@@ -80,6 +81,26 @@ export async function updateProfile(
   const { error } = await supabase
     .from('profiles')
     .update(fields as never)
+    .eq('id', userId)
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
+}
+
+/**
+ * Update the expertise areas for a judge profile.
+ * Can be called by the judge themselves or by an admin on behalf of a judge.
+ * @param userId - The user ID whose profile to update
+ * @param expertise - Array of TopicCategory values (the 5 standard topics)
+ */
+export async function updateProfileExpertise(
+  userId: string,
+  expertise: TopicCategory[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('profiles')
+    .update({ expertise } as never)
     .eq('id', userId)
 
   if (error) return { ok: false, error: error.message }

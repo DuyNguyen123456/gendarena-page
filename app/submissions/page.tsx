@@ -19,7 +19,8 @@ import {
   insertLinkSubmission,
   replaceLinkSubmission,
 } from '@/services/submissions'
-import type { Submission, SubmissionHistory, TeamRecord } from '@/types/submission'
+import type { Submission, SubmissionHistory, TeamRecord, TopicCategory } from '@/types/submission'
+import { TOPIC_CATEGORIES } from '@/types/submission'
 import type { CompetitionPhase } from '@/types/phase'
 import { getSubmissionGate } from '@/types/phase'
 
@@ -308,6 +309,9 @@ function SubmitForm({
   // For 'both', default to whichever tab makes sense
   const [activeTab, setActiveTab] = useState<'file' | 'link'>(type === 'link' ? 'link' : 'file')
 
+  const [topic, setTopic] = useState<TopicCategory | ''>('')
+  const [topicError, setTopicError] = useState<string | null>(null)
+
   const [file, setFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [linkValue, setLinkValue] = useState('')
@@ -334,6 +338,11 @@ function SubmitForm({
   }
 
   async function doSubmit(existing: Submission | null) {
+    if (!topic) {
+      setTopicError('Vui lòng chọn 1 trong 5 nhóm chủ đề bắt buộc.')
+      return
+    }
+
     setUploading(true)
     setUploadProgress(10)
 
@@ -351,13 +360,13 @@ function SubmitForm({
     if (activeTab === 'file' && file) {
       setUploadProgress(50)
       result = existing
-        ? await replaceFileSubmission(user.id, teamId, phase.id, file, existing)
-        : await insertFileSubmission(user.id, teamId, phase.id, file)
+        ? await replaceFileSubmission(user.id, teamId, phase.id, file, existing, topic)
+        : await insertFileSubmission(user.id, teamId, phase.id, file, topic)
     } else {
       setUploadProgress(60)
       result = existing
-        ? await replaceLinkSubmission(user.id, teamId, phase.id, linkValue, existing)
-        : await insertLinkSubmission(user.id, teamId, phase.id, linkValue)
+        ? await replaceLinkSubmission(user.id, teamId, phase.id, linkValue, existing, topic)
+        : await insertLinkSubmission(user.id, teamId, phase.id, linkValue, topic)
     }
 
     setUploadProgress(100)
@@ -376,6 +385,11 @@ function SubmitForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (!topic) {
+      setTopicError('Vui lòng chọn 1 trong 5 nhóm chủ đề bắt buộc.')
+      return
+    }
 
     if (activeTab === 'file') {
       if (!file) { addToast('error', 'Vui lòng chọn file PDF.'); return }
@@ -408,6 +422,36 @@ function SubmitForm({
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Topic Category Selector */}
+        <div>
+          <label className="block text-xs font-orbitron font-bold tracking-widest text-cyan-400 uppercase mb-2">
+            🏷️ Nhóm chủ đề bài thi <span className="text-red-400">*</span>
+          </label>
+          <select
+            id={`topic-select-${phase.id}`}
+            value={topic}
+            onChange={(e) => {
+              setTopic(e.target.value as TopicCategory)
+              setTopicError(null)
+            }}
+            className={`w-full bg-slate-950/80 border rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition ${
+              topicError ? 'border-red-500/60 bg-red-950/20' : 'border-[#1e2d5a] focus:border-cyan-400/60'
+            }`}
+          >
+            <option value="" disabled>-- Chọn 1 trong 5 nhóm chủ đề --</option>
+            {TOPIC_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat} className="bg-slate-900 text-white">
+                {cat}
+              </option>
+            ))}
+          </select>
+          {topicError && (
+            <p className="mt-1.5 text-xs text-red-400 font-bold flex items-center gap-1.5">
+              <span>⚠</span> {topicError}
+            </p>
+          )}
+        </div>
+
         {/* Tab selector for 'both' */}
         {type === 'both' && (
           <div className="flex rounded-lg border border-[#1e2d5a] overflow-hidden">
@@ -508,6 +552,12 @@ function CurrentSubmissionCard({
               {isFile ? submission.file_name : 'Bài nộp bằng link'}
             </span>
           </div>
+          {submission.topic && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-950/60 border border-cyan-500/30 rounded-lg text-xs font-semibold text-cyan-300">
+              <span>🏷️ Chủ đề:</span>
+              <span>{submission.topic}</span>
+            </div>
+          )}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400 font-semibold">
             {isFile && submission.file_size && <span>📦 {formatBytes(submission.file_size)}</span>}
             <span>🕐 Nộp lúc: {formatDate(submission.uploaded_at)}</span>
@@ -617,106 +667,149 @@ function PhaseSubmissionSection({
   }
 
   // Phase header
-  const statusConfig = {
-    active: { dot: '●', cls: 'text-emerald-400', label: 'ĐANG MỞ' },
-    upcoming: { dot: '○', cls: 'text-amber-400', label: 'SẮP MỞ' },
-    completed: { dot: '✓', cls: 'text-slate-500', label: 'ĐÃ ĐÓNG' },
+  const statusConfig: Record<string, { dot: string; cls: string; label: string; cardBorder: string; cardBg: string }> = {
+    active: {
+      dot: '●', cls: 'text-emerald-400', label: 'ĐANG MỞ',
+      cardBorder: 'border-emerald-500/30', cardBg: 'bg-emerald-950/5',
+    },
+    upcoming: {
+      dot: '○', cls: 'text-amber-400', label: 'SẮP TỚI',
+      cardBorder: 'border-amber-500/20', cardBg: 'bg-amber-950/5',
+    },
+    completed: {
+      dot: '✓', cls: 'text-slate-500', label: 'ĐÃ ĐÓNG',
+      cardBorder: 'border-slate-700/40', cardBg: 'bg-slate-950/20',
+    },
   }
   const sc = statusConfig[phase.status] ?? statusConfig.upcoming
 
   return (
-    <div className="space-y-4">
-      {/* Phase header row */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#1e2d5a]/60">
-        <div className="flex items-center gap-2.5">
-          <span className="text-xl">{phase.icon}</span>
-          <div>
-            <h3 className="font-orbitron text-sm font-bold text-white tracking-wider uppercase">{phase.title}</h3>
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${sc.cls}`}>
-              {sc.dot} {sc.label}
-              {phase.submission_open && gate !== 'closed' && (
-                <span className="text-slate-600 ml-2 font-normal">
-                  {phase.submission_type === 'file' ? '· PDF' : phase.submission_type === 'link' ? '· LINK' : '· PDF / LINK'}
+    <div className={`rounded-xl border ${sc.cardBorder} ${sc.cardBg} overflow-hidden`}>
+      {/* Phase Header Card */}
+      <div className="p-5 border-b border-[#1e2d5a]/60">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            {/* Phase number badge */}
+            <div className="w-9 h-9 rounded-full bg-[#0b1124] border border-[#1e2d5a] flex items-center justify-center font-orbitron font-bold text-cyan-500 shrink-0 text-sm">
+              {phase.phase_number}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h3 className="font-orbitron text-sm font-bold text-white tracking-wider uppercase">{phase.title}</h3>
+                <span className={`text-[10px] font-bold font-orbitron uppercase tracking-widest ${sc.cls}`}>
+                  {sc.dot} {sc.label}
                 </span>
+                {gate === 'open' && (
+                  <span className="text-[9px] text-slate-600 font-semibold">
+                    · {phase.submission_type === 'file' ? 'PDF' : phase.submission_type === 'link' ? 'LINK' : 'PDF / LINK'}
+                  </span>
+                )}
+              </div>
+              {phase.description && (
+                <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">{phase.description}</p>
               )}
-            </span>
+              {/* Date info */}
+              <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1.5 text-[10px] text-slate-500 font-semibold">
+                {phase.start_date && (
+                  <span>
+                    📅 {new Date(phase.start_date).toLocaleDateString('vi-VN')}
+                    {phase.end_date ? ` → ${new Date(phase.end_date).toLocaleDateString('vi-VN')}` : ''}
+                  </span>
+                )}
+                {phase.submission_opens_at && (
+                  <span className="text-cyan-600/80">
+                    📤 Mở nộp: {new Date(phase.submission_opens_at).toLocaleString('vi-VN')}
+                  </span>
+                )}
+                {phase.submission_closes_at && (
+                  <span className="text-red-400/70">
+                    ⛔ Hạn chót: {new Date(phase.submission_closes_at).toLocaleString('vi-VN')}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
+          {/* Quick submit button if open and no form showing */}
+          {gate === 'open' && !showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="text-xs font-orbitron font-bold text-cyan-400 border border-cyan-500/30 px-3 py-1.5 rounded-lg hover:bg-cyan-950/20 uppercase tracking-wider transition shrink-0"
+            >
+              + Nộp bài
+            </button>
+          )}
         </div>
-        {/* Quick submit button if open and no form showing */}
-        {gate === 'open' && !showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="text-xs font-orbitron font-bold text-cyan-400 hover:text-cyan-300 uppercase tracking-wider transition"
-          >
-            + Nộp bài
-          </button>
-        )}
       </div>
 
-      {/* Gate banner (closed / not_yet / expired) */}
-      {gate !== 'open' && <GateBanner phase={phase} />}
+      {/* Phase Body */}
+      <div className="p-5 space-y-4">
+        {/* Gate banner (closed / not_yet / expired) */}
+        {gate !== 'open' && <GateBanner phase={phase} />}
 
-      {loading ? (
-        <div className="h-16 flex items-center justify-center">
-          <span className="w-5 h-5 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
-        </div>
-      ) : (
-        <>
-          {/* Submit form inline */}
-          {showForm && gate === 'open' && (
-            <div className="tech-panel p-5 border-cyan-500/20">
-              <h4 className="font-orbitron text-xs font-bold tracking-widest text-cyan-400 uppercase mb-4">
-                📤 NỘP BÀI — {phase.title}
-              </h4>
-              <SubmitForm
-                phase={phase}
-                teamId={teamId}
-                userId={userId}
-                onSuccess={handleSuccess}
-                onCancel={() => setShowForm(false)}
-              />
-            </div>
-          )}
-
-          {/* Current submission */}
-          {current ? (
-            <CurrentSubmissionCard
-              submission={current}
-              phase={phase}
-              onResubmit={() => setShowForm(true)}
-            />
-          ) : gate === 'open' && !showForm ? (
-            <div className="p-5 border border-dashed border-[#1e2d5a] rounded-xl text-center">
-              <p className="text-slate-600 text-sm font-semibold">Chưa có bài nộp cho vòng này</p>
-              <button
-                onClick={() => setShowForm(true)}
-                className="mt-2 text-xs font-orbitron font-bold text-cyan-500 hover:text-cyan-300 uppercase tracking-wider transition"
-              >
-                + Nộp bài ngay
-              </button>
-            </div>
-          ) : gate !== 'open' ? (
-            <div className="p-5 border border-dashed border-[#1e2d5a]/40 rounded-xl text-center">
-              <p className="text-slate-600 text-sm">Chưa có bài nộp.</p>
-            </div>
-          ) : null}
-
-          {/* History */}
-          {history.length > 0 && (
-            <div className="mt-2">
-              <h4 className="font-orbitron text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-3 flex items-center gap-1.5">
-                🗄 LỊCH SỬ BÀI NỘP CŨ
-              </h4>
-              <div className="space-y-2">
-                {history.map((item) => <HistoryItem key={item.id} item={item} />)}
+        {loading ? (
+          <div className="h-16 flex items-center justify-center">
+            <span className="w-5 h-5 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            {/* Submit form inline */}
+            {showForm && gate === 'open' && (
+              <div className="tech-panel p-5 border-cyan-500/20">
+                <h4 className="font-orbitron text-xs font-bold tracking-widest text-cyan-400 uppercase mb-4">
+                  📤 NỘP BÀI — {phase.title}
+                </h4>
+                <SubmitForm
+                  phase={phase}
+                  teamId={teamId}
+                  userId={userId}
+                  onSuccess={handleSuccess}
+                  onCancel={() => setShowForm(false)}
+                />
               </div>
-              <p className="mt-3 text-[10px] text-slate-600 font-semibold italic text-center">
-                File cũ đã được xóa để tiết kiệm dung lượng
-              </p>
-            </div>
-          )}
-        </>
-      )}
+            )}
+
+            {/* Current submission */}
+            {current ? (
+              <CurrentSubmissionCard
+                submission={current}
+                phase={phase}
+                onResubmit={() => setShowForm(true)}
+              />
+            ) : gate === 'open' && !showForm ? (
+              <div className="p-5 border border-dashed border-[#1e2d5a] rounded-xl text-center">
+                <p className="text-slate-600 text-sm font-semibold">Chưa có bài nộp cho vòng này</p>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="mt-2 text-xs font-orbitron font-bold text-cyan-500 hover:text-cyan-300 uppercase tracking-wider transition"
+                >
+                  + Nộp bài ngay
+                </button>
+              </div>
+            ) : gate !== 'open' && !current ? (
+              <div className="p-4 border border-dashed border-[#1e2d5a]/40 rounded-xl text-center">
+                <p className="text-slate-600 text-xs">
+                  {phase.status === 'upcoming' ? 'Vòng thi chưa bắt đầu.' : 'Vòng thi đã kết thúc.'}
+                </p>
+              </div>
+            ) : null}
+
+            {/* History */}
+            {history.length > 0 && (
+              <div className="mt-2">
+                <h4 className="font-orbitron text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-3 flex items-center gap-1.5">
+                  🗄 LỊCH SỬ BÀI NỘP CŨ
+                </h4>
+                <div className="space-y-2">
+                  {history.map((item) => <HistoryItem key={item.id} item={item} />)}
+                </div>
+                <p className="mt-3 text-[10px] text-slate-600 font-semibold italic text-center">
+                  File cũ đã được xóa để tiết kiệm dung lượng
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -804,11 +897,11 @@ export default function SubmissionsPage() {
                   </div>
                 </div>
 
-                {/* Phases */}
+                {/* Phases — Journey */}
                 {phases.length === 0 ? (
                   <p className="text-slate-600 text-sm text-center py-4">Chưa có vòng thi nào được cấu hình.</p>
                 ) : (
-                  <div className="space-y-8">
+                  <div className="space-y-4">
                     {phases.map((phase) => (
                       <PhaseSubmissionSection
                         key={`${team.id}-${phase.id}`}

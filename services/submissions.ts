@@ -12,6 +12,7 @@ import type {
   SubmissionHistory,
   TeamRecord,
   ServiceResult,
+  TopicCategory,
 } from '@/types/submission'
 
 const BUCKET = 'submissions'
@@ -175,6 +176,7 @@ export async function insertFileSubmission(
   teamId: string,
   phaseId: string,
   file: File,
+  topic: TopicCategory,
 ): Promise<ServiceResult> {
   const supabase = createClient()
   const storagePath = buildStoragePath(userId, phaseId, file.name)
@@ -201,6 +203,7 @@ export async function insertFileSubmission(
     uploaded_at: new Date().toISOString(),
     status: 'submitted',
     notes: null,
+    topic,
   })
 
   if (dbError) {
@@ -226,6 +229,7 @@ export async function replaceFileSubmission(
   phaseId: string,
   file: File,
   existing: Submission,
+  topic: TopicCategory,
 ): Promise<ServiceResult> {
   const supabase = createClient()
   const newStoragePath = buildStoragePath(userId, phaseId, file.name)
@@ -251,6 +255,7 @@ export async function replaceFileSubmission(
     uploaded_at: existing.uploaded_at,
     deleted_at: new Date().toISOString(),
     reason: 'replaced',
+    topic: existing.topic,
   })
 
   if (historyError) {
@@ -283,6 +288,7 @@ export async function replaceFileSubmission(
       uploaded_at: new Date().toISOString(),
       status: 'submitted',
       notes: null,
+      topic,
     })
     .eq('id', existing.id)
 
@@ -306,6 +312,7 @@ export async function insertLinkSubmission(
   teamId: string,
   phaseId: string,
   url: string,
+  topic: TopicCategory,
 ): Promise<ServiceResult> {
   const supabase = createClient()
 
@@ -322,6 +329,7 @@ export async function insertLinkSubmission(
     uploaded_at: new Date().toISOString(),
     status: 'submitted',
     notes: null,
+    topic,
   })
 
   if (error) {
@@ -343,6 +351,7 @@ export async function replaceLinkSubmission(
   phaseId: string,
   url: string,
   existing: Submission,
+  topic: TopicCategory,
 ): Promise<ServiceResult> {
   const supabase = createClient()
 
@@ -357,6 +366,7 @@ export async function replaceLinkSubmission(
     uploaded_at: existing.uploaded_at,
     deleted_at: new Date().toISOString(),
     reason: 'replaced',
+    topic: existing.topic,
   })
 
   if (historyError) {
@@ -375,7 +385,6 @@ export async function replaceLinkSubmission(
     }
   }
 
-  // Step 2: Update
   const { error: updateError } = await supabase
     .from('submissions')
     .update({
@@ -389,6 +398,7 @@ export async function replaceLinkSubmission(
       uploaded_at: new Date().toISOString(),
       status: 'submitted',
       notes: null,
+      topic,
     })
     .eq('id', existing.id)
 
@@ -404,3 +414,105 @@ export async function replaceLinkSubmission(
 // Keep old names so any future callers don't break immediately.
 export { insertFileSubmission as insertSubmission }
 export { replaceFileSubmission as replaceSubmission }
+
+// ─── Admin helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Fetch ALL submissions with joined team name, phase title, and assignment info.
+ * This is the single source of truth for /admin/submissions and /admin/assign.
+ *
+ * IMPLEMENTATION NOTE:
+ * We intentionally split this into TWO separate queries instead of one complex join.
+ * The reason: PostgREST alias syntax `profiles:judge_id(full_name)` inside
+ * judge_assignments requires the FK relationship to be registered by the exact
+ * name in PostgREST's schema cache. If not registered, it throws PGRST200 and
+ * the ENTIRE query silently returns []. Splitting avoids this fragile dependency.
+ *
+ * IMPORTANT: This query requires the FK constraint submissions_phase_id_fkey
+ * to exist in the database. Without it, PostgREST cannot resolve
+ * competition_phases(title) and will silently return null data.
+ * Run fix_dataflow_and_expertise_migration.sql first if the join fails.
+ */
+export async function getAllSubmissionsForAdmin() {
+  const supabase = createClient()
+
+  // ── Query 1: submissions with team name and phase title ──────────────────
+  const { data: subData, error: subError } = await supabase
+    .from('submissions')
+    .select('id, submission_kind, file_name, submission_url, file_path, uploaded_at, status, phase_id, topic, teams(name), competition_phases(title)')
+    .order('uploaded_at', { ascending: false })
+
+  if (subError) {
+    console.error('[getAllSubmissionsForAdmin] submissions query failed:', JSON.stringify(subError, null, 2))
+    return []
+  }
+
+  // ── Query 2: assignments with judge profile (safe separate query) ─────────
+  const { data: assignData, error: assignError } = await supabase
+    .from('judge_assignments')
+    .select('id, judge_id, submission_id, profiles(full_name)')
+
+  if (assignError) {
+    // Non-fatal: continue without assignment data, just log
+    console.error('[getAllSubmissionsForAdmin] judge_assignments query failed:', JSON.stringify(assignError, null, 2))
+  }
+
+  // Build a map: submission_id → assignment info
+  type AssignMap = Record<string, { id: string; judge_id: string; full_name?: string }>
+  const assignMap: AssignMap = {}
+
+  for (const row of (assignData ?? [])) {
+    type RawAssign = { id: string; judge_id: string; submission_id: string; profiles?: { full_name: string } | { full_name: string }[] | null }
+    const r = row as RawAssign
+    const prof = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles
+    assignMap[r.submission_id] = {
+      id: r.id,
+      judge_id: r.judge_id,
+      full_name: prof?.full_name,
+    }
+  }
+
+  // ── Normalize and merge ───────────────────────────────────────────────────
+  type RawSub = {
+    id: string
+    submission_kind: string
+    file_name: string | null
+    submission_url: string | null
+    file_path: string | null
+    uploaded_at: string
+    status: string
+    phase_id: string | null
+    topic: string | null
+    teams: { name: string } | { name: string }[] | null
+    competition_phases: { title: string } | { title: string }[] | null
+  }
+
+  return (subData ?? []).map((row): import('@/types/submission').AdminSubmissionRow => {
+    const r = row as RawSub
+    const teams = Array.isArray(r.teams) ? (r.teams[0] ?? null) : r.teams
+    const competition_phases = Array.isArray(r.competition_phases)
+      ? (r.competition_phases[0] ?? null)
+      : r.competition_phases
+
+    const asgn = assignMap[r.id] ?? null
+    const assigned_judge = asgn
+      ? { id: asgn.id, judge_id: asgn.judge_id, full_name: asgn.full_name }
+      : null
+
+    return {
+      id: r.id,
+      submission_kind: r.submission_kind as import('@/types/submission').SubmissionKind,
+      file_name: r.file_name,
+      submission_url: r.submission_url,
+      file_path: r.file_path,
+      uploaded_at: r.uploaded_at,
+      status: r.status,
+      phase_id: r.phase_id,
+      topic: r.topic as import('@/types/submission').TopicCategory | null,
+      teams,
+      competition_phases,
+      assigned_judge,
+    }
+  })
+}
+

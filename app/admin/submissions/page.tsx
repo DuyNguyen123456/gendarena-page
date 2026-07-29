@@ -5,44 +5,47 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/loading'
-import { getDownloadUrl } from '@/services/submissions'
-
-type SubmissionRow = {
-  id: string
-  submission_kind: 'file' | 'link'
-  file_name: string | null
-  submission_url: string | null
-  file_path: string | null
-  uploaded_at: string
-  status: string
-  phase_id: string | null
-  teams?: { name: string } | null
-  competition_phases?: { title: string } | null
-}
+import { getDownloadUrl, getAllSubmissionsForAdmin } from '@/services/submissions'
+import type { AdminSubmissionRow, TopicCategory } from '@/types/submission'
+import { TOPIC_CATEGORY_CONFIG } from '@/types/submission'
 
 type Phase = { id: string; title: string }
+type TabKey = 'all' | 'pending' | string
 
-type TabKey = 'all' | 'pending' | string // string for phase IDs
+// ─── Topic Badge ──────────────────────────────────────────────────────────────
+
+function TopicBadge({ topic }: { topic: TopicCategory | string | null | undefined }) {
+  if (!topic) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-md border text-[9px] font-bold tracking-wide bg-slate-900 border-slate-600/40 text-slate-500">
+        Chưa chọn chủ đề
+      </span>
+    )
+  }
+  const cfg = TOPIC_CATEGORY_CONFIG[topic as TopicCategory]
+  if (!cfg) return null
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[9px] font-bold tracking-wide ${cfg.cls}`}>
+      {cfg.label}
+    </span>
+  )
+}
 
 export default function AdminSubmissions() {
-  const [submissions, setSubmissions] = useState<SubmissionRow[]>([])
+  const [submissions, setSubmissions] = useState<AdminSubmissionRow[]>([])
   const [phases, setPhases] = useState<Phase[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabKey>('all')
   const [userRole, setUserRole] = useState<string>('')
-  const [judgeId, setJudgeId] = useState<string | null>(null)
   const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set())
 
   const router = useRouter()
   const supabase = createClient()
 
   const loadData = useCallback(async (role: string, uid: string) => {
-    let query = supabase
-      .from('submissions')
-      .select('id, submission_kind, file_name, submission_url, file_path, uploaded_at, status, phase_id, teams(name)')
-      .order('uploaded_at', { ascending: false })
+    let data: AdminSubmissionRow[] = await getAllSubmissionsForAdmin()
 
-    // Judges only see their assigned submissions (RLS handles this, but we also filter client-side)
+    // Judges only see their assigned submissions
     if (role === 'judge') {
       const { data: assignments } = await supabase
         .from('judge_assignments')
@@ -50,17 +53,10 @@ export default function AdminSubmissions() {
         .eq('judge_id', uid)
       const ids = (assignments ?? []).map((a: { submission_id: string }) => a.submission_id)
       setAssignedIds(new Set(ids))
-      if (ids.length > 0) {
-        query = query.in('id', ids)
-      } else {
-        setSubmissions([])
-        return
-      }
+      data = data.filter(sub => ids.includes(sub.id))
     }
 
-    const { data } = await query
-    setSubmissions((data as unknown as SubmissionRow[]) || [])
-
+    setSubmissions(data)
 
     // Load phases for tab filter
     const { data: phaseData } = await supabase
@@ -87,15 +83,13 @@ export default function AdminSubmissions() {
       }
 
       setUserRole(profile.role)
-      if (profile.role === 'judge') setJudgeId(user.id)
-
       await loadData(profile.role, user.id)
       setLoading(false)
     }
     init()
   }, [supabase, router, loadData])
 
-  const openAttachment = async (sub: SubmissionRow) => {
+  const openAttachment = async (sub: AdminSubmissionRow) => {
     if (sub.submission_kind === 'link' && sub.submission_url) {
       window.open(sub.submission_url, '_blank')
       return
@@ -195,11 +189,22 @@ export default function AdminSubmissions() {
               <div key={sub.id} className="tech-panel p-5 rounded-xl border border-[#1e2d5a]/60 hover:border-cyan-500/30 transition group">
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <h3 className="font-orbitron font-bold uppercase text-white group-hover:text-cyan-400 transition">
                         {sub.teams?.name ?? 'Đội thi'}
                       </h3>
                       {statusBadge(sub.status)}
+                      <TopicBadge topic={sub.topic} />
+                      {/* Assigned Judge Badge */}
+                      {sub.assigned_judge ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold font-orbitron bg-purple-950/40 border-purple-500/40 text-purple-300">
+                          👤 BGK: {sub.assigned_judge.full_name ?? 'Đã gán'}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold font-orbitron bg-amber-950/20 border-amber-500/30 text-amber-400">
+                          🔴 CHƯA PHÂN CÔNG
+                        </span>
+                      )}
                       {userRole === 'admin' && assignedIds.size === 0 && (
                         <span className="text-[10px] font-orbitron text-slate-600 border border-slate-800 px-2 py-0.5 rounded">
                           ID: {sub.id.slice(0, 8)}…
@@ -207,7 +212,7 @@ export default function AdminSubmissions() {
                       )}
                     </div>
                     <p className="text-xs text-slate-400 mb-2">
-                      {phases.find(p => p.id === sub.phase_id)?.title ?? '—'} • {new Date(sub.uploaded_at).toLocaleString('vi-VN')}
+                      {sub.competition_phases?.title ?? phases.find(p => p.id === sub.phase_id)?.title ?? '—'} • {new Date(sub.uploaded_at).toLocaleString('vi-VN')}
                     </p>
                     <p className="text-sm text-slate-300">
                       {sub.submission_kind === 'file' ? `📄 ${sub.file_name}` : `🔗 ${sub.submission_url}`}

@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import type { CompetitionPhase, PhaseFormData, PhaseStatus, SubmissionType } from '@/types/phase'
-import { getPhases, createPhase, updatePhase, deletePhase, toggleSubmissionOpen } from '@/services/phases'
-import { Edit2, Trash2, Plus, ToggleLeft, ToggleRight } from 'lucide-react'
+import { getPhases, createPhase, updatePhase, deletePhase, toggleSubmissionOpen, toggleScoringOpen } from '@/services/phases'
+import { Edit2, Trash2, Plus, ToggleLeft, ToggleRight, Scale } from 'lucide-react'
 import Loading from '@/components/loading'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,12 +49,14 @@ const DEFAULT_FORM: PhaseFormData = {
   submission_type: 'file',
   submission_opens_at: null,
   submission_closes_at: null,
+  scoring_open: false,
+  scoring_opens_at: null,
+  scoring_closes_at: null,
 }
 
 /** Convert ISO string to local datetime-local input value */
 function isoToDatetimeLocal(iso: string | null): string {
   if (!iso) return ''
-  // datetime-local expects "YYYY-MM-DDTHH:mm"
   return iso.slice(0, 16)
 }
 
@@ -73,6 +75,7 @@ export default function AdminPhasesPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [togglingScoringId, setTogglingScoringId] = useState<string | null>(null)
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null)
 
   const [formData, setFormData] = useState<PhaseFormData>(DEFAULT_FORM)
@@ -128,6 +131,9 @@ export default function AdminPhasesPage() {
         submission_type: phase.submission_type ?? 'file',
         submission_opens_at: phase.submission_opens_at ?? null,
         submission_closes_at: phase.submission_closes_at ?? null,
+        scoring_open: phase.scoring_open ?? false,
+        scoring_opens_at: phase.scoring_opens_at ?? null,
+        scoring_closes_at: phase.scoring_closes_at ?? null,
       })
     } else {
       setEditingId(null)
@@ -152,7 +158,7 @@ export default function AdminPhasesPage() {
     }
   }
 
-  /** Inline toggle without opening modal */
+  /** Inline submission toggle */
   const handleToggleOpen = async (phase: CompetitionPhase) => {
     setTogglingId(phase.id)
     const { error } = await toggleSubmissionOpen(phase.id, !phase.submission_open)
@@ -164,6 +170,22 @@ export default function AdminPhasesPage() {
       setPhases((prev) =>
         prev.map((p) => (p.id === phase.id ? { ...p, submission_open: !p.submission_open } : p))
       )
+    }
+  }
+
+  /** Inline scoring toggle */
+  const handleToggleScoringOpen = async (phase: CompetitionPhase) => {
+    setTogglingScoringId(phase.id)
+    const { error } = await toggleScoringOpen(phase.id, !phase.scoring_open)
+    setTogglingScoringId(null)
+    if (error) {
+      console.error('Toggle scoring error:', error)
+      setMessage({ text: 'Lỗi khi thay đổi trạng thái chấm điểm.', ok: false })
+    } else {
+      setPhases((prev) =>
+        prev.map((p) => (p.id === phase.id ? { ...p, scoring_open: !p.scoring_open } : p))
+      )
+      setMessage({ text: `Đã ${!phase.scoring_open ? 'MỞ' : 'ĐÓNG'} chấm bài cho vòng "${phase.title}".`, ok: true })
     }
   }
 
@@ -181,6 +203,12 @@ export default function AdminPhasesPage() {
           : null,
         submission_closes_at: formData.submission_closes_at
           ? datetimeLocalToIso(formData.submission_closes_at)
+          : null,
+        scoring_opens_at: formData.scoring_opens_at
+          ? datetimeLocalToIso(formData.scoring_opens_at)
+          : null,
+        scoring_closes_at: formData.scoring_closes_at
+          ? datetimeLocalToIso(formData.scoring_closes_at)
           : null,
       }
       const result = editingId
@@ -216,10 +244,10 @@ export default function AdminPhasesPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-[#1e2d5a] pb-6">
           <div>
             <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase">
-              🗓️ QUẢN LÝ LỊCH TRÌNH
+              🗓️ QUẢN LÝ LỊCH TRÌNH & MỞ CHẤM BÀI
             </h1>
             <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-              TIMELINE CONFIGURATION TERMINAL
+              TIMELINE & SCORING WINDOW TERMINAL
             </p>
           </div>
           <button
@@ -266,6 +294,14 @@ export default function AdminPhasesPage() {
                         {phase.title}
                         <StatusBadge status={phase.status} />
                         <SubmissionTypeBadge type={phase.submission_type ?? 'file'} />
+                        {/* Scoring badge */}
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold font-orbitron border ${
+                          phase.scoring_open
+                            ? 'bg-purple-950/50 border-purple-500/40 text-purple-300'
+                            : 'bg-slate-900 border-slate-700 text-slate-500'
+                        }`}>
+                          ⚖️ {phase.scoring_open ? 'MỞ CHẤM' : 'ĐÓNG CHẤM'}
+                        </span>
                       </h3>
                       <div className="text-xs text-slate-400 mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5">
                         <span>Order: {phase.display_order}</span>
@@ -280,24 +316,24 @@ export default function AdminPhasesPage() {
                             Nộp từ: {new Date(phase.submission_opens_at).toLocaleString('vi-VN')}
                           </span>
                         )}
-                        {phase.submission_closes_at && (
-                          <span className="text-red-400/70">
-                            Đến: {new Date(phase.submission_closes_at).toLocaleString('vi-VN')}
+                        {phase.scoring_opens_at && (
+                          <span className="text-purple-400/70">
+                            Chấm từ: {new Date(phase.scoring_opens_at).toLocaleString('vi-VN')}
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Right: Submission toggle + actions */}
-                  <div className="flex items-center gap-3 shrink-0">
+                  {/* Right: Submission & Scoring toggles + actions */}
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     {/* Inline submission toggle */}
                     <button
                       id={`toggle-submission-${phase.id}`}
                       onClick={() => handleToggleOpen(phase)}
                       disabled={togglingId === phase.id}
                       title={phase.submission_open ? 'Tắt nộp bài' : 'Bật nộp bài'}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold tracking-wider font-orbitron uppercase transition-all ${
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold tracking-wider font-orbitron uppercase transition-all ${
                         phase.submission_open
                           ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/50'
                           : 'bg-slate-800/40 border-[#1e2d5a] text-slate-500 hover:border-cyan-500/30 hover:text-slate-300'
@@ -306,11 +342,31 @@ export default function AdminPhasesPage() {
                       {togglingId === phase.id ? (
                         <span className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
                       ) : phase.submission_open ? (
-                        <ToggleRight className="w-4 h-4" />
+                        <ToggleRight className="w-3.5 h-3.5" />
                       ) : (
-                        <ToggleLeft className="w-4 h-4" />
+                        <ToggleLeft className="w-3.5 h-3.5" />
                       )}
-                      {phase.submission_open ? 'ĐANG MỞ' : 'ĐÃ ĐÓNG'}
+                      NỘP: {phase.submission_open ? 'MỞ' : 'ĐÓNG'}
+                    </button>
+
+                    {/* Inline scoring toggle */}
+                    <button
+                      id={`toggle-scoring-${phase.id}`}
+                      onClick={() => handleToggleScoringOpen(phase)}
+                      disabled={togglingScoringId === phase.id}
+                      title={phase.scoring_open ? 'Tắt chấm điểm' : 'Bật chấm điểm'}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold tracking-wider font-orbitron uppercase transition-all ${
+                        phase.scoring_open
+                          ? 'bg-purple-950/50 border-purple-500/40 text-purple-300 hover:bg-purple-900/50'
+                          : 'bg-slate-800/40 border-[#1e2d5a] text-slate-500 hover:border-purple-500/30 hover:text-slate-300'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {togglingScoringId === phase.id ? (
+                        <span className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                      ) : (
+                        <Scale className="w-3.5 h-3.5" />
+                      )}
+                      CHẤM: {phase.scoring_open ? 'MỞ' : 'ĐÓNG'}
                     </button>
 
                     <button
@@ -413,7 +469,7 @@ export default function AdminPhasesPage() {
               {/* ── Submission controls section ──────────────────────────── */}
               <div className="border-t border-[#1e2d5a] pt-5 space-y-4">
                 <h3 className="font-orbitron text-xs font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-2">
-                  📤 CÀI ĐẶT NỘP BÀI
+                  📤 CÀI ĐẶT NỘP BÀI (THÍ SINH)
                 </h3>
 
                 {/* submission_open toggle */}
@@ -475,7 +531,6 @@ export default function AdminPhasesPage() {
                       onChange={e => setFormData({ ...formData, submission_opens_at: e.target.value || null })}
                       className={inputCls}
                     />
-                    <p className="text-[10px] text-slate-600 mt-1">Để trống = mở ngay khi toggle bật</p>
                   </div>
                   <div>
                     <label className={labelCls}>Đóng nộp lúc (tuỳ chọn)</label>
@@ -485,7 +540,59 @@ export default function AdminPhasesPage() {
                       onChange={e => setFormData({ ...formData, submission_closes_at: e.target.value || null })}
                       className={inputCls}
                     />
-                    <p className="text-[10px] text-slate-600 mt-1">Để trống = không tự đóng</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Scoring controls section ───────────────────────────── */}
+              <div className="border-t border-[#1e2d5a] pt-5 space-y-4">
+                <h3 className="font-orbitron text-xs font-bold text-purple-400 uppercase tracking-widest flex items-center gap-2">
+                  ⚖️ CÀI ĐẶT CHẤM ĐIỂM (BAN GIÁM KHẢO)
+                </h3>
+
+                {/* scoring_open toggle */}
+                <div className="flex items-center justify-between p-3.5 bg-purple-950/20 border border-purple-500/30 rounded-lg">
+                  <div>
+                    <p className="text-sm font-bold text-white">Mở chấm điểm</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Cho phép Giám khảo nhập/sửa điểm bài nộp của vòng này</p>
+                  </div>
+                  <button
+                    type="button"
+                    id="modal-scoring-open-toggle"
+                    onClick={() => setFormData({ ...formData, scoring_open: !formData.scoring_open })}
+                    className={`relative inline-flex h-6 w-11 rounded-full border-2 transition-colors duration-200 focus:outline-none ${
+                      formData.scoring_open
+                        ? 'bg-purple-500 border-purple-400'
+                        : 'bg-slate-700 border-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                        formData.scoring_open ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* scoring windows */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>Mở chấm lúc (tuỳ chọn)</label>
+                    <input
+                      type="datetime-local"
+                      value={isoToDatetimeLocal(formData.scoring_opens_at)}
+                      onChange={e => setFormData({ ...formData, scoring_opens_at: e.target.value || null })}
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Đóng chấm lúc (tuỳ chọn)</label>
+                    <input
+                      type="datetime-local"
+                      value={isoToDatetimeLocal(formData.scoring_closes_at)}
+                      onChange={e => setFormData({ ...formData, scoring_closes_at: e.target.value || null })}
+                      className={inputCls}
+                    />
                   </div>
                 </div>
               </div>

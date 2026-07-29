@@ -17,6 +17,8 @@ import {
   type ScoringRound,
 } from '@/services/scoring'
 
+import { getScoringGate } from '@/types/phase'
+
 export default function JudgeScoringPage() {
   const [loading, setLoading] = useState(true)
   const [submissions, setSubmissions] = useState<AssignedSubmission[]>([])
@@ -63,7 +65,7 @@ export default function JudgeScoringPage() {
     init()
   }, [router, supabase, loadData])
 
-    useEffect(() => {
+  useEffect(() => {
     if (!userId || !selectedRoundId) return
 
     const uid = userId
@@ -78,11 +80,13 @@ export default function JudgeScoringPage() {
   }, [userId, selectedRoundId])
 
   const currentRound = rounds.find((round) => round.id === selectedRoundId)
+  const scoringGate = currentRound ? getScoringGate(currentRound) : 'closed'
+  const isScoringOpen = scoringGate === 'open'
 
   const handleScore = async (e: React.FormEvent<HTMLFormElement>, submissionId: string) => {
     e.preventDefault()
-    if (!userId || !currentRound || !currentRound.scoring_open) {
-      setMessage('❌ Vòng chấm hiện không mở.')
+    if (!userId || !currentRound || !isScoringOpen) {
+      setMessage('❌ Vòng chấm hiện không mở do BTC cấu hình.')
       return
     }
 
@@ -141,7 +145,7 @@ export default function JudgeScoringPage() {
           <div>
             <h1 className="font-orbitron text-2xl font-extrabold tracking-wider uppercase">📝 CHẤM ĐIỂM</h1>
             <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
-              {currentRound?.scoring_open ? '🟢 Cửa sổ chấm đang mở' : '🔒 Cửa sổ chấm đang đóng'}
+              {isScoringOpen ? '🟢 Cửa sổ chấm đang mở' : '🔒 Cửa sổ chấm đang đóng (BTC kiểm soát)'}
             </p>
           </div>
           {currentRound?.rubric_url && (
@@ -175,9 +179,11 @@ export default function JudgeScoringPage() {
           </div>
         )}
 
-        {currentRound && !currentRound.scoring_open && (
+        {!isScoringOpen && currentRound && (
           <div className="tech-panel p-6 mb-6 border-amber-500/30 text-amber-400 text-sm">
-            Vòng chấm hiện chưa mở. Bạn có thể xem bài được phân công nhưng chưa thể lưu điểm.
+            {scoringGate === 'closed' && '🔒 Vòng chấm này hiện chưa được Ban tổ chức mở. Bạn chỉ có thể xem bài nộp nhưng chưa thể nhập điểm.'}
+            {scoringGate === 'not_yet' && '⏰ Chưa đến thời gian mở chấm điểm theo cấu hình của Ban tổ chức.'}
+            {scoringGate === 'expired' && '⛔ Thời gian chấm điểm cho vòng này đã kết thúc.'}
           </div>
         )}
         {!currentRound && (
@@ -205,6 +211,12 @@ export default function JudgeScoringPage() {
                         Giai đoạn: {sub.competition_phases?.title ?? '—'} •{' '}
                         {sub.submission_kind === 'file' ? `📄 ${sub.file_name}` : '🔗 Link nộp'}
                       </p>
+                      {sub.topic && (
+                        <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-cyan-950/60 border border-cyan-500/30 rounded-lg text-xs font-semibold text-cyan-300">
+                          <span>🏷️ Chủ đề:</span>
+                          <span>{sub.topic}</span>
+                        </div>
+                      )}
                     </div>
                     {score && (
                       <div className="text-emerald-400 font-orbitron text-2xl font-bold">
