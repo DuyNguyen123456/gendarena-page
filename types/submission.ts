@@ -49,8 +49,14 @@ export interface AdminSubmissionRow {
   phase_id: string | null
   topic: TopicCategory | null
   teams: { name: string } | null
-  competition_phases: { title: string } | null
+  competition_phases: {
+    title: string
+    scoring_open?: boolean
+    scoring_opens_at?: string | null
+    scoring_closes_at?: string | null
+  } | null
   assigned_judge?: { id: string; judge_id: string; full_name?: string } | null
+  scores?: { id: string; judge_id: string; total_score: number; comment?: string | null }[]
 }
 
 export interface Submission {

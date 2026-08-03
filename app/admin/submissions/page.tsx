@@ -23,7 +23,13 @@ function TopicBadge({ topic }: { topic: TopicCategory | string | null | undefine
     )
   }
   const cfg = TOPIC_CATEGORY_CONFIG[topic as TopicCategory]
-  if (!cfg) return null
+  if (!cfg) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-md border text-[9px] font-bold tracking-wide bg-slate-900 border-slate-600/40 text-slate-500">
+        Chưa chọn chủ đề
+      </span>
+    )
+  }
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[9px] font-bold tracking-wide ${cfg.cls}`}>
       {cfg.label}
@@ -203,6 +209,12 @@ export default function AdminSubmissions() {
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold font-orbitron bg-amber-950/20 border-amber-500/30 text-amber-400">
                           🔴 CHƯA PHÂN CÔNG
+                        </span>
+                      )}
+                      {/* Read-Only Judge Score Badge for Admin */}
+                      {sub.scores && sub.scores.length > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold font-orbitron bg-emerald-950/40 border-emerald-500/40 text-emerald-300">
+                          ⭐ Điểm: {sub.scores[0].total_score.toFixed(1)}
                         </span>
                       )}
                       {userRole === 'admin' && assignedIds.size === 0 && (

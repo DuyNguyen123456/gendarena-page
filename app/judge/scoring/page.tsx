@@ -80,13 +80,14 @@ export default function JudgeScoringPage() {
   }, [userId, selectedRoundId])
 
   const currentRound = rounds.find((round) => round.id === selectedRoundId)
-  const scoringGate = currentRound ? getScoringGate(currentRound) : 'closed'
-  const isScoringOpen = scoringGate === 'open'
 
   const handleScore = async (e: React.FormEvent<HTMLFormElement>, submissionId: string) => {
     e.preventDefault()
-    if (!userId || !currentRound || !isScoringOpen) {
-      setMessage('❌ Vòng chấm hiện không mở do BTC cấu hình.')
+    const sub = submissions.find((s) => s.id === submissionId)
+    const phaseGate = sub?.competition_phases ? getScoringGate(sub.competition_phases) : (currentRound ? getScoringGate(currentRound) : 'closed')
+
+    if (!userId || !currentRound || phaseGate !== 'open') {
+      setMessage('❌ Vòng chấm cho bài nộp này hiện không mở do Ban tổ chức cấu hình.')
       return
     }
 
@@ -145,7 +146,7 @@ export default function JudgeScoringPage() {
           <div>
             <h1 className="font-orbitron text-2xl font-extrabold tracking-wider uppercase">📝 CHẤM ĐIỂM</h1>
             <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
-              {isScoringOpen ? '🟢 Cửa sổ chấm đang mở' : '🔒 Cửa sổ chấm đang đóng (BTC kiểm soát)'}
+              Thời gian chấm điểm do BTC quản lý theo từng vòng thi
             </p>
           </div>
           {currentRound?.rubric_url && (
@@ -179,13 +180,6 @@ export default function JudgeScoringPage() {
           </div>
         )}
 
-        {!isScoringOpen && currentRound && (
-          <div className="tech-panel p-6 mb-6 border-amber-500/30 text-amber-400 text-sm">
-            {scoringGate === 'closed' && '🔒 Vòng chấm này hiện chưa được Ban tổ chức mở. Bạn chỉ có thể xem bài nộp nhưng chưa thể nhập điểm.'}
-            {scoringGate === 'not_yet' && '⏰ Chưa đến thời gian mở chấm điểm theo cấu hình của Ban tổ chức.'}
-            {scoringGate === 'expired' && '⛔ Thời gian chấm điểm cho vòng này đã kết thúc.'}
-          </div>
-        )}
         {!currentRound && (
           <div className="tech-panel p-6 mb-6 border-amber-500/30 text-amber-400 text-sm">
             Hiện không có vòng chấm nào để chấm. Vui lòng chờ BTC cập nhật vòng.
@@ -200,6 +194,9 @@ export default function JudgeScoringPage() {
           <div className="space-y-6">
             {submissions.map((sub) => {
               const score = scores[sub.id]
+              const phaseGate = sub.competition_phases ? getScoringGate(sub.competition_phases) : (currentRound ? getScoringGate(currentRound) : 'closed')
+              const isPhaseScoringOpen = phaseGate === 'open'
+
               return (
                 <div key={sub.id} className="tech-panel-glow p-6 rounded-xl border-cyan-500/15">
                   <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4">
@@ -211,12 +208,10 @@ export default function JudgeScoringPage() {
                         Giai đoạn: {sub.competition_phases?.title ?? '—'} •{' '}
                         {sub.submission_kind === 'file' ? `📄 ${sub.file_name}` : '🔗 Link nộp'}
                       </p>
-                      {sub.topic && (
-                        <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-cyan-950/60 border border-cyan-500/30 rounded-lg text-xs font-semibold text-cyan-300">
-                          <span>🏷️ Chủ đề:</span>
-                          <span>{sub.topic}</span>
-                        </div>
-                      )}
+                      <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-cyan-950/60 border border-cyan-500/30 rounded-lg text-xs font-semibold text-cyan-300">
+                        <span>🏷️ Chủ đề:</span>
+                        <span>{sub.topic ?? 'Chưa chọn chủ đề'}</span>
+                      </div>
                     </div>
                     {score && (
                       <div className="text-emerald-400 font-orbitron text-2xl font-bold">
@@ -228,12 +223,12 @@ export default function JudgeScoringPage() {
                   <button
                     type="button"
                     onClick={() => openAttachment(sub)}
-                    className="text-xs font-orbitron border border-[#1e2d5a] text-cyan-400 px-3 py-2 rounded-lg mb-4 hover:border-cyan-400"
+                    className="text-xs font-orbitron border border-[#1e2d5a] text-cyan-400 px-3 py-2 rounded-lg mb-4 hover:border-cyan-400 mr-3"
                   >
                     {sub.submission_kind === 'file' ? '📄 XEM FILE' : '🔗 MỞ LINK BÀI NỘP'}
                   </button>
 
-                  {currentRound?.scoring_open && scoringId !== sub.id && (
+                  {isPhaseScoringOpen && scoringId !== sub.id && (
                     <button
                       onClick={() => setScoringId(sub.id)}
                       className="tech-btn-accent px-4 py-2 text-xs font-bold uppercase rounded-lg text-black"
@@ -242,7 +237,13 @@ export default function JudgeScoringPage() {
                     </button>
                   )}
 
-                  {scoringId === sub.id && currentRound?.scoring_open && (
+                  {!isPhaseScoringOpen && (
+                    <span className="inline-block px-3 py-1 bg-amber-950/20 border border-amber-500/30 text-amber-400 text-xs rounded-lg font-orbitron">
+                      🔒 CHẤM ĐIỂM ĐÃ ĐÓNG
+                    </span>
+                  )}
+
+                  {scoringId === sub.id && isPhaseScoringOpen && (
                     <form onSubmit={(e) => handleScore(e, sub.id)} className="border border-[#1e2d5a] rounded-xl p-5 mt-4 space-y-4">
                       <div className="space-y-4">
                         <div className="text-sm text-slate-300">

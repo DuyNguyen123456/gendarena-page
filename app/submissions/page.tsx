@@ -552,10 +552,15 @@ function CurrentSubmissionCard({
               {isFile ? submission.file_name : 'Bài nộp bằng link'}
             </span>
           </div>
-          {submission.topic && (
+          {submission.topic ? (
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-950/60 border border-cyan-500/30 rounded-lg text-xs font-semibold text-cyan-300">
               <span>🏷️ Chủ đề:</span>
               <span>{submission.topic}</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-600/40 rounded-lg text-xs font-semibold text-slate-500">
+              <span>🏷️ Chủ đề:</span>
+              <span>Chưa chọn chủ đề</span>
             </div>
           )}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400 font-semibold">

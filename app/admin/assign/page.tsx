@@ -42,7 +42,13 @@ function TopicBadge({ topic }: { topic: TopicCategory | string | null | undefine
     )
   }
   const cfg = TOPIC_CATEGORY_CONFIG[topic as TopicCategory]
-  if (!cfg) return null
+  if (!cfg) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-md border text-[9px] font-bold tracking-wide bg-slate-900 border-slate-600/40 text-slate-500">
+        Chưa chọn chủ đề
+      </span>
+    )
+  }
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[9px] font-bold tracking-wide ${cfg.cls}`}>
       {cfg.label}

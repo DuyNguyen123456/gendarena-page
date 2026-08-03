@@ -436,10 +436,10 @@ export { replaceFileSubmission as replaceSubmission }
 export async function getAllSubmissionsForAdmin() {
   const supabase = createClient()
 
-  // ── Query 1: submissions with team name and phase title ──────────────────
+  // ── Query 1: submissions with team name and phase details ──────────────────
   const { data: subData, error: subError } = await supabase
     .from('submissions')
-    .select('id, submission_kind, file_name, submission_url, file_path, uploaded_at, status, phase_id, topic, teams(name), competition_phases(title)')
+    .select('id, submission_kind, file_name, submission_url, file_path, uploaded_at, status, phase_id, topic, teams(name), competition_phases(title, scoring_open, scoring_opens_at, scoring_closes_at)')
     .order('uploaded_at', { ascending: false })
 
   if (subError) {
@@ -447,28 +447,66 @@ export async function getAllSubmissionsForAdmin() {
     return []
   }
 
-  // ── Query 2: assignments with judge profile (safe separate query) ─────────
+  // ── Query 2: assignments (safe separate query) ─────────────────────────────
   const { data: assignData, error: assignError } = await supabase
     .from('judge_assignments')
-    .select('id, judge_id, submission_id, profiles(full_name)')
+    .select('id, judge_id, submission_id')
 
   if (assignError) {
-    // Non-fatal: continue without assignment data, just log
     console.error('[getAllSubmissionsForAdmin] judge_assignments query failed:', JSON.stringify(assignError, null, 2))
   }
 
-  // Build a map: submission_id → assignment info
-  type AssignMap = Record<string, { id: string; judge_id: string; full_name?: string }>
-  const assignMap: AssignMap = {}
+  // ── Query 3: judge profiles for names ─────────────────────────────────────
+  const judgeIds = Array.from(new Set((assignData ?? []).map((a) => a.judge_id).filter(Boolean)))
+  let profileMap = new Map<string, string>()
 
-  for (const row of (assignData ?? [])) {
-    type RawAssign = { id: string; judge_id: string; submission_id: string; profiles?: { full_name: string } | { full_name: string }[] | null }
-    const r = row as RawAssign
-    const prof = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles
-    assignMap[r.submission_id] = {
-      id: r.id,
-      judge_id: r.judge_id,
-      full_name: prof?.full_name,
+  if (judgeIds.length > 0) {
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', judgeIds)
+
+    if (profilesError) {
+      console.error('[getAllSubmissionsForAdmin] profiles query failed:', JSON.stringify(profilesError, null, 2))
+    } else {
+      profileMap = new Map((profilesData ?? []).map((p) => [p.id, p.full_name ?? 'Giám khảo']))
+    }
+  }
+
+  // ── Query 4: scores summary for admin view ──────────────────────────────
+  const { data: scoresData, error: scoresError } = await supabase
+    .from('scores')
+    .select('id, submission_id, judge_id, total_score, comment')
+
+  if (scoresError) {
+    console.error('[getAllSubmissionsForAdmin] scores query failed:', JSON.stringify(scoresError, null, 2))
+  }
+
+  // Build assignment Map: submission_id -> assigned_judge info
+  const assignMap = new Map<string, { id: string; judge_id: string; full_name?: string }>()
+  for (const r of (assignData ?? [])) {
+    if (r.submission_id) {
+      assignMap.set(r.submission_id, {
+        id: r.id,
+        judge_id: r.judge_id,
+        full_name: profileMap.get(r.judge_id) ?? 'Giám khảo',
+      })
+    }
+  }
+
+  // Build scores Map: submission_id -> list of scores
+  type ScoreEntry = { id: string; judge_id: string; total_score: number; comment?: string | null }
+  const scoresMap = new Map<string, ScoreEntry[]>()
+  for (const s of (scoresData ?? [])) {
+    if (s.submission_id) {
+      const existing = scoresMap.get(s.submission_id) ?? []
+      existing.push({
+        id: s.id,
+        judge_id: s.judge_id,
+        total_score: Number(s.total_score ?? 0),
+        comment: s.comment,
+      })
+      scoresMap.set(s.submission_id, existing)
     }
   }
 
@@ -484,7 +522,17 @@ export async function getAllSubmissionsForAdmin() {
     phase_id: string | null
     topic: string | null
     teams: { name: string } | { name: string }[] | null
-    competition_phases: { title: string } | { title: string }[] | null
+    competition_phases: {
+      title: string
+      scoring_open?: boolean
+      scoring_opens_at?: string | null
+      scoring_closes_at?: string | null
+    } | {
+      title: string
+      scoring_open?: boolean
+      scoring_opens_at?: string | null
+      scoring_closes_at?: string | null
+    }[] | null
   }
 
   return (subData ?? []).map((row): import('@/types/submission').AdminSubmissionRow => {
@@ -494,10 +542,12 @@ export async function getAllSubmissionsForAdmin() {
       ? (r.competition_phases[0] ?? null)
       : r.competition_phases
 
-    const asgn = assignMap[r.id] ?? null
+    const asgn = assignMap.get(r.id) ?? null
     const assigned_judge = asgn
       ? { id: asgn.id, judge_id: asgn.judge_id, full_name: asgn.full_name }
       : null
+
+    const subScores = scoresMap.get(r.id) ?? []
 
     return {
       id: r.id,
@@ -512,6 +562,7 @@ export async function getAllSubmissionsForAdmin() {
       teams,
       competition_phases,
       assigned_judge,
+      scores: subScores,
     }
   })
 }

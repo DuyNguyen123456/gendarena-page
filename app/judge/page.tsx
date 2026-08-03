@@ -7,9 +7,12 @@ import Link from 'next/link'
 import Loading from '@/components/loading'
 import { getPostLoginPath } from '@/lib/auth/routing'
 import { getScoringRounds, type ScoringRound } from '@/services/scoring'
+import { getPhases } from '@/services/phases'
 import { updateProfileExpertise } from '@/services/profile'
 import type { TopicCategory } from '@/types/submission'
 import { TOPIC_CATEGORIES, TOPIC_CATEGORY_CONFIG } from '@/types/submission'
+import type { CompetitionPhase } from '@/types/phase'
+import { getScoringGate } from '@/types/phase'
 
 export default function JudgeHomePage() {
   const [loading, setLoading] = useState(true)
@@ -19,6 +22,7 @@ export default function JudgeHomePage() {
   const [editingExpertise, setEditingExpertise] = useState(false)
   const [expertiseDraft, setExpertiseDraft] = useState<TopicCategory[]>([])
   const [savingExpertise, setSavingExpertise] = useState(false)
+  const [openPhase, setOpenPhase] = useState<CompetitionPhase | null>(null)
   const [activeRound, setActiveRound] = useState<ScoringRound | null>(null)
   const [assignmentCount, setAssignmentCount] = useState(0)
   const router = useRouter()
@@ -47,8 +51,10 @@ export default function JudgeHomePage() {
       )
       setExpertise(savedExpertise)
 
-      const rounds = await getScoringRounds()
-      setActiveRound(rounds.find((round) => round.scoring_open) ?? null)
+      const [phases, rounds] = await Promise.all([getPhases(), getScoringRounds()])
+      const currentOpen = phases.find((p) => getScoringGate(p) === 'open') ?? null
+      setOpenPhase(currentOpen)
+      setActiveRound(rounds.find((r) => r.rubric_url) ?? rounds[0] ?? null)
 
       const { count } = await supabase
         .from('judge_assignments')
@@ -103,8 +109,8 @@ export default function JudgeHomePage() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-orbitron tracking-widest text-slate-500 uppercase mb-1">Trạng thái chấm điểm</p>
-                <p className={`font-orbitron text-lg font-bold ${activeRound?.scoring_open ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {activeRound?.scoring_open ? '🟢 ĐANG MỞ' : '🔒 ĐANG ĐÓNG'}
+                <p className={`font-orbitron text-lg font-bold ${openPhase ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {openPhase ? `🟢 ĐANG MỞ (${openPhase.title})` : '🔒 ĐANG ĐÓNG'}
                 </p>
               </div>
               <div className="text-right">

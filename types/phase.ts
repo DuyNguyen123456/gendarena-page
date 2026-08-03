@@ -86,12 +86,12 @@ export type ScoringGateStatus =
   | 'expired'      // scoring_closes_at is in the past
   | 'open'         // all good, judges can score
 
-export function getScoringGate(phase: CompetitionPhase | {
+export function getScoringGate(phase?: CompetitionPhase | {
   scoring_open?: boolean
   scoring_opens_at?: string | null
   scoring_closes_at?: string | null
-}): ScoringGateStatus {
-  if (!phase.scoring_open) return 'closed'
+} | null): ScoringGateStatus {
+  if (!phase || !phase.scoring_open) return 'closed'
 
   const now = Date.now()
 
