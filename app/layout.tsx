@@ -1,3 +1,4 @@
+import FaqWidgetWrapper from "@/components/faq/FaqWidgetWrapper"
 import type { Metadata } from "next"
 import Navbar from "@/components/navbar"
 import { Analytics } from "@vercel/analytics/next"
@@ -54,6 +55,7 @@ export default function RootLayout({
         />
         <Navbar />
         {children}
+        <FaqWidgetWrapper />
         <Analytics />
       </body>
     </html>
