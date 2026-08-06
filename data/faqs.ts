@@ -13,7 +13,7 @@ export interface FaqCategory {
 }
 
 export const MASCOT_IMAGE_CONFIG = {
-  path: "/images/faq-mascot.png",
+  path: "/images/faq-mascot.svg",
   alt: "Gen D Arena FAQ Mascot",
   fallbackText: "GenD FAQ",
 }

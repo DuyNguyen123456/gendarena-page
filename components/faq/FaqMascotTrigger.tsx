@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState } from 'react'
-import Image from 'next/image'
 import { MASCOT_IMAGE_CONFIG } from '@/data/faqs'
 
 interface FaqMascotTriggerProps {
@@ -45,12 +44,11 @@ export default function FaqMascotTrigger({
         {/* Outer Border */}
         <div className="absolute inset-0 rounded-full bg-[#070e24] border-2 border-cyan-400/80 shadow-[0_0_20px_rgba(0,240,255,0.4)] flex items-center justify-center overflow-hidden">
           {!imageError ? (
-            <Image
+            <img
               src={MASCOT_IMAGE_CONFIG.path}
               alt={MASCOT_IMAGE_CONFIG.alt}
               width={64}
               height={64}
-              priority
               className={`w-full h-full object-cover transition-transform duration-300 ${
                 isOpen ? 'rotate-12 scale-110' : 'group-hover:rotate-6'
               }`}

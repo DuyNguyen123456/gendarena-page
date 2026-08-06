@@ -1,4 +1,5 @@
 import FaqWidgetWrapper from "@/components/faq/FaqWidgetWrapper"
+import AuthStateListener from "@/components/AuthStateListener"
 import type { Metadata } from "next"
 import Navbar from "@/components/navbar"
 import { Analytics } from "@vercel/analytics/next"
@@ -53,6 +54,7 @@ export default function RootLayout({
           shadow="0 0 10px #00F0FF, 0 0 5px #00F0FF"
           zIndex={1600}
         />
+        <AuthStateListener />
         <Navbar />
         {children}
         <FaqWidgetWrapper />
