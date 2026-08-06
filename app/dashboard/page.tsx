@@ -6,7 +6,18 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/loading'
 import { getPostLoginPath } from '@/lib/auth/routing'
-import { updateProfile, uploadAvatar, validateFacebookUrl, validatePhone } from '@/services/profile'
+import {
+  Settings,
+  AlertTriangle,
+  Loader2,
+  Radio,
+  User as UserIcon,
+  Plus,
+  Search,
+  Inbox,
+  Trophy,
+  Pencil,
+} from 'lucide-react'
 
 type Profile = {
   id: string
@@ -58,10 +69,6 @@ export default function DashboardPage() {
   // Interactive action states
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [message, setMessage] = useState('')
-  const [editingProfile, setEditingProfile] = useState(false)
-  const [profileForm, setProfileForm] = useState({ phone: '', facebook_url: '' })
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
-  const [profileSaving, setProfileSaving] = useState(false)
 
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -118,10 +125,6 @@ export default function DashboardPage() {
     // 2. Fetch profile details (already loaded above for role check)
     if (profileData) {
       setProfile(profileData as unknown as Profile)
-      setProfileForm({
-        phone: profileData.phone ?? '',
-        facebook_url: profileData.facebook_url ?? '',
-      })
       
       // 3. Fetch active team invitations using user's UID
       if (profileData.uid) {
@@ -197,7 +200,7 @@ export default function DashboardPage() {
         .maybeSingle()
 
       if (teamCheck) {
-        setMessage('❌ Bạn đã là thành viên của một liên minh khác.')
+        setMessage('Bạn đã là thành viên của một liên minh khác.')
         setActionLoading(null)
         return
       }
@@ -212,7 +215,7 @@ export default function DashboardPage() {
       if (teamData) {
         const currentCount = teamData.team_members?.length || 0
         if (currentCount >= teamData.max_members) {
-          setMessage('❌ Đội bóng này đã đạt số lượng tối đa.')
+          setMessage('Đội bóng này đã đạt số lượng tối đa.')
           setActionLoading(null)
           return
         }
@@ -229,7 +232,7 @@ export default function DashboardPage() {
 
       if (memberError) {
         console.error('Accept invite member error:', memberError)
-        setMessage(`❌ Lỗi thêm thành viên: ${memberError.message}`)
+        setMessage(`Lỗi thêm thành viên: ${memberError.message}`)
         setActionLoading(null)
         return
       }
@@ -252,9 +255,9 @@ export default function DashboardPage() {
         .eq('id', invite.id)
 
       if (error) {
-        setMessage(`❌ Thao tác thất bại: ${error.message}`)
+        setMessage(`Thao tác thất bại: ${error.message}`)
       } else {
-        setMessage('✅ Đã từ chối lời mời gia nhập.')
+        setMessage('Đã từ chối lời mời gia nhập.')
         // Reload invites
         setInvites(prev => prev.filter(inv => inv.id !== invite.id))
       }
@@ -262,45 +265,6 @@ export default function DashboardPage() {
     setActionLoading(null)
   }
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !profile) return
-
-    const fbErr = validateFacebookUrl(profileForm.facebook_url)
-    if (fbErr) { setMessage('❌ ' + fbErr); return }
-    const phoneErr = validatePhone(profileForm.phone)
-    if (phoneErr) { setMessage('❌ ' + phoneErr); return }
-
-    setProfileSaving(true)
-    setMessage('')
-
-    let avatarUrl = profile.avatar_url
-    if (avatarFile) {
-      const upload = await uploadAvatar(user.id, avatarFile)
-      if (!upload.ok) {
-        setMessage('❌ ' + upload.error)
-        setProfileSaving(false)
-        return
-      }
-      avatarUrl = upload.url
-    }
-
-    const result = await updateProfile(user.id, {
-      phone: profileForm.phone.trim() || null,
-      facebook_url: profileForm.facebook_url.trim() || null,
-      avatar_url: avatarUrl,
-    })
-
-    if (!result.ok) {
-      setMessage('❌ ' + result.error)
-    } else {
-      setMessage('✅ Đã cập nhật hồ sơ!')
-      setEditingProfile(false)
-      setAvatarFile(null)
-      await loadDashboardData()
-    }
-    setProfileSaving(false)
-  }
 
   if (loading) return <Loading text="LOADING TERMINAL PARAMETERS" />
 
@@ -316,12 +280,13 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-[#1e2d5a] pb-6 gap-4">
           <div>
             <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase flex items-center gap-2">
-              <span className="text-cyan-400 animate-pulse">⚙️</span> BẢNG ĐIỀU KHIỂN ĐẤU THỦ
+              <Settings className="w-6 h-6 text-cyan-400 animate-pulse" />
+              <span>Bảng điều khiển</span>
             </h1>
           </div>
           <div className="flex items-center gap-2 text-xs font-orbitron bg-cyan-950/30 border border-cyan-500/30 px-4 py-2 rounded-lg text-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.05)]">
             <span className="w-2 h-2 rounded-full bg-emerald-405 animate-ping" />
-            HỆ THỐNG HOẠT ĐỘNG
+            Hoạt động
           </div>
         </div>
 
@@ -329,11 +294,11 @@ export default function DashboardPage() {
         {duplicateTeams.length > 1 && (
           <div className="bg-amber-950/40 border border-amber-500/50 rounded-xl p-5 mb-8 shadow-[0_0_20px_rgba(234,179,8,0.15)]">
             <div className="flex items-start gap-3 mb-4">
-              <span className="text-2xl shrink-0">⚠️</span>
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <h2 className="font-orbitron text-sm font-bold text-amber-400 uppercase tracking-wider">Phát hiện bạn đang ở nhiều đội cùng lúc</h2>
+                <h2 className="font-orbitron text-sm font-bold text-amber-400 tracking-wider">Phát hiện tài khoản thuộc nhiều đội cùng lúc</h2>
                 <p className="text-slate-400 text-xs mt-1">
-                  Hệ thống phát hiện bạn đang là thành viên của {duplicateTeams.length} đội. Vui lòng chọn 1 đội để giữ lại. Các đội khác sẽ bị xóa khỏi danh sách thành viên của bạn.
+                  Vui lòng chọn 1 đội để giữ lại. Các đội khác sẽ tự động rời khỏi tài khoản của bạn.
                 </p>
               </div>
             </div>
@@ -348,9 +313,16 @@ export default function DashboardPage() {
                   <button
                     onClick={() => handleKeepTeam(m.team_id)}
                     disabled={resolvingTeam !== null}
-                    className="px-4 py-2 bg-amber-950/40 border border-amber-500/40 hover:bg-amber-500 hover:text-black text-amber-400 text-xs font-bold uppercase tracking-wider rounded-lg transition cursor-pointer disabled:opacity-50 font-orbitron"
+                    className="px-4 py-2 bg-amber-950/40 border border-amber-500/40 hover:bg-amber-500 hover:text-black text-amber-400 text-xs font-bold tracking-wider rounded-lg transition cursor-pointer disabled:opacity-50 font-orbitron flex items-center gap-1.5"
                   >
-                    {resolvingTeam === m.team_id ? '⏳ Đang xử lý...' : 'GIỮ ĐỘI NÀY'}
+                    {resolvingTeam === m.team_id ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Đang xử lý...</span>
+                      </>
+                    ) : (
+                      'Giữ đội này'
+                    )}
                   </button>
                 </div>
               ))}
@@ -360,147 +332,77 @@ export default function DashboardPage() {
 
         {message && (
           <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-8 text-sm font-semibold tracking-wide flex items-center gap-2">
-            <span>📡</span> {message}
+            <Radio className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span>{message}</span>
           </div>
         )}
 
-        {/* Profile Card */}
+        {/* Profile Summary Card */}
         <div className="tech-panel p-6 mb-8 relative cyber-corners border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
-          
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
-            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase flex items-center gap-1.5">
-              <span>📋</span> THÔNG TIN HỒ SƠ
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-5">
+            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase flex items-center gap-2">
+              <UserIcon className="w-4 h-4 text-cyan-400" />
+              <span>Hồ sơ của bạn</span>
             </h2>
-            <div className="flex items-center gap-3">
-              {profile?.uid && (
-                <div className="bg-cyan-950/40 border border-cyan-500/30 rounded-lg px-4 py-2 flex items-center gap-3">
-                  <span className="text-slate-400 text-xs font-semibold tracking-wider uppercase">UID:</span>
-                  <span className="font-mono text-sm font-black text-white bg-slate-950 px-2.5 py-1 rounded border border-cyan-400/40 select-all">{profile.uid}</span>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => setEditingProfile((v) => !v)}
-                className="text-xs font-orbitron border border-cyan-500/30 text-cyan-400 px-3 py-2 rounded-lg hover:bg-cyan-950/30"
-              >
-                {editingProfile ? 'Huỷ' : '✏️ Cập nhật'}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-6 mb-6">
-            <div className="shrink-0 w-20 h-20 rounded-full border-2 border-cyan-500/30 bg-[#131e3d] overflow-hidden flex items-center justify-center">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-3xl text-slate-500">👤</span>
-              )}
-            </div>
-            {profile?.facebook_url && !editingProfile && (
-              <a href={profile.facebook_url} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-400 hover:underline mt-2">
-                Facebook →
-              </a>
+            {profile?.uid && (
+              <div className="bg-cyan-950/40 border border-cyan-500/30 rounded-lg px-4 py-2 flex items-center gap-3">
+                <span className="text-slate-400 text-xs font-semibold tracking-wider uppercase">UID:</span>
+                <span className="font-mono text-sm font-black text-white bg-slate-950 px-2.5 py-1 rounded border border-cyan-400/40 select-all">{profile.uid}</span>
+              </div>
             )}
           </div>
 
-          {editingProfile ? (
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase text-slate-400 mb-1">Số điện thoại</label>
-                  <input
-                    value={profileForm.phone}
-                    onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
-                    placeholder="09xxxxxxxx"
-                    className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase text-slate-400 mb-1">Facebook URL</label>
-                  <input
-                    value={profileForm.facebook_url}
-                    onChange={(e) => setProfileForm((p) => ({ ...p, facebook_url: e.target.value }))}
-                    placeholder="https://facebook.com/..."
-                    className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] uppercase text-slate-400 mb-1">Avatar (JPEG/PNG/WebP, max 2MB)</label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
-                  className="text-xs text-slate-400"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={profileSaving}
-                className="tech-btn-accent px-6 py-2 rounded-lg text-xs font-bold uppercase text-black disabled:opacity-50"
-              >
-                {profileSaving ? 'Đang lưu...' : '💾 Lưu hồ sơ'}
-              </button>
-            </form>
-          ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-semibold">
-            <div className="bg-[#131e3d]/40 border border-[#1e2d5a]/60 px-4 py-3 rounded-lg flex items-center justify-between">
-              <span className="text-slate-400 text-xs tracking-wider uppercase">Họ và tên:</span>
-              <span className="text-white">{profile?.full_name}</span>
+          <div className="flex items-center gap-5 mb-5">
+            <div className="shrink-0 w-16 h-16 rounded-full border-2 border-cyan-500/30 bg-[#131e3d] overflow-hidden flex items-center justify-center">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <UserIcon className="w-8 h-8 text-slate-500" />
+              )}
             </div>
-            <div className="bg-[#131e3d]/40 border border-[#1e2d5a]/60 px-4 py-3 rounded-lg flex items-center justify-between">
-              <span className="text-slate-400 text-xs tracking-wider uppercase">Địa chỉ Email:</span>
-              <span className="text-white">{profile?.email}</span>
-            </div>
-            <div className="bg-[#131e3d]/40 border border-[#1e2d5a]/60 px-4 py-3 rounded-lg flex items-center justify-between">
-              <span className="text-slate-400 text-xs tracking-wider uppercase">Số điện thoại:</span>
-              <span className="text-white">{profile?.phone || 'Chưa cập nhật'}</span>
-            </div>
-            <div className="bg-[#131e3d]/40 border border-[#1e2d5a]/60 px-4 py-3 rounded-lg flex items-center justify-between">
-              <span className="text-slate-400 text-xs tracking-wider uppercase">Facebook:</span>
-              <span className="text-white truncate max-w-[200px]">{profile?.facebook_url || 'Chưa cập nhật'}</span>
-            </div>
-            <div className="bg-[#131e3d]/40 border border-[#1e2d5a]/60 px-4 py-3 rounded-lg flex items-center justify-between md:col-span-2">
-              <span className="text-slate-400 text-xs tracking-wider uppercase">Đơn vị công tác:</span>
-              <span className="text-white">{profile?.organization || 'Chưa cập nhật'}</span>
+            <div className="space-y-1">
+              <p className="text-white font-bold text-base">{profile?.full_name || <span className="text-slate-500 italic text-sm">Chưa có tên</span>}</p>
+              <p className="text-slate-400 text-sm">{profile?.email}</p>
+              {profile?.organization && (
+                <p className="text-slate-500 text-xs">{profile.organization}</p>
+              )}
             </div>
           </div>
-          )}
+
+          <Link
+            href="/profile"
+            className="inline-flex items-center gap-1.5 text-xs font-orbitron font-bold tracking-wider text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 px-4 py-2 rounded-lg hover:bg-cyan-950/30 transition"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            <span>Chỉnh sửa hồ sơ</span>
+          </Link>
         </div>
 
         {/* Dynamic CTA Sections for Team Management */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="tech-panel p-6 border-cyan-500/15 relative flex flex-col justify-between">
-            <div>
-              <h3 className="font-orbitron text-base font-bold text-white tracking-wider uppercase mb-2">
-                ➕ THÀNH LẬP LIÊN MINH MỚI
-              </h3>
-              <p className="text-slate-400 text-xs leading-relaxed mb-6">
-                Trở thành Chỉ huy, thiết lập chiến đội và kêu gọi những đấu thủ số khác gia nhập liên minh của bạn.
-              </p>
-            </div>
+            <h3 className="font-orbitron text-base font-bold text-white tracking-wider mb-4 flex items-center gap-2">
+              <Plus className="w-5 h-5 text-cyan-400" />
+              <span>Tạo đội thi mới</span>
+            </h3>
             <Link
               href="/team/create"
-              className="tech-btn-accent font-orbitron inline-block py-3 rounded-lg text-xs font-bold tracking-widest text-center uppercase text-black hover:scale-[1.02] transition"
+              className="tech-btn-accent font-orbitron inline-block py-3 rounded-lg text-xs font-bold tracking-wider text-center text-black hover:scale-[1.02] transition"
             >
-              TẠO ĐỘI NGAY
+              Tạo đội
             </Link>
           </div>
 
           <div className="tech-panel p-6 border-cyan-500/15 relative flex flex-col justify-between">
-            <div>
-              <h3 className="font-orbitron text-base font-bold text-white tracking-wider uppercase mb-2">
-                🔎 GIA NHẬP ĐỘI NGŨ CÓ SẴN
-              </h3>
-              <p className="text-slate-400 text-xs leading-relaxed mb-6">
-                Tìm kiếm các liên minh chiến đấu đang mở đợt tuyển quân và nộp đơn xin gia nhập.
-              </p>
-            </div>
+            <h3 className="font-orbitron text-base font-bold text-white tracking-wider mb-4 flex items-center gap-2">
+              <Search className="w-5 h-5 text-cyan-400" />
+              <span>Gia nhập đội có sẵn</span>
+            </h3>
             <Link
               href="/team/browse"
-              className="tech-btn-primary font-orbitron inline-block py-3 rounded-lg text-xs font-bold tracking-widest text-center uppercase text-white hover:scale-[1.02] transition"
+              className="tech-btn-primary font-orbitron inline-block py-3 rounded-lg text-xs font-bold tracking-wider text-center text-white hover:scale-[1.02] transition"
             >
-              TÌM ĐỘI NGŨ
+              Tìm đội
             </Link>
           </div>
         </div>
@@ -508,8 +410,9 @@ export default function DashboardPage() {
         {/* Pending Invitations list */}
         {invites.length > 0 && (
           <div className="tech-panel p-6 mb-8 border-cyan-500/15 relative">
-            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
-              <span>📥</span> LỜI MỜI GIA NHẬP ĐANG CHỜ ({invites.length})
+            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
+              <Inbox className="w-4 h-4 text-cyan-400" />
+              <span>Lời mời gia nhập ({invites.length})</span>
             </h2>
             <div className="space-y-4">
               {invites.map((invite) => (
@@ -519,26 +422,33 @@ export default function DashboardPage() {
                 >
                   <div>
                     <p className="text-sm font-bold text-white">
-                      Lời mời gia nhập liên minh <span className="text-cyan-400">{invite.teams?.name}</span>
+                      Lời mời gia nhập đội <span className="text-cyan-400">{invite.teams?.name}</span>
                     </p>
                     <p className="text-xs text-slate-400 mt-1">
-                      Gửi bởi Chỉ huy: <span className="text-slate-300 font-semibold">{invite.inviter?.full_name || 'Vô danh'}</span> • Ngày mời: {new Date(invite.created_at).toLocaleDateString('vi-VN')}
+                      Người mời: <span className="text-slate-300 font-semibold">{invite.inviter?.full_name || 'Không rõ'}</span> • {new Date(invite.created_at).toLocaleDateString('vi-VN')}
                     </p>
                   </div>
                   <div className="flex gap-2.5 shrink-0 self-end sm:self-center">
                     <button
                       onClick={() => handleInviteAction(invite, 'accept')}
                       disabled={actionLoading === invite.id}
-                      className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black text-xs font-bold uppercase tracking-wider rounded-lg transition disabled:opacity-50 cursor-pointer font-orbitron"
+                      className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black text-xs font-bold tracking-wider rounded-lg transition disabled:opacity-50 cursor-pointer font-orbitron flex items-center gap-1.5"
                     >
-                      {actionLoading === invite.id ? '⌛ ĐANG XỬ LÝ...' : 'ĐỒNG Ý'}
+                      {actionLoading === invite.id ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Đang xử lý...</span>
+                        </>
+                      ) : (
+                        'Chấp nhận'
+                      )}
                     </button>
                     <button
                       onClick={() => handleInviteAction(invite, 'reject')}
                       disabled={actionLoading === invite.id}
-                      className="px-4 py-2 border border-slate-700 hover:bg-slate-900/60 text-slate-350 text-xs font-bold uppercase tracking-wider rounded-lg transition disabled:opacity-50 cursor-pointer font-orbitron"
+                      className="px-4 py-2 border border-slate-700 hover:bg-slate-900/60 text-slate-350 text-xs font-bold tracking-wider rounded-lg transition disabled:opacity-50 cursor-pointer font-orbitron"
                     >
-                      TỪ CHỐI
+                      Từ chối
                     </button>
                   </div>
                 </div>
@@ -550,10 +460,11 @@ export default function DashboardPage() {
         {/* Active Arenas */}
         <div className="tech-panel p-6 border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
           <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-2">
-            <span>🏆</span> PHÂN KHU ĐẤU TRƯỜNG ARENA
+            <Trophy className="w-4 h-4 text-cyan-400" />
+            <span>Danh sách cuộc thi</span>
           </h2>
           {competitions.length === 0 ? (
-            <p className="text-slate-400 text-center py-6 text-sm font-semibold">Hiện chưa có cuộc thi nào được kích hoạt trên hệ thống.</p>
+            <p className="text-slate-400 text-center py-6 text-sm font-semibold">Hiện chưa có cuộc thi nào trên hệ thống.</p>
           ) : (
             <div className="space-y-4">
               {competitions.map((comp) => (
@@ -569,9 +480,9 @@ export default function DashboardPage() {
                     </div>
                     <Link
                       href={`/competitions/${comp.id}`}
-                      className="tech-btn-primary px-6 py-2.5 rounded-lg text-xs font-bold tracking-widest font-orbitron uppercase transition whitespace-nowrap self-end md:self-center"
+                      className="tech-btn-primary px-6 py-2.5 rounded-lg text-xs font-bold tracking-wider font-orbitron transition whitespace-nowrap self-end md:self-center"
                     >
-                      XEM CHI TIẾT →
+                      Xem chi tiết →
                     </Link>
                   </div>
                 </div>

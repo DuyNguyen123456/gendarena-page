@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+import { KeyRound, XCircle, Loader2 } from 'lucide-react'
+
 import { getPostLoginPath } from '@/lib/auth/routing'
 
 export default function LoginPage() {
@@ -52,23 +54,22 @@ export default function LoginPage() {
       <div className="tech-panel-glow p-8 max-w-md w-full relative cyber-corners border-cyan-500/20 shadow-[0_0_30px_rgba(0,240,255,0.05)]">
         
 
-        <h2 className="font-orbitron text-2xl font-extrabold text-center text-white mb-1 uppercase tracking-wider">
-          🔑 XÁC MINH DANH TÍNH
+        <h2 className="font-orbitron text-2xl font-extrabold text-center text-white mb-6 tracking-wider flex items-center justify-center gap-2">
+          <KeyRound className="w-5 h-5 text-cyan-400" />
+          <span>Đăng nhập</span>
         </h2>
-        <p className="text-slate-400 text-xs font-medium text-center tracking-widest uppercase mb-8">
-          Đăng nhập vào hệ thống điều khiển
-        </p>
 
         {error && (
-          <div className="bg-red-950/30 border border-red-500/40 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm font-medium">
-            ❌ HỆ THỐNG BÁO LỖI: {error}
+          <div className="bg-red-950/30 border border-red-500/40 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm font-medium flex items-center gap-2">
+            <XCircle className="w-4 h-4 shrink-0 text-red-400" />
+            <span>Lỗi: {error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">
-              ĐỊA CHỈ EMAIL
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Email
             </label>
             <input
               name="email"
@@ -80,8 +81,8 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1.5">
-              MẬT KHẨU TRUY CẬP
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Mật khẩu
             </label>
             <input
               name="password"
@@ -95,16 +96,23 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-gradient-to-r from-blue-900 to-[#112E81] hover:from-blue-800 hover:to-blue-700 text-white border border-cyan-500/30 font-bold uppercase tracking-wider rounded-lg shadow-[0_0_15px_rgba(17,46,129,0.3)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)] disabled:opacity-50 transition duration-200 cursor-pointer text-sm font-orbitron"
+            className="w-full py-3.5 bg-gradient-to-r from-blue-900 to-[#112E81] hover:from-blue-800 hover:to-blue-700 text-white border border-cyan-500/30 font-bold tracking-wider rounded-lg shadow-[0_0_15px_rgba(17,46,129,0.3)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)] disabled:opacity-50 transition duration-200 cursor-pointer text-sm font-orbitron flex items-center justify-center gap-2"
           >
-            {loading ? '⏳ ĐANG XỬ LÝ...' : 'ĐĂNG NHẬP HỆ THỐNG'}
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Đang xử lý...</span>
+              </>
+            ) : (
+              'Đăng nhập'
+            )}
           </button>
         </form>
 
         <p className="text-center text-xs text-slate-400 mt-6 font-semibold tracking-wide">
-          Chưa đăng ký quyền truy cập?{' '}
+          Chưa có tài khoản?{' '}
           <Link href="/register" className="text-cyan-400 hover:text-cyan-300 hover:underline transition ml-1">
-            ĐĂNG KÝ NGAY
+            Đăng ký ngay
           </Link>
         </p>
       </div>

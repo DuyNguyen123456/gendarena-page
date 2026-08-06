@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
+import { CheckCircle2, Rocket, XCircle, Loader2 } from 'lucide-react'
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
@@ -70,7 +71,9 @@ export default function RegisterPage() {
         <div className="absolute bottom-1/3 right-1/3 w-72 h-72 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
         <div className="tech-panel-glow p-8 max-w-md w-full text-center relative cyber-corners border-cyan-500/20 shadow-[0_0_30px_rgba(0,240,255,0.05)] text-white">
-          <div className="text-5xl mb-4 inline-block bg-cyan-950/30 border border-cyan-800/30 p-4 rounded-full text-cyan-400">✅</div>
+          <div className="inline-block bg-cyan-950/30 border border-cyan-800/30 p-4 rounded-full text-cyan-400 mb-4">
+            <CheckCircle2 className="w-10 h-10" />
+          </div>
           <h2 className="font-orbitron text-2xl font-extrabold mb-2 uppercase tracking-wider text-cyan-400">ĐĂNG KÝ THÀNH CÔNG!</h2>
           <p className="text-slate-400 text-sm mb-6 leading-relaxed">
             Hệ thống đã gửi email kích hoạt. Vui lòng kiểm tra hộp thư để xác thực tài khoản trước khi truy cập đấu trường.
@@ -93,23 +96,22 @@ export default function RegisterPage() {
       <div className="tech-panel-glow p-8 max-w-md w-full relative cyber-corners border-cyan-500/20 shadow-[0_0_30px_rgba(0,240,255,0.05)] text-white">
         
 
-        <h2 className="font-orbitron text-2xl font-extrabold text-center text-white mb-1 uppercase tracking-wider">
-          🚀 ĐĂNG KÝ ĐẤU THỦ
+        <h2 className="font-orbitron text-2xl font-extrabold text-center text-white mb-6 tracking-wider flex items-center justify-center gap-2">
+          <Rocket className="w-5 h-5 text-cyan-400" />
+          <span>Đăng ký tài khoản</span>
         </h2>
-        <p className="text-slate-400 text-xs font-medium text-center tracking-widest uppercase mb-6">
-          Tạo tài khoản để tham gia GenD Arena
-        </p>
 
         {error && (
-          <div className="bg-red-950/30 border border-red-500/40 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm font-medium">
-            ❌ HỆ THỐNG BÁO LỖI: {error}
+          <div className="bg-red-950/30 border border-red-500/40 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm font-medium flex items-center gap-2">
+            <XCircle className="w-4 h-4 shrink-0 text-red-400" />
+            <span>Lỗi: {error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
-              HỌ VÀ TÊN *
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Họ và tên *
             </label>
             <input
               name="fullName"
@@ -120,8 +122,8 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
-              ĐỊA CHỈ EMAIL *
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Email *
             </label>
             <input
               name="email"
@@ -133,8 +135,8 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
-              SỐ ĐIỆN THOẠI
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Số điện thoại
             </label>
             <input
               name="phone"
@@ -144,8 +146,8 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
-              ĐƠN VỊ / TRƯỜNG HỌC
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Đơn vị / Trường học
             </label>
             <input
               name="organization"
@@ -155,8 +157,8 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
-              MẬT KHẨU KHỞI TẠO *
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Mật khẩu *
             </label>
             <input
               name="password"
@@ -169,8 +171,8 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-300 mb-1">
-              XÁC NHẬN MẬT KHẨU *
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Xác nhận mật khẩu *
             </label>
             <input
               name="confirmPassword"
@@ -184,16 +186,23 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-gradient-to-r from-blue-900 to-[#112E81] hover:from-blue-800 hover:to-blue-700 text-white border border-cyan-500/30 font-bold uppercase tracking-wider rounded-lg shadow-[0_0_15px_rgba(17,46,129,0.3)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)] disabled:opacity-50 transition duration-200 cursor-pointer text-sm font-orbitron"
+            className="w-full py-3.5 bg-gradient-to-r from-blue-900 to-[#112E81] hover:from-blue-800 hover:to-blue-700 text-white border border-cyan-500/30 font-bold tracking-wider rounded-lg shadow-[0_0_15px_rgba(17,46,129,0.3)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)] disabled:opacity-50 transition duration-200 cursor-pointer text-sm font-orbitron flex items-center justify-center gap-2"
           >
-            {loading ? '⏳ ĐANG KHỞI TẠO...' : 'ĐĂNG KÝ TÀI KHOẢN'}
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Đang xử lý...</span>
+              </>
+            ) : (
+              'Đăng ký'
+            )}
           </button>
         </form>
 
         <p className="text-center text-xs text-slate-400 mt-6 font-semibold tracking-wide">
           Đã có tài khoản?{' '}
           <Link href="/login" className="text-cyan-400 hover:text-cyan-300 hover:underline transition ml-1">
-            ĐĂNG NHẬP
+            Đăng nhập
           </Link>
         </p>
       </div>

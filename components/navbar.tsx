@@ -135,9 +135,14 @@ export default function Navbar() {
           )}
 
           {isJudge && (
-            <Link href="/judge" className={getAdminLinkClass('/judge')}>
-              ⚖️ Giám khảo
-            </Link>
+            <>
+              <Link href="/judge" className={getAdminLinkClass('/judge')}>
+                ⚖️ Giám khảo
+              </Link>
+              <Link href="/profile" className={getLinkClass('/profile')}>
+                Hồ sơ
+              </Link>
+            </>
           )}
 
           {isAdmin && (
@@ -236,15 +241,20 @@ export default function Navbar() {
           )}
 
           {isJudge && (
-            <Link
-              href="/judge"
-              className={`block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname.startsWith('/judge')
-                  ? 'text-purple-400 bg-purple-950/30 border border-purple-500/30'
-                  : 'text-slate-300 hover:text-purple-400 hover:bg-purple-950/10'
-                }`}
-            >
-              ⚖️ Giám khảo
-            </Link>
+            <>
+              <Link
+                href="/judge"
+                className={`block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname.startsWith('/judge')
+                    ? 'text-purple-400 bg-purple-950/30 border border-purple-500/30'
+                    : 'text-slate-300 hover:text-purple-400 hover:bg-purple-950/10'
+                  }`}
+              >
+                ⚖️ Giám khảo
+              </Link>
+              <Link href="/profile" className={getMobileLinkClass('/profile')}>
+                Hồ sơ
+              </Link>
+            </>
           )}
 
           {isAdmin && (

@@ -6,6 +6,8 @@ const MAX_AVATAR_SIZE = 2 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 export type ProfileUpdate = {
+  full_name?: string | null
+  organization?: string | null
   phone?: string | null
   facebook_url?: string | null
   avatar_url?: string | null

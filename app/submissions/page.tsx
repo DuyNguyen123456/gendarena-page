@@ -21,8 +21,33 @@ import {
 } from '@/services/submissions'
 import type { Submission, SubmissionHistory, TeamRecord, TopicCategory } from '@/types/submission'
 import { TOPIC_CATEGORIES } from '@/types/submission'
-import type { CompetitionPhase } from '@/types/phase'
+import { CompetitionPhase } from '@/types/phase'
 import { getSubmissionGate } from '@/types/phase'
+import {
+  CheckCircle2,
+  XCircle,
+  Radio,
+  AlertTriangle,
+  Check,
+  Lock,
+  Clock,
+  Ban,
+  FileText,
+  Link as LinkIcon,
+  Info,
+  Tag,
+  Upload,
+  Package,
+  Download,
+  ExternalLink,
+  RefreshCw,
+  User as UserIcon,
+  Calendar,
+  Archive,
+  ArrowLeft,
+  ClipboardPen,
+  Users,
+} from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -65,12 +90,14 @@ function ToastContainer({ toasts, onDismiss }: { toasts: ToastMsg[]; onDismiss: 
     <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
       {toasts.map((t) => (
         <div key={t.id} onClick={() => onDismiss(t.id)}
-          className={`pointer-events-auto flex items-start gap-3 px-5 py-4 rounded-xl border backdrop-blur-xl text-sm font-semibold tracking-wide max-w-sm shadow-2xl cursor-pointer animate-[slide-in_0.3s_ease-out] ${
+          className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-xl border backdrop-blur-xl text-sm font-semibold tracking-wide max-w-sm shadow-2xl cursor-pointer animate-[slide-in_0.3s_ease-out] ${
             t.type === 'success' ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300'
             : t.type === 'error' ? 'bg-red-950/90 border-red-500/50 text-red-300'
             : 'bg-cyan-950/90 border-cyan-500/50 text-cyan-300'
           }`}>
-          <span className="text-lg shrink-0">{t.type === 'success' ? '✅' : t.type === 'error' ? '❌' : '📡'}</span>
+          <span className="shrink-0">
+            {t.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : t.type === 'error' ? <XCircle className="w-5 h-5 text-red-400" /> : <Radio className="w-5 h-5 text-cyan-400" />}
+          </span>
           <span>{t.text}</span>
         </div>
       ))}
@@ -97,7 +124,7 @@ function ConfirmDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCance
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="tech-panel-glow max-w-md w-full p-7 rounded-2xl space-y-5 border-amber-500/30 shadow-[0_0_40px_rgba(234,179,8,0.1)]">
         <div className="flex items-center gap-3">
-          <span className="text-3xl">⚠️</span>
+          <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
           <h3 className="font-orbitron text-base font-bold text-amber-400 tracking-wider uppercase">Xác nhận nộp lại</h3>
         </div>
         <p className="text-slate-300 text-sm leading-relaxed">
@@ -105,12 +132,13 @@ function ConfirmDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCance
         </p>
         <div className="flex gap-3 pt-1">
           <button id="confirm-replace-btn" onClick={onConfirm}
-            className="flex-1 tech-btn-accent font-orbitron px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase cursor-pointer">
-            ✓ XÁC NHẬN
+            className="flex-1 tech-btn-accent font-orbitron px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider cursor-pointer flex items-center justify-center gap-1.5">
+            <Check className="w-4 h-4" />
+            <span>Xác nhận</span>
           </button>
           <button id="cancel-replace-btn" onClick={onCancel}
-            className="flex-1 px-5 py-2.5 border border-[#1e2d5a] bg-transparent hover:bg-slate-900/60 text-slate-300 text-xs font-semibold uppercase tracking-wider rounded-lg cursor-pointer transition">
-            HUỶ
+            className="flex-1 px-5 py-2.5 border border-[#1e2d5a] bg-transparent hover:bg-slate-900/60 text-slate-300 text-xs font-semibold tracking-wider rounded-lg cursor-pointer transition">
+            Hủy
           </button>
         </div>
       </div>
@@ -127,17 +155,17 @@ function GateBanner({ phase }: { phase: CompetitionPhase }) {
 
   const configs = {
     closed: {
-      icon: '🔒', title: 'Chưa mở nộp bài',
+      icon: <Lock className="w-6 h-6 shrink-0" />, title: 'Chưa mở nộp bài',
       sub: 'Ban tổ chức chưa mở vòng nộp bài này.',
       cls: 'border-slate-700/60 bg-slate-900/40 text-slate-400',
     },
     not_yet: {
-      icon: '⏰', title: 'Chưa đến thời gian',
+      icon: <Clock className="w-6 h-6 shrink-0" />, title: 'Chưa đến thời gian',
       sub: `Nộp bài mở lúc: ${formatDate(phase.submission_opens_at!)}`,
       cls: 'border-amber-500/30 bg-amber-950/20 text-amber-400',
     },
     expired: {
-      icon: '⛔', title: 'Đã đóng nộp bài',
+      icon: <Ban className="w-6 h-6 shrink-0" />, title: 'Đã đóng nộp bài',
       sub: `Hạn nộp đã kết thúc lúc: ${formatDate(phase.submission_closes_at!)}`,
       cls: 'border-red-500/30 bg-red-950/20 text-red-400',
     },
@@ -146,7 +174,7 @@ function GateBanner({ phase }: { phase: CompetitionPhase }) {
   const c = configs[gate]
   return (
     <div className={`flex items-center gap-4 p-5 border rounded-xl ${c.cls}`}>
-      <span className="text-2xl shrink-0">{c.icon}</span>
+      {c.icon}
       <div>
         <p className="font-orbitron font-bold text-sm uppercase tracking-wider">{c.title}</p>
         <p className="text-xs mt-0.5 opacity-70">{c.sub}</p>
@@ -182,7 +210,7 @@ function FileDropzone({
   if (file && !error) {
     return (
       <div className="flex items-center gap-4 p-4 bg-emerald-950/20 border border-emerald-500/30 rounded-xl">
-        <span className="text-3xl shrink-0">📄</span>
+        <FileText className="w-8 h-8 text-emerald-400 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-emerald-300 text-sm break-all">{file.name}</p>
           <p className="text-xs text-slate-500 mt-0.5">{formatBytes(file.size)}</p>
@@ -211,19 +239,19 @@ function FileDropzone({
             : 'border-[#1e2d5a] bg-slate-950/30 hover:border-cyan-500/40 hover:bg-cyan-950/10'
         }`}
       >
-        <div className="text-4xl mb-3">📄</div>
+        <FileText className="w-10 h-10 text-cyan-400 mx-auto mb-3" />
         <p className="text-white font-semibold text-sm">Kéo thả PDF vào đây</p>
         <p className="text-slate-500 text-xs mt-1">hoặc click để chọn</p>
-        <div className="mt-4 space-y-1">
-          <p className="text-xs font-bold text-amber-400/80">⚠ Chỉ chấp nhận: PDF</p>
-          <p className="text-xs font-bold text-amber-400/80">⚠ Kích thước tối đa: 10 MB</p>
+        <div className="mt-4 space-y-1 text-xs font-bold text-amber-400/80">
+          <p className="flex items-center justify-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Chỉ chấp nhận: PDF</p>
+          <p className="flex items-center justify-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Kích thước tối đa: 10 MB</p>
         </div>
       </button>
       <input ref={inputRef} type="file" accept="application/pdf,.pdf" className="hidden"
         onChange={(e) => pick(e.target.files)} />
       {error && (
         <p className="mt-2 text-xs text-red-400 font-bold flex items-center gap-1.5">
-          <span>⚠</span> {error}
+          <AlertTriangle className="w-3.5 h-3.5" /> {error}
         </p>
       )}
     </div>
@@ -245,8 +273,9 @@ function LinkInput({
         error ? 'border-red-500/50' : 'border-[#1e2d5a] focus-within:border-cyan-400/60'
       }`}>
         <div className="px-4 py-3 bg-slate-950/50">
-          <label className="block text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-2">
-            🔗 Đường dẫn bài nộp
+          <label className="block text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-2 flex items-center gap-1.5">
+            <LinkIcon className="w-4 h-4 text-cyan-400" />
+            <span>Đường dẫn bài nộp</span>
           </label>
           <input
             id="link-submission-input"
@@ -258,13 +287,13 @@ function LinkInput({
           />
         </div>
         <div className="px-4 py-3 bg-[#050d1e]/60 border-t border-[#1e2d5a] text-xs text-slate-500 space-y-0.5">
-          <p>ℹ Hỗ trợ: Google Drive, GitHub, Figma, Notion, v.v.</p>
-          <p className="text-amber-400/70 font-semibold">⚠ Đảm bảo link CÔNG KHAI để ban giám khảo xem được</p>
+          <p className="flex items-center gap-1.5"><Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> Hỗ trợ: Google Drive, GitHub, Figma, Notion, v.v.</p>
+          <p className="text-amber-400/70 font-semibold flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Đảm bảo link CÔNG KHAI để ban giám khảo xem được</p>
         </div>
       </div>
       {error && (
         <p className="mt-2 text-xs text-red-400 font-bold flex items-center gap-1.5">
-          <span>⚠</span> {error}
+          <AlertTriangle className="w-3.5 h-3.5" /> {error}
         </p>
       )}
     </div>
@@ -424,8 +453,9 @@ function SubmitForm({
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Topic Category Selector */}
         <div>
-          <label className="block text-xs font-orbitron font-bold tracking-widest text-cyan-400 uppercase mb-2">
-            🏷️ Nhóm chủ đề bài thi <span className="text-red-400">*</span>
+          <label className="block text-xs font-orbitron font-bold tracking-widest text-cyan-400 uppercase mb-2 flex items-center gap-1.5">
+            <Tag className="w-4 h-4 text-cyan-400" />
+            <span>Nhóm chủ đề bài thi</span> <span className="text-red-400">*</span>
           </label>
           <select
             id={`topic-select-${phase.id}`}
@@ -447,7 +477,7 @@ function SubmitForm({
           </select>
           {topicError && (
             <p className="mt-1.5 text-xs text-red-400 font-bold flex items-center gap-1.5">
-              <span>⚠</span> {topicError}
+              <AlertTriangle className="w-3.5 h-3.5" /> {topicError}
             </p>
           )}
         </div>
@@ -460,13 +490,13 @@ function SubmitForm({
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2.5 text-xs font-orbitron font-bold uppercase tracking-wider transition ${
+                className={`flex-1 py-2.5 text-xs font-orbitron font-bold uppercase tracking-wider transition flex items-center justify-center gap-1.5 ${
                   activeTab === tab
                     ? 'bg-cyan-950/60 text-cyan-400 border-b-2 border-cyan-400'
                     : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900/30'
                 }`}
               >
-                {tab === 'file' ? '📄 Nộp File' : '🔗 Nộp Link'}
+                {tab === 'file' ? <><FileText className="w-3.5 h-3.5" /> Nộp File</> : <><LinkIcon className="w-3.5 h-3.5" /> Nộp Link</>}
               </button>
             ))}
           </div>
@@ -491,21 +521,26 @@ function SubmitForm({
             id={`submit-btn-${phase.id}`}
             type="submit"
             disabled={uploading || (activeTab === 'file' ? !!fileError : !!linkError)}
-            className="tech-btn-accent font-orbitron px-6 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase cursor-pointer text-black disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+            className="tech-btn-accent font-orbitron px-6 py-2.5 rounded-lg text-xs font-bold tracking-wider cursor-pointer text-black disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
           >
             {uploading ? (
               <>
                 <span className="w-3.5 h-3.5 border-2 border-black/40 border-t-black rounded-full animate-spin" />
-                ĐANG XỬ LÝ...
+                Đang xử lý...
               </>
-            ) : '📤 NỘP BÀI'}
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                <span>Nộp bài</span>
+              </>
+            )}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="px-5 py-2.5 border border-[#1e2d5a] bg-transparent hover:bg-slate-900/60 text-slate-400 text-xs font-semibold uppercase tracking-wider rounded-lg cursor-pointer transition"
+            className="px-5 py-2.5 border border-[#1e2d5a] bg-transparent hover:bg-slate-900/60 text-slate-400 text-xs font-semibold tracking-wider rounded-lg cursor-pointer transition"
           >
-            HUỶ
+            Hủy
           </button>
         </div>
       </form>
@@ -547,25 +582,27 @@ function CurrentSubmissionCard({
         <div className="space-y-3 flex-1 min-w-0">
           {/* Kind indicator */}
           <div className="flex items-center gap-2.5">
-            <span className="text-2xl shrink-0">{isFile ? '📄' : '🔗'}</span>
+            <span className="shrink-0">{isFile ? <FileText className="w-5 h-5 text-cyan-400" /> : <LinkIcon className="w-5 h-5 text-cyan-400" />}</span>
             <span className="font-orbitron font-bold text-white tracking-wide text-sm break-all">
               {isFile ? submission.file_name : 'Bài nộp bằng link'}
             </span>
           </div>
           {submission.topic ? (
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-950/60 border border-cyan-500/30 rounded-lg text-xs font-semibold text-cyan-300">
-              <span>🏷️ Chủ đề:</span>
+              <Tag className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Chủ đề:</span>
               <span>{submission.topic}</span>
             </div>
           ) : (
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-600/40 rounded-lg text-xs font-semibold text-slate-500">
-              <span>🏷️ Chủ đề:</span>
+              <Tag className="w-3.5 h-3.5 text-slate-500" />
+              <span>Chủ đề:</span>
               <span>Chưa chọn chủ đề</span>
             </div>
           )}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400 font-semibold">
-            {isFile && submission.file_size && <span>📦 {formatBytes(submission.file_size)}</span>}
-            <span>🕐 Nộp lúc: {formatDate(submission.uploaded_at)}</span>
+            {isFile && submission.file_size && <span className="flex items-center gap-1"><Package className="w-3.5 h-3.5 text-slate-400" /> {formatBytes(submission.file_size)}</span>}
+            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-400" /> Nộp lúc: {formatDate(submission.uploaded_at)}</span>
           </div>
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-extrabold tracking-widest font-orbitron uppercase flex items-center gap-1.5 self-start whitespace-nowrap ${status.className}`}>
@@ -580,12 +617,14 @@ function CurrentSubmissionCard({
             id={`download-btn-${submission.id}`}
             onClick={handleDownload}
             disabled={loadingUrl}
-            className="flex items-center gap-2 px-4 py-2 bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-400 text-cyan-400 hover:text-white text-xs font-bold tracking-wider uppercase rounded-lg cursor-pointer transition disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-[#131e3d] border border-[#1e2d5a] hover:border-cyan-400 text-cyan-400 hover:text-white text-xs font-bold tracking-wider rounded-lg cursor-pointer transition disabled:opacity-50"
           >
-            {loadingUrl
-              ? <span className="w-3 h-3 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
-              : '⬇'}
-            TẢI XUỐNG
+            {loadingUrl ? (
+              <span className="w-3 h-3 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span>Tải xuống</span>
           </button>
         )}
         {!isFile && submission.submission_url && (
@@ -593,9 +632,10 @@ function CurrentSubmissionCard({
             href={submission.submission_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 bg-[#131e3d] border border-[#1e2d5a] hover:border-violet-400 text-violet-400 hover:text-white text-xs font-bold tracking-wider uppercase rounded-lg transition"
+            className="flex items-center gap-2 px-4 py-2 bg-[#131e3d] border border-[#1e2d5a] hover:border-violet-400 text-violet-400 hover:text-white text-xs font-bold tracking-wider rounded-lg transition"
           >
-            🔗 MỞ LINK
+            <ExternalLink className="w-4 h-4" />
+            <span>Mở link</span>
           </a>
         )}
         {/* Only show re-submit button if gate is still open */}
@@ -603,9 +643,10 @@ function CurrentSubmissionCard({
           <button
             id={`resubmit-btn-${submission.id}`}
             onClick={onResubmit}
-            className="flex items-center gap-2 px-4 py-2 border border-[#1e2d5a] hover:border-amber-400/50 bg-transparent text-slate-400 hover:text-amber-400 text-xs font-bold tracking-wider uppercase rounded-lg cursor-pointer transition"
+            className="flex items-center gap-2 px-4 py-2 border border-[#1e2d5a] hover:border-amber-400/50 bg-transparent text-slate-400 hover:text-amber-400 text-xs font-bold tracking-wider rounded-lg cursor-pointer transition"
           >
-            🔄 NỘP LẠI
+            <RefreshCw className="w-4 h-4" />
+            <span>Nộp lại</span>
           </button>
         )}
       </div>
@@ -619,16 +660,16 @@ function HistoryItem({ item }: { item: SubmissionHistory }) {
   const isFile = item.submission_kind === 'file'
   return (
     <div className="flex items-start gap-4 p-4 bg-slate-950/40 border border-[#1e2d5a]/60 rounded-xl hover:border-[#1e2d5a] transition">
-      <span className="text-2xl shrink-0 mt-0.5 opacity-50">{isFile ? '📄' : '🔗'}</span>
+      <span className="shrink-0 mt-0.5 text-slate-500">{isFile ? <FileText className="w-5 h-5" /> : <LinkIcon className="w-5 h-5" />}</span>
       <div className="flex-1 min-w-0 space-y-1.5">
         <p className="text-sm font-semibold text-slate-400 break-all">
           {isFile && item.file_name ? item.file_name : 'Nộp bằng link'}
         </p>
         <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-slate-500 font-semibold">
-          {isFile && item.file_size && <span>📦 {formatBytes(item.file_size)}</span>}
+          {isFile && item.file_size && <span className="flex items-center gap-1"><Package className="w-3.5 h-3.5" /> {formatBytes(item.file_size)}</span>}
           <span>Nộp lúc: {formatDate(item.uploaded_at)}</span>
           <span>Bị thay thế lúc: {formatDate(item.deleted_at)}</span>
-          {item.profiles?.email && <span>👤 {item.profiles.email}</span>}
+          {item.profiles?.email && <span className="flex items-center gap-1"><UserIcon className="w-3.5 h-3.5" /> {item.profiles.email}</span>}
         </div>
       </div>
       <span className="text-[10px] font-orbitron font-bold text-slate-600 uppercase tracking-widest shrink-0">CŨ</span>
@@ -716,19 +757,24 @@ function PhaseSubmissionSection({
               {/* Date info */}
               <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1.5 text-[10px] text-slate-500 font-semibold">
                 {phase.start_date && (
-                  <span>
-                    📅 {new Date(phase.start_date).toLocaleDateString('vi-VN')}
-                    {phase.end_date ? ` → ${new Date(phase.end_date).toLocaleDateString('vi-VN')}` : ''}
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                    <span>
+                      {new Date(phase.start_date).toLocaleDateString('vi-VN')}
+                      {phase.end_date ? ` → ${new Date(phase.end_date).toLocaleDateString('vi-VN')}` : ''}
+                    </span>
                   </span>
                 )}
                 {phase.submission_opens_at && (
-                  <span className="text-cyan-600/80">
-                    📤 Mở nộp: {new Date(phase.submission_opens_at).toLocaleString('vi-VN')}
+                  <span className="text-cyan-600/80 flex items-center gap-1">
+                    <Upload className="w-3.5 h-3.5 text-cyan-500" />
+                    <span>Mở nộp: {new Date(phase.submission_opens_at).toLocaleString('vi-VN')}</span>
                   </span>
                 )}
                 {phase.submission_closes_at && (
-                  <span className="text-red-400/70">
-                    ⛔ Hạn chót: {new Date(phase.submission_closes_at).toLocaleString('vi-VN')}
+                  <span className="text-red-400/70 flex items-center gap-1">
+                    <Ban className="w-3.5 h-3.5 text-red-400" />
+                    <span>Hạn chót: {new Date(phase.submission_closes_at).toLocaleString('vi-VN')}</span>
                   </span>
                 )}
               </div>
@@ -760,8 +806,9 @@ function PhaseSubmissionSection({
             {/* Submit form inline */}
             {showForm && gate === 'open' && (
               <div className="tech-panel p-5 border-cyan-500/20">
-                <h4 className="font-orbitron text-xs font-bold tracking-widest text-cyan-400 uppercase mb-4">
-                  📤 NỘP BÀI — {phase.title}
+                <h4 className="font-orbitron text-xs font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-cyan-400" />
+                  <span>NỘP BÀI — {phase.title}</span>
                 </h4>
                 <SubmitForm
                   phase={phase}
@@ -802,7 +849,8 @@ function PhaseSubmissionSection({
             {history.length > 0 && (
               <div className="mt-2">
                 <h4 className="font-orbitron text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-3 flex items-center gap-1.5">
-                  🗄 LỊCH SỬ BÀI NỘP CŨ
+                  <Archive className="w-4 h-4 text-slate-500" />
+                  <span>LỊCH SỬ BÀI NỘP CŨ</span>
                 </h4>
                 <div className="space-y-2">
                   {history.map((item) => <HistoryItem key={item.id} item={item} />)}
@@ -859,20 +907,24 @@ export default function SubmissionsPage() {
 
       <div className="max-w-3xl mx-auto relative z-10">
         <Link href="/dashboard"
-          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-cyan-400 hover:text-cyan-300 transition-colors uppercase mb-8">
-          ← QUAY LẠI PILOT CONSOLE
+          className="inline-flex items-center gap-1.5 text-xs font-orbitron font-bold tracking-widest text-cyan-400 hover:text-cyan-300 transition-colors uppercase mb-8">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Quay lại Dashboard</span>
         </Link>
 
         <div className="mb-8">
-          <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase">
-            📝 BÀI NỘP CỦA TÔI
+          <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase flex items-center gap-2">
+            <ClipboardPen className="w-6 h-6 text-cyan-400" />
+            <span>BÀI NỘP CỦA TÔI</span>
           </h1>
         </div>
 
         {/* No team state */}
         {myTeams.length === 0 && (
           <div className="tech-panel p-8 text-center relative cyber-corners border-amber-500/20 text-white">
-            <div className="text-5xl mb-4 inline-block bg-amber-950/20 border border-amber-800/30 p-4 rounded-full">👥</div>
+            <div className="inline-block bg-amber-950/20 border border-amber-800/30 p-4 rounded-full text-amber-400 mb-4">
+              <Users className="w-10 h-10" />
+            </div>
             <h3 className="font-orbitron text-lg font-bold mb-2 uppercase tracking-wider text-amber-400">
               CHƯA GIA NHẬP LIÊN MINH
             </h3>
