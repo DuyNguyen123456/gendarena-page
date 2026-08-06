@@ -1,3 +1,29 @@
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║                ⚠️  REVIEW BEFORE RUNNING  ⚠️                   ║
+-- ║                                                                  ║
+-- ║  DATA CLEANUP SCRIPT — CONDITIONAL USE ONLY                     ║
+-- ║                                                                  ║
+-- ║  This script was written to fix a specific data integrity       ║
+-- ║  issue: users belonging to multiple teams simultaneously.       ║
+-- ║  It should only be run if that condition is confirmed to exist. ║
+-- ║                                                                  ║
+-- ║  What this script does:                                         ║
+-- ║    1. DELETEs duplicate team_members rows (keeps leader role    ║
+-- ║       or newest join if no leader). Logic is CTE-guarded but   ║
+-- ║       incorrect data shape may cause unintended deletes.       ║
+-- ║    2. ADDs a UNIQUE constraint on team_members(user_id).       ║
+-- ║    3. CREATEs a trigger to auto-reject pending join requests.  ║
+-- ║                                                                  ║
+-- ║  BEFORE RUNNING:                                                 ║
+-- ║    1. Verify duplicate team membership actually exists.         ║
+-- ║    2. Back up team_members table.                               ║
+-- ║    3. Test on staging first.                                    ║
+-- ║    4. Review the CTE output before the DELETE executes.        ║
+-- ║                                                                  ║
+-- ║  Steps 2-3 are safe to re-run (idempotent). Step 1 is not.    ║
+-- ║  See audit: SQL_MIGRATIONS_README.md                            ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+
 -- 1. DỌN DẸP DỮ LIỆU TRÙNG LẶP HIỆN TẠI (GIỮ LẠI DÒNG MỚI NHẤT HOẶC DÒNG CÓ VAI TRÒ LEADER)
 WITH duplicate_members AS (
   SELECT id, user_id, team_id, role, joined_at,

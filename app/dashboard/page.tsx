@@ -285,7 +285,7 @@ export default function DashboardPage() {
             </h1>
           </div>
           <div className="flex items-center gap-2 text-xs font-orbitron bg-cyan-950/30 border border-cyan-500/30 px-4 py-2 rounded-lg text-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.05)]">
-            <span className="w-2 h-2 rounded-full bg-emerald-405 animate-ping" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             Hoạt động
           </div>
         </div>

@@ -560,7 +560,7 @@ export default function TeamDashboardPage() {
                   </div>
                   <div>
                     <span className="text-slate-500 text-xs tracking-wider font-semibold block">Trạng thái tuyển quân:</span>
-                    <span className={`font-bold ${team.is_open ? 'text-cyan-400' : 'text-red-450'}`}>
+                    <span className={`font-bold ${team.is_open ? 'text-cyan-400' : 'text-red-400'}`}>
                       {team.is_open ? 'Đang mở đăng ký' : 'Đã đóng tuyển'}
                     </span>
                   </div>

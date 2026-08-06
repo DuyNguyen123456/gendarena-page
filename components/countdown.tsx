@@ -85,8 +85,8 @@ export default function Countdown({ targetDate, phaseTitle = 'VÒNG SƠ LOẠI' 
 
         {timeLeft.isExpired ? (
           <div className="text-center py-6">
-            <h3 className="font-orbitron text-xl md:text-2xl font-bold tracking-widest text-cyan-400 animate-pulse">
-              ĐÃ ĐẾN GIỜ MỞ ĐƠN CHÍNH THỨC!
+            <h3 className="font-orbitron text-xl md:text-2xl font-bold tracking-wider text-cyan-400">
+              Đã mở đơn đăng ký chính thức!
             </h3>
             <p className="text-xs text-slate-400 font-sans mt-2">Hệ thống đang mở nhận hồ sơ đăng ký tham dự giải đấu.</p>
           </div>
@@ -97,8 +97,8 @@ export default function Countdown({ targetDate, phaseTitle = 'VÒNG SƠ LOẠI' 
               <span className="font-orbitron text-3xl md:text-5xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] select-none">
                 {String(timeLeft.days).padStart(2, '0')}
               </span>
-              <span className="text-[10px] md:text-xs font-bold text-slate-400 tracking-wider font-sans mt-1">
-                NGÀY
+              <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wider font-sans mt-1">
+                Ngày
               </span>
               {/* Progress bar ticker */}
               <div className="absolute bottom-0 left-0 h-[2px] bg-cyan-400 transition-all duration-1000" style={{ width: `${daysPercent}%` }} />
@@ -109,8 +109,8 @@ export default function Countdown({ targetDate, phaseTitle = 'VÒNG SƠ LOẠI' 
               <span className="font-orbitron text-3xl md:text-5xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] select-none">
                 {String(timeLeft.hours).padStart(2, '0')}
               </span>
-              <span className="text-[10px] md:text-xs font-bold text-slate-400 tracking-wider font-sans mt-1">
-                GIỜ
+              <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wider font-sans mt-1">
+                Giờ
               </span>
               {/* Progress bar ticker */}
               <div className="absolute bottom-0 left-0 h-[2px] bg-cyan-400 transition-all duration-1000" style={{ width: `${hoursPercent}%` }} />
@@ -121,8 +121,8 @@ export default function Countdown({ targetDate, phaseTitle = 'VÒNG SƠ LOẠI' 
               <span className="font-orbitron text-3xl md:text-5xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] select-none">
                 {String(timeLeft.minutes).padStart(2, '0')}
               </span>
-              <span className="text-[10px] md:text-xs font-bold text-slate-400 tracking-wider font-sans mt-1">
-                PHÚT
+              <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wider font-sans mt-1">
+                Phút
               </span>
               {/* Progress bar ticker */}
               <div className="absolute bottom-0 left-0 h-[2px] bg-cyan-400 transition-all duration-1000" style={{ width: `${minutesPercent}%` }} />
@@ -133,8 +133,8 @@ export default function Countdown({ targetDate, phaseTitle = 'VÒNG SƠ LOẠI' 
               <span className="font-orbitron text-3xl md:text-5xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] select-none">
                 {String(timeLeft.seconds).padStart(2, '0')}
               </span>
-              <span className="text-[10px] md:text-xs font-bold text-slate-400 tracking-wider font-sans mt-1">
-                GIÂY
+              <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wider font-sans mt-1">
+                Giây
               </span>
               {/* Progress bar ticker */}
               <div className="absolute bottom-0 left-0 h-[2px] bg-cyan-400 transition-all duration-500" style={{ width: `${secondsPercent}%` }} />

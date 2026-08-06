@@ -1,3 +1,26 @@
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              🟠  CORE MIGRATION — READ BEFORE RUNNING  🟠       ║
+-- ║                                                                  ║
+-- ║  EXECUTION ORDER MATTERS:                                        ║
+-- ║    Run AFTER:  gendarena_update_2.sql  (hard dependency)       ║
+-- ║    Depends on: scoring_config, scores, judge_assignments,       ║
+-- ║                competition_phases — all created by update_2     ║
+-- ║                                                                  ║
+-- ║  Running this file WITHOUT update_2 applied first WILL FAIL.   ║
+-- ║                                                                  ║
+-- ║  What this file extends:                                        ║
+-- ║    - Profile RLS: adds admin + self select/update policies      ║
+-- ║    - scoring_rounds + scoring_criteria + score_levels tables    ║
+-- ║    - Dynamic scoring logic (overrides fixed-weight from #2)     ║
+-- ║    - Updated enforce_score_business_rules trigger               ║
+-- ║    - RLS for all new dynamic scoring tables                     ║
+-- ║                                                                  ║
+-- ║  This file is idempotent and safe to re-run once update_2      ║
+-- ║  has been applied.                                               ║
+-- ║                                                                  ║
+-- ║  See audit: SQL_MIGRATIONS_README.md                            ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+
 -- ═══════════════════════════════════════════
 -- GEND ARENA UPDATE #3
 -- Fix profile role updates, enable dynamic scoring rounds/criteria, and support judge routing.

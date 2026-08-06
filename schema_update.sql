@@ -1,3 +1,27 @@
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║                  ⛔  SAFETY WARNING  ⛔                        ║
+-- ║                                                                  ║
+-- ║  ONE-SHOT BOOTSTRAP SCRIPT — DO NOT RERUN ON ANY ENVIRONMENT   ║
+-- ║  THAT HAS LIVE DATA                                              ║
+-- ║                                                                  ║
+-- ║  This file was designed to be executed ONCE on an empty DB.     ║
+-- ║  It contains BARE DELETE statements with no WHERE condition:     ║
+-- ║                                                                  ║
+-- ║      DELETE FROM submission_history;  -- wipes entire table     ║
+-- ║      DELETE FROM submissions;         -- wipes entire table     ║
+-- ║      DELETE FROM competition_phases;  -- wipes entire table     ║
+-- ║                                                                  ║
+-- ║  Re-running this script on production WILL permanently delete   ║
+-- ║  all submission, submission history, and phase data.            ║
+-- ║                                                                  ║
+-- ║  BEFORE RUNNING:                                                 ║
+-- ║    1. Confirm you are on a fresh / empty database.              ║
+-- ║    2. Back up the database if any data exists.                  ║
+-- ║    3. Read SQL_MIGRATIONS_README.md for execution order.        ║
+-- ║                                                                  ║
+-- ║  See audit: SQL_MIGRATIONS_README.md                            ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+
 -- ═══════════════════════════════════════════
 -- PHẦN 1: UPDATE LỊCH TRÌNH & THỂ LOẠI SỰ KIỆN
 -- ═══════════════════════════════════════════

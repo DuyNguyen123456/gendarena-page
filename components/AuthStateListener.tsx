@@ -24,11 +24,8 @@ export default function AuthStateListener() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event) => {
         if (event === 'SIGNED_OUT') {
-          // Purge any remaining stale cookies and redirect to login.
-          // signOut() is a no-op when no session exists, so this is safe.
-          supabase.auth.signOut().finally(() => {
-            router.push('/login')
-          })
+          // Purge any remaining stale state and redirect to login.
+          router.push('/login')
         }
       }
     )

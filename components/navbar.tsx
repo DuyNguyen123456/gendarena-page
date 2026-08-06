@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { siteConfig } from '@/config/site'
 import Image from 'next/image'
+import { Settings, Scale, Calendar, Crown, User as UserIcon } from 'lucide-react'
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null)
@@ -16,7 +17,7 @@ export default function Navbar() {
   const menuRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     async function loadUser() {
@@ -30,6 +31,8 @@ export default function Navbar() {
           .eq('id', user.id)
           .single()
         setProfile(data)
+      } else {
+        setProfile(null)
       }
       setLoading(false)
     }
@@ -53,11 +56,9 @@ export default function Navbar() {
   }, [pathname])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
-    router.push('/')
-    router.refresh()
+    await supabase.auth.signOut()
   }
 
   const isAdmin = profile?.role === 'admin'
@@ -129,15 +130,17 @@ export default function Navbar() {
           )}
 
           {isAdmin && (
-            <Link href="/admin" className={getAdminLinkClass('/admin')}>
-              ⚙️ Quản lý
+            <Link href="/admin" className={`${getAdminLinkClass('/admin')} flex items-center gap-1.5`}>
+              <Settings className="w-4 h-4" />
+              <span>Quản lý</span>
             </Link>
           )}
 
           {isJudge && (
             <>
-              <Link href="/judge" className={getAdminLinkClass('/judge')}>
-                ⚖️ Giám khảo
+              <Link href="/judge" className={`${getAdminLinkClass('/judge')} flex items-center gap-1.5`}>
+                <Scale className="w-4 h-4 text-purple-400" />
+                <span>Giám khảo</span>
               </Link>
               <Link href="/profile" className={getLinkClass('/profile')}>
                 Hồ sơ
@@ -146,8 +149,9 @@ export default function Navbar() {
           )}
 
           {isAdmin && (
-            <Link href="/admin/phases" className={getAdminLinkClass('/admin/phases')}>
-              🗓️ Quản lý Timeline
+            <Link href="/admin/phases" className={`${getAdminLinkClass('/admin/phases')} flex items-center gap-1.5`}>
+              <Calendar className="w-4 h-4 text-red-400" />
+              <span>Timeline</span>
             </Link>
           )}
 
@@ -159,7 +163,8 @@ export default function Navbar() {
             <div className="flex items-center gap-3.5">
               <span className="text-slate-300 text-xs font-medium bg-[#131e3d] border border-[#1e2d5a] px-3 py-1.5 rounded-full flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                {isAdmin ? '👑 Admin:' : isJudge ? '⚖️ Giám khảo:' : '👤'} {profile?.full_name || 'Đấu thủ'}
+                {isAdmin ? <Crown className="w-3.5 h-3.5 text-amber-400" /> : isJudge ? <Scale className="w-3.5 h-3.5 text-purple-400" /> : <UserIcon className="w-3.5 h-3.5 text-cyan-400" />}
+                <span>{profile?.full_name || 'Đấu thủ'}</span>
               </span>
               <button
                 onClick={handleLogout}
@@ -178,9 +183,9 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/register"
-                className="tech-btn-accent px-4 py-2 rounded-lg text-sm"
+                className="tech-btn-accent px-4 py-2 rounded-lg text-sm font-bold"
               >
-                BƯỚC VÀO SÀN ĐẤU
+                Đăng ký ngay
               </Link>
             </div>
           )}
@@ -231,12 +236,13 @@ export default function Navbar() {
           {isAdmin && (
             <Link
               href="/admin"
-              className={`block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname === '/admin'
+              className={`flex items-center gap-2 w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname === '/admin'
                   ? 'text-red-400 bg-red-950/30 border border-red-500/30'
                   : 'text-slate-300 hover:text-red-400 hover:bg-red-950/10'
                 }`}
             >
-              ⚙️ Quản lý
+              <Settings className="w-4 h-4 text-red-400" />
+              <span>Quản lý</span>
             </Link>
           )}
 
@@ -244,12 +250,13 @@ export default function Navbar() {
             <>
               <Link
                 href="/judge"
-                className={`block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname.startsWith('/judge')
+                className={`flex items-center gap-2 w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname.startsWith('/judge')
                     ? 'text-purple-400 bg-purple-950/30 border border-purple-500/30'
                     : 'text-slate-300 hover:text-purple-400 hover:bg-purple-950/10'
                   }`}
               >
-                ⚖️ Giám khảo
+                <Scale className="w-4 h-4 text-purple-400" />
+                <span>Giám khảo</span>
               </Link>
               <Link href="/profile" className={getMobileLinkClass('/profile')}>
                 Hồ sơ
@@ -260,12 +267,13 @@ export default function Navbar() {
           {isAdmin && (
             <Link
               href="/admin/phases"
-              className={`block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname === '/admin/phases'
+              className={`flex items-center gap-2 w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname === '/admin/phases'
                   ? 'text-red-400 bg-red-950/30 border border-red-500/30'
                   : 'text-slate-300 hover:text-red-400 hover:bg-red-950/10'
                 }`}
             >
-              🗓️ Quản lý Timeline
+              <Calendar className="w-4 h-4 text-red-400" />
+              <span>Timeline</span>
             </Link>
           )}
 
@@ -276,7 +284,8 @@ export default function Navbar() {
               <div className="flex items-center justify-between px-1">
                 <span className="text-slate-300 text-xs font-medium flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  {isAdmin ? '👑' : isJudge ? '⚖️' : '👤'} {profile?.full_name || 'Đấu thủ'}
+                  {isAdmin ? <Crown className="w-3.5 h-3.5 text-amber-400" /> : isJudge ? <Scale className="w-3.5 h-3.5 text-purple-400" /> : <UserIcon className="w-3.5 h-3.5 text-cyan-400" />}
+                  <span>{profile?.full_name || 'Đấu thủ'}</span>
                 </span>
                 <button
                   onClick={handleLogout}
@@ -291,7 +300,7 @@ export default function Navbar() {
                   Đăng nhập
                 </Link>
                 <Link href="/register" className="tech-btn-accent block text-center px-4 py-2.5 rounded-lg text-sm font-bold">
-                  BƯỚC VÀO SÀN ĐẤU
+                  Đăng ký ngay
                 </Link>
               </div>
             )}

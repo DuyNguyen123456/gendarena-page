@@ -74,13 +74,13 @@ export default function RegisterPage() {
           <div className="inline-block bg-cyan-950/30 border border-cyan-800/30 p-4 rounded-full text-cyan-400 mb-4">
             <CheckCircle2 className="w-10 h-10" />
           </div>
-          <h2 className="font-orbitron text-2xl font-extrabold mb-2 uppercase tracking-wider text-cyan-400">ĐĂNG KÝ THÀNH CÔNG!</h2>
+          <h2 className="font-orbitron text-2xl font-extrabold mb-2 tracking-wider text-cyan-400">Đăng ký thành công!</h2>
           <p className="text-slate-400 text-sm mb-6 leading-relaxed">
             Hệ thống đã gửi email kích hoạt. Vui lòng kiểm tra hộp thư để xác thực tài khoản trước khi truy cập đấu trường.
           </p>
           <Link href="/login"
-            className="tech-btn-accent font-orbitron inline-block px-8 py-3 rounded-lg text-sm tracking-widest text-black">
-            ĐĂNG NHẬP NGAY
+            className="tech-btn-accent font-orbitron inline-block px-8 py-3 rounded-lg text-sm tracking-wider font-bold text-black">
+            Đăng nhập ngay
           </Link>
         </div>
       </div>

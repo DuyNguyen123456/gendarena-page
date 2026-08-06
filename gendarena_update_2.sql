@@ -1,3 +1,29 @@
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              🟠  CORE MIGRATION — READ BEFORE RUNNING  🟠       ║
+-- ║                                                                  ║
+-- ║  This is the primary migration for the judge/scoring system.    ║
+-- ║  It is idempotent and safe to re-run, but note:                 ║
+-- ║                                                                  ║
+-- ║  EXECUTION ORDER MATTERS:                                        ║
+-- ║    Run BEFORE: gendarena_update_3.sql                           ║
+-- ║    Depends on: Base tables (profiles, submissions, teams)       ║
+-- ║                created by schema_update.sql                     ║
+-- ║                                                                  ║
+-- ║  What this file sets up:                                        ║
+-- ║    - Security helper functions (is_admin, is_judge, etc.)       ║
+-- ║    - Profile extensions (facebook_url, avatar_url)              ║
+-- ║    - scoring_config table + weight validation                   ║
+-- ║    - judge_assignments table + RLS                              ║
+-- ║    - scores table + weighted scoring trigger                    ║
+-- ║    - leaderboard_view + get_leaderboard() function             ║
+-- ║    - Storage: avatars bucket + policies                         ║
+-- ║                                                                  ║
+-- ║  gendarena_update_3.sql extends and overrides some triggers     ║
+-- ║  defined here. Both files must be applied for full behavior.   ║
+-- ║                                                                  ║
+-- ║  See audit: SQL_MIGRATIONS_README.md                            ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+
 -- ═══════════════════════════════════════════════════════════════════
 -- GEND ARENA UPDATE #2
 -- Judge branch, scoring config, profile extensions, RLS

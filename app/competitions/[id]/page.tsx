@@ -5,6 +5,15 @@ import { createClient } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/loading'
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ScrollText,
+  Trophy,
+  Calendar,
+  Radio,
+  Users,
+} from 'lucide-react'
 
 type Competition = {
   id: string
@@ -59,9 +68,13 @@ export default function CompetitionDetailPage() {
 
   if (!competition) return (
     <div className="min-h-screen bg-[#050814] text-white flex flex-col items-center justify-center gap-4">
-      <p className="font-orbitron text-lg text-red-400 tracking-widest uppercase">⚠ Không tìm thấy cuộc thi</p>
-      <Link href="/dashboard" className="tech-btn-primary px-6 py-2.5 rounded-lg text-xs font-bold tracking-widest font-orbitron uppercase">
-        ← Quay lại Dashboard
+      <p className="font-orbitron text-base text-red-400 tracking-wider uppercase flex items-center gap-2">
+        <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+        <span>Không tìm thấy cuộc thi</span>
+      </p>
+      <Link href="/dashboard" className="tech-btn-primary px-6 py-2.5 rounded-lg text-xs font-bold tracking-wider font-orbitron flex items-center gap-1.5">
+        <ArrowLeft className="w-4 h-4" />
+        <span>Quay lại Dashboard</span>
       </Link>
     </div>
   )
@@ -77,9 +90,10 @@ export default function CompetitionDetailPage() {
         {/* Back navigation */}
         <Link 
           href="/dashboard" 
-          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-cyan-400 hover:text-cyan-300 transition-colors uppercase mb-8"
+          className="inline-flex items-center gap-1.5 text-xs font-orbitron font-bold tracking-wider text-cyan-400 hover:text-cyan-300 transition-colors uppercase mb-8"
         >
-          ← QUAY LẠI PILOT CONSOLE
+          <ArrowLeft className="w-4 h-4" />
+          <span>Quay lại Dashboard</span>
         </Link>
 
         {/* Quest Briefing Header */}
@@ -101,8 +115,9 @@ export default function CompetitionDetailPage() {
         {/* Details Grid (Rules & Prizes) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="tech-panel p-6 border-cyan-500/15 relative">
-            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
-              <span>📜</span> THỂ LỆ THI ĐẤU
+            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
+              <ScrollText className="w-4 h-4 text-cyan-400 shrink-0" />
+              <span>Thể lệ thi đấu</span>
             </h2>
             <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
               {competition.rules || 'Nội dung thể lệ đang được cập nhật bởi ban tổ chức...'}
@@ -110,8 +125,9 @@ export default function CompetitionDetailPage() {
           </div>
 
           <div className="tech-panel p-6 border-cyan-500/15 relative">
-            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-1.5">
-              <span>🏆</span> CƠ CẤU GIẢI THƯỞNG
+            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-cyan-400 shrink-0" />
+              <span>Cơ cấu giải thưởng</span>
             </h2>
             <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
               {competition.prizes || 'Thông tin giải thưởng chi tiết đang được cập nhật...'}
@@ -119,10 +135,11 @@ export default function CompetitionDetailPage() {
           </div>
         </div>
 
-        {/* Timeline Timeline */}
+        {/* Timeline */}
         <div className="tech-panel p-6 mb-8 border-cyan-500/15 relative">
-          <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-1.5">
-            <span>📅</span> LỘ TRÌNH ĐẤU TRƯỜNG
+          <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span>Lộ trình cuộc thi</span>
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -133,8 +150,8 @@ export default function CompetitionDetailPage() {
             ].map((item) => (
               <div key={item.label} className={`border p-4 rounded-lg flex flex-col justify-between h-20 ${item.bg}`}>
                 <span className="text-xs font-bold uppercase tracking-wider opacity-85">{item.label}</span>
-                <span className="font-orbitron text-xs font-extrabold tracking-widest">
-                  {item.value ? new Date(item.value).toLocaleDateString('vi-VN') : 'CHƯA ĐỊNH NGÀY'}
+                <span className="font-orbitron text-xs font-semibold tracking-wider">
+                  {item.value ? new Date(item.value).toLocaleDateString('vi-VN') : 'Chưa công bố'}
                 </span>
               </div>
             ))}
@@ -143,16 +160,18 @@ export default function CompetitionDetailPage() {
 
         {message && (
           <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-8 text-sm font-semibold tracking-wide flex items-center gap-2">
-            <span>📡</span> {message}
+            <Radio className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span>{message}</span>
           </div>
         )}
 
         {/* Register Alliance Section */}
         <Link
           href={`/team/create?competitionId=${competition.id}`}
-          className="w-full tech-btn-accent py-4 rounded-lg font-orbitron font-extrabold text-base tracking-widest uppercase cursor-pointer text-center block text-black hover:scale-[1.01] transition-transform duration-200"
+          className="w-full tech-btn-accent py-4 rounded-lg font-orbitron font-extrabold text-sm md:text-base tracking-wider uppercase cursor-pointer text-center flex items-center justify-center gap-2 text-black hover:scale-[1.01] transition-transform duration-200"
         >
-          👥 KHỞI TẠO LIÊN MINH CHIẾN ĐẤU (ĐĂNG KÝ ĐỘI THI)
+          <Users className="w-5 h-5 shrink-0" />
+          <span>Tạo đội thi mới & Đăng ký</span>
         </Link>
 
       </div>

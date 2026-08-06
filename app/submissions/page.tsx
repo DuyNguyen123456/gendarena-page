@@ -915,7 +915,7 @@ export default function SubmissionsPage() {
         <div className="mb-8">
           <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase flex items-center gap-2">
             <ClipboardPen className="w-6 h-6 text-cyan-400" />
-            <span>BÀI NỘP CỦA TÔI</span>
+            <span>Bài nộp của tôi</span>
           </h1>
         </div>
 
@@ -925,14 +925,14 @@ export default function SubmissionsPage() {
             <div className="inline-block bg-amber-950/20 border border-amber-800/30 p-4 rounded-full text-amber-400 mb-4">
               <Users className="w-10 h-10" />
             </div>
-            <h3 className="font-orbitron text-lg font-bold mb-2 uppercase tracking-wider text-amber-400">
-              CHƯA GIA NHẬP LIÊN MINH
+            <h3 className="font-orbitron text-lg font-bold mb-2 tracking-wider text-amber-400">
+              Chưa gia nhập đội thi
             </h3>
             <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">
               Bạn cần thành lập hoặc gia nhập một đội thi trước khi có thể nộp bài.
             </p>
             <Link href="/dashboard"
-              className="tech-btn-accent font-orbitron inline-block px-6 py-2.5 rounded-lg text-xs tracking-wider uppercase text-black">
+              className="tech-btn-accent font-orbitron inline-block px-6 py-2.5 rounded-lg text-xs tracking-wider uppercase font-bold text-black">
               XEM CÁC CUỘC THI
             </Link>
           </div>
@@ -950,7 +950,7 @@ export default function SubmissionsPage() {
                   </div>
                   <div>
                     <p className="font-orbitron font-bold text-white tracking-wider uppercase text-sm">{team.name}</p>
-                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">LIÊN MINH</p>
+                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">ĐỘI THI</p>
                   </div>
                 </div>
 

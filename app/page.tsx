@@ -9,6 +9,7 @@ import SponsorsSection from '@/components/sponsors-section'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import TimelineSection from '@/components/timeline-section'
 import { siteConfig } from '@/config/site'
+import { Rocket, Lightbulb, Users, Trophy } from 'lucide-react'
 
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient()
@@ -52,7 +53,7 @@ export default async function HomePage() {
 
           {/* Title */}
           <h1 className="font-orbitron text-5xl md:text-7xl font-extrabold tracking-tight mb-4 leading-tight uppercase">
-            ĐẤU TRƯỜNG <br />
+            SÀN ĐẤU <br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 neon-text-cyan drop-shadow-[0_0_30px_rgba(0,240,255,0.3)]">
               {siteConfig.name}
             </span>
@@ -77,15 +78,16 @@ export default async function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 mb-20">
             <Link
               href="/register"
-              className="tech-btn-accent shimmer-btn font-orbitron inline-block px-10 py-5 rounded-lg text-lg tracking-wider hover:scale-105 active:scale-95 transition-all duration-200 shadow-[0_0_30px_rgba(0,240,255,0.2)]"
+              className="tech-btn-accent shimmer-btn font-orbitron font-bold inline-flex items-center justify-center gap-2 px-9 py-4 rounded-lg text-base tracking-wider hover:scale-105 active:scale-95 transition-all duration-200 shadow-[0_0_30px_rgba(0,240,255,0.2)] text-black"
             >
-              🎯 ĐĂNG KÝ BƯỚC VÀO ARENA
+              <Rocket className="w-5 h-5 text-black shrink-0" />
+              <span>Đăng ký tham gia</span>
             </Link>
             <Link
               href="/login"
-              className="tech-btn-primary font-orbitron inline-block px-8 py-5 rounded-lg text-base tracking-wider hover:scale-105 active:scale-95 transition-all duration-200"
+              className="tech-btn-primary font-orbitron font-bold inline-flex items-center justify-center px-8 py-4 rounded-lg text-base tracking-wider hover:scale-105 active:scale-95 transition-all duration-200 text-white"
             >
-              ĐĂNG NHẬP HỆ THỐNG →
+              Đăng nhập hệ thống
             </Link>
           </div>
 
@@ -97,7 +99,7 @@ export default async function HomePage() {
       {/* Features Section */}
       <section className="relative max-w-5xl mx-auto px-6 py-20">
         <div className="flex flex-col items-center mb-12">
-          <h2 className="font-orbitron text-3xl font-bold tracking-widest uppercase mb-3">
+          <h2 className="font-orbitron text-2xl md:text-3xl font-bold tracking-widest uppercase mb-3">
             VỀ CUỘC THI
           </h2>
           <div className="h-[2px] w-24 bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
@@ -106,22 +108,22 @@ export default async function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             {
-              icon: '💡',
+              icon: <Lightbulb className="w-7 h-7 text-cyan-400" />,
               num: '01',
-              title: 'Ý TƯỞNG ĐỘT PHÁ',
-              desc: 'Chia sẻ các đề xuất khoa học, giải pháp robot hoặc phần mềm đột phá giải quyết các bài toán thực tế của xã hội.'
+              title: 'Ý tưởng đột phá',
+              desc: 'Chia sẻ các đề xuất khoa học, giải pháp công nghệ hoặc phần mềm đột phá giải quyết các bài toán thực tế.'
             },
             {
-              icon: '👥',
+              icon: <Users className="w-7 h-7 text-cyan-400" />,
               num: '02',
-              title: 'LIÊN MINH CHIẾN ĐẤU',
-              desc: 'Xây dựng đội nhóm 2-5 thành viên đa ngành (lập trình viên, kĩ sư cơ khí, thiết kế) để cùng thiết kế và tối ưu hoá sản phẩm.'
+              title: 'Đội ngũ phát triển',
+              desc: 'Xây dựng đội nhóm 2-5 thành viên đa ngành (lập trình, kĩ thuật, thiết kế) để cùng thiết kế và tối ưu sản phẩm.'
             },
             {
-              icon: '🏆',
+              icon: <Trophy className="w-7 h-7 text-cyan-400" />,
               num: '03',
-              title: 'VINH QUANG ĐẤU TRƯỜNG',
-              desc: 'Tranh tài trực tiếp trên sàn đấu công nghệ để nhận giải thưởng tiền mặt trị giá 100 triệu VNĐ cùng các tấm vé gọi vốn startup.'
+              title: 'Giải thưởng & Cơ hội',
+              desc: 'Tranh tài trực tiếp trên sàn đấu công nghệ để nhận giải thưởng 100 triệu VNĐ cùng cơ hội gọi vốn startup.'
             },
           ].map((item, idx) => (
             <div
@@ -134,10 +136,10 @@ export default async function HomePage() {
               </div>
 
               <div>
-                <div className="text-4xl mb-4 p-3 bg-cyan-950/30 border border-cyan-800/30 rounded-lg inline-block group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(0,240,255,0.15)] transition duration-300">
+                <div className="p-3 bg-cyan-950/30 border border-cyan-800/30 rounded-lg inline-block mb-4 group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(0,240,255,0.15)] transition duration-300">
                   {item.icon}
                 </div>
-                <h3 className="font-orbitron text-lg font-bold mb-3 tracking-wider text-slate-100 group-hover:text-cyan-400 transition">
+                <h3 className="font-orbitron text-base font-bold mb-3 tracking-wider text-slate-100 group-hover:text-cyan-400 transition">
                   {item.title}
                 </h3>
                 <p className="text-slate-400 text-sm leading-relaxed mb-4">
