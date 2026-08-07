@@ -289,7 +289,7 @@ import { getScoringGate } from '@/types/phase'
 export async function upsertScore(
   payload: ScorePayload,
   existingId?: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; score?: Score } | { ok: false; error: string }> {
   const supabase = createClient()
 
   // Validate scoring gate against competition_phases (source of truth)
@@ -313,15 +313,15 @@ export async function upsertScore(
     return { ok: false, error: 'Vòng chấm điểm cho bài nộp này hiện đang đóng.' }
   }
 
-  const { error } = existingId
-    ? await supabase.from('scores').update(payload as never).eq('id', existingId)
-    : await supabase.from('scores').insert(payload as never)
+  const { data, error } = existingId
+    ? await supabase.from('scores').update(payload as never).eq('id', existingId).select('*').single()
+    : await supabase.from('scores').insert(payload as never).select('*').single()
 
   if (error) {
     console.error('upsertScore error:', error)
     return { ok: false, error: error.message }
   }
-  return { ok: true }
+  return { ok: true, score: data as Score }
 }
 
 export type LeaderboardRow = {
@@ -341,7 +341,8 @@ export async function getLeaderboard(): Promise<LeaderboardRow[]> {
     return []
   }
 
-  return (data ?? []) as LeaderboardRow[]
+  const rows = (data ?? []) as LeaderboardRow[]
+  return rows.sort((a, b) => Number(b.avg_score || 0) - Number(a.avg_score || 0))
 }
 
 export async function getJudges(): Promise<{ id: string; full_name: string; email: string }[]> {

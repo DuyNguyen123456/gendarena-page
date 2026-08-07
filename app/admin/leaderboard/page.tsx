@@ -38,7 +38,8 @@ export default function Leaderboard() {
       const ranked = await getLeaderboard()
       if (!isMounted) return
 
-      setRankings(ranked)
+      const sorted = [...ranked].sort((a, b) => Number(b.avg_score || 0) - Number(a.avg_score || 0))
+      setRankings(sorted)
       setLoading(false)
       timeoutId = setTimeout(() => {
         if (isMounted) setBarsVisible(true)

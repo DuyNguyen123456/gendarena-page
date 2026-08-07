@@ -26,6 +26,7 @@ export default function JudgeScoringPage() {
   const [rounds, setRounds] = useState<ScoringRound[]>([])
   const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null)
   const [scoringId, setScoringId] = useState<string | null>(null)
+  const [savingSubId, setSavingSubId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
@@ -91,6 +92,8 @@ export default function JudgeScoringPage() {
       return
     }
 
+    setSavingSubId(submissionId)
+
     const formData = new FormData(e.currentTarget)
     const criteriaScores: Record<string, number> = {}
 
@@ -110,11 +113,24 @@ export default function JudgeScoringPage() {
     const existing = scores[submissionId]
     const result = await upsertScore(payload, existing?.id)
 
+    setSavingSubId(null)
+
     if (!result.ok) {
       setMessage('❌ ' + result.error)
     } else {
       setMessage('✅ Đã lưu điểm!')
       setScoringId(null)
+
+      if (result.score) {
+        setScores((prev) => ({
+          ...prev,
+          [submissionId]: result.score!,
+        }))
+      }
+      if (selectedRoundId) {
+        const refreshedScores = await getMyScores(userId, selectedRoundId)
+        setScores(refreshedScores)
+      }
       await loadData(userId)
     }
   }
@@ -287,8 +303,19 @@ export default function JudgeScoringPage() {
                         className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white text-sm"
                       />
                       <div className="flex gap-3 flex-wrap">
-                        <button type="submit" className="px-5 py-2 bg-emerald-600 rounded-lg text-xs font-bold uppercase">
-                          💾 Lưu điểm
+                        <button
+                          type="submit"
+                          disabled={savingSubId === sub.id}
+                          className="px-5 py-2 bg-emerald-600 rounded-lg text-xs font-bold uppercase flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {savingSubId === sub.id ? (
+                            <>
+                              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                              Đang lưu...
+                            </>
+                          ) : (
+                            '💾 Lưu điểm'
+                          )}
                         </button>
                         <button type="button" onClick={() => setScoringId(null)} className="px-5 py-2 border border-[#1e2d5a] text-xs uppercase">
                           Huỷ
