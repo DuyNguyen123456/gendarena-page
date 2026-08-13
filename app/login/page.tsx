@@ -1,27 +1,46 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-
+import { useRouter, useSearchParams } from 'next/navigation'
 import { KeyRound, XCircle, Loader2, X, CheckCircle } from 'lucide-react'
-
 import { getPostLoginPath } from '@/lib/auth/routing'
+import { getAppUrl } from '@/lib/utils'
+import Loading from '@/components/loading'
 
-export default function LoginPage() {
+function LoginForm() {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<string>('')
 
   // Password Recovery state
   const [showResetModal, setShowResetModal] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
-  const [resetError, setResetError] = useState('')
+  const [resetError, setResetError] = useState<string>('')
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    const resetParam = searchParams.get('reset')
+
+    if (resetParam === 'success') {
+      setTimeout(() => {
+        setToast({
+          text: 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập với mật khẩu mới.',
+          type: 'success',
+        })
+      }, 0)
+    } else if (errorParam) {
+      setTimeout(() => {
+        setError(errorParam)
+      }, 0)
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -38,7 +57,12 @@ export default function LoginPage() {
     })
 
     if (authError) {
-      setError(authError.message)
+      const msg = typeof authError === 'string' ? authError : authError.message || 'Đã có lỗi xảy ra'
+      if (msg.includes('For security purposes') || (msg.includes('after ') && msg.includes('seconds'))) {
+        setError('Bạn vừa gửi yêu cầu. Vui lòng đợi khoảng 1 phút trước khi gửi lại.')
+      } else {
+        setError(msg)
+      }
       setLoading(false)
       return
     }
@@ -58,22 +82,37 @@ export default function LoginPage() {
     setResetLoading(true)
     setResetError('')
 
-    const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined
-    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: redirectUrl,
-    })
-
-    setResetLoading(false)
-
-    if (resetErr) {
-      setResetError(resetErr.message)
-    } else {
-      setShowResetModal(false)
-      setToast({
-        text: 'Email khôi phục đã gửi! Kiểm tra hộp thư của bạn.',
-        type: 'success',
+    try {
+      const redirectUrl = `${getAppUrl()}/auth/callback?next=/dat-lai-mat-khau`
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: redirectUrl,
       })
-      setTimeout(() => setToast(null), 5000)
+
+      setResetLoading(false)
+
+      if (resetErr) {
+        const msg = typeof resetErr === 'string' ? resetErr : resetErr.message || 'Đã có lỗi xảy ra'
+        if (msg.includes('For security purposes') || (msg.includes('after ') && msg.includes('seconds'))) {
+          setResetError('Bạn vừa gửi yêu cầu. Vui lòng đợi khoảng 1 phút trước khi gửi lại.')
+        } else {
+          setResetError(msg)
+        }
+      } else {
+        setShowResetModal(false)
+        setToast({
+          text: 'Email khôi phục đã được gửi! Vui lòng kiểm tra hộp thư.',
+          type: 'success',
+        })
+        setTimeout(() => setToast(null), 6000)
+      }
+    } catch (err: unknown) {
+      setResetLoading(false)
+      const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Đã có lỗi xảy ra'
+      if (msg.includes('For security purposes') || (msg.includes('after ') && msg.includes('seconds'))) {
+        setResetError('Bạn vừa gửi yêu cầu. Vui lòng đợi khoảng 1 phút trước khi gửi lại.')
+      } else {
+        setResetError(msg)
+      }
     }
   }
 
@@ -241,5 +280,13 @@ export default function LoginPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<Loading text="Đang tải trang đăng nhập..." />}>
+      <LoginForm />
+    </Suspense>
   )
 }
