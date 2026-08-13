@@ -10,6 +10,16 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import TimelineSection from '@/components/timeline-section'
 import { siteConfig } from '@/config/site'
 import { Rocket, Lightbulb, Users, Trophy } from 'lucide-react'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Trang chủ — Đấu Trường Khởi Nghiệp Công Nghệ',
+  description: siteConfig.description,
+  openGraph: {
+    title: `${siteConfig.name} — Đấu Trường Khởi Nghiệp Công Nghệ`,
+    description: siteConfig.description,
+  },
+}
 
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient()

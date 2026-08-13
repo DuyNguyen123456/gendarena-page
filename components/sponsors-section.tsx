@@ -31,7 +31,7 @@ function SponsorLogo({ sponsor }: { sponsor: Sponsor }) {
       {sponsor.logo_url && !imgError ? (
         <img
           src={sponsor.logo_url}
-          alt={sponsor.name}
+          alt={`Logo ${sponsor.name}`}
           className="h-8 max-w-[120px] object-contain filter brightness-75 hover:brightness-110 transition"
           onError={() => setImgError(true)}
         />

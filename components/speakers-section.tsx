@@ -35,7 +35,7 @@ function SpeakerCard({ speaker }: { speaker: Speaker }) {
           {speaker.avatar_url && !imgError ? (
             <img
               src={speaker.avatar_url}
-              alt={speaker.name}
+              alt={`Ảnh đại diện ${speaker.name}`}
               className="w-full h-full object-cover"
               onError={() => setImgError(true)}
             />

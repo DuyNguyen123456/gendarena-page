@@ -14,7 +14,7 @@ export interface FaqCategory {
 
 export const MASCOT_IMAGE_CONFIG = {
   path: "/images/faq-mascot.svg",
-  alt: "Gen D Arena FAQ Mascot",
+  alt: "Mascot trợ lý FAQ GenD Arena 2026",
   fallbackText: "GenD FAQ",
 }
 

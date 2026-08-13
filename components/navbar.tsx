@@ -101,7 +101,7 @@ export default function Navbar() {
         >
           <Image
             src="/logo/gendarena-logo.png"
-            alt="GenD Arena Logo"
+            alt="Logo GenD Arena 2026"
             width={28}
             height={28}
             className="object-contain group-hover:animate-pulse"
