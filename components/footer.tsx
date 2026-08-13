@@ -87,7 +87,7 @@ export default function Footer() {
               <li><a href={siteConfig.resources.scoringCriteria} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">Tiêu chí chấm điểm</a></li>
               <li><a href={siteConfig.resources.reportTemplate} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">Template báo cáo</a></li>
               <li><Link href="/organizers" className="hover:text-cyan-400 transition-colors">FAQ (Ban tổ chức)</Link></li>
-              <li><Link href="/chinh-sach-bao-mat" className="hover:text-cyan-400 transition-colors">Chính sách bảo mật</Link></li>
+              <li><Link href="/privacy-policy" className="hover:text-cyan-400 transition-colors">Chính sách bảo mật</Link></li>
             </ul>
           </div>
 
@@ -114,7 +114,7 @@ export default function Footer() {
           <p className="text-slate-600 text-xs">
             © {year} {siteConfig.name}. Bản quyền thuộc về GenD Arena.
           </p>
-          <Link href="/chinh-sach-bao-mat" className="text-slate-500 hover:text-cyan-400 text-xs transition-colors">
+          <Link href="/privacy-policy" className="text-slate-500 hover:text-cyan-400 text-xs transition-colors">
             Chính sách bảo mật
           </Link>
         </div>

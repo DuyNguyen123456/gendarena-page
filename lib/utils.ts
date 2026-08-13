@@ -6,15 +6,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getAppUrl() {
+  // In browser during local development, always use actual origin to avoid
+  // accidentally sending recovery emails to a production URL from .env.local
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    return window.location.origin
+  }
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     const url = process.env.NEXT_PUBLIC_SITE_URL
     return url.endsWith('/') ? url.slice(0, -1) : url
   }
-  if (typeof window !== 'undefined' && window.location.origin) {
+  // Production browser fallback
+  if (typeof window !== 'undefined') {
     return window.location.origin
-  }
-  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
   }
   return 'http://localhost:3000'
 }

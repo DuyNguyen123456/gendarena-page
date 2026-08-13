@@ -12,7 +12,7 @@ export default function robots(): MetadataRoute.Robots {
         '/judge/*',
         '/api/*',
         '/auth/callback',
-        '/dat-lai-mat-khau',
+        '/reset-password',
       ],
     },
     sitemap: `${baseUrl}/sitemap.xml`,

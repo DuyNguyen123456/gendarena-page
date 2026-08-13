@@ -155,55 +155,36 @@ export default function PrivacyPolicyPage() {
             </p>
           </section>
 
-          {/* Section 7: Thời gian lưu trữ (PLACEHOLDER) */}
+          {/* Section 7: Thời gian lưu trữ */}
           <section className="tech-panel p-6 rounded-xl border-[#1e2d5a] relative">
             <h2 className="font-orbitron text-lg font-bold text-white uppercase tracking-wider mb-3 flex items-center gap-2">
               <Server className="w-5 h-5 text-cyan-400" />
               <span>7. Thời Gian Lưu Trữ Dữ Liệu</span>
             </h2>
-            <p className="text-slate-300 text-sm leading-relaxed mb-4">
-              Dữ liệu cá nhân và bài dự thi sẽ được lưu trữ trong suốt thời gian diễn ra cuộc thi GenD Arena 2026 để phục vụ công tác chấm điểm, trao giải và truyền thông tổng kết.
+            <p className="text-slate-300 text-sm leading-relaxed mb-3">
+              BTC GenD Arena 2026 cam kết lưu trữ dữ liệu người dùng theo các thời hạn sau:
             </p>
-
-            {/* TODO: BTC xác nhận thời gian lưu trữ chính xác */}
-            <div className="bg-amber-950/40 border border-amber-500/50 p-4 rounded-xl text-amber-300 text-xs leading-relaxed flex items-start gap-3 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-orbitron font-bold uppercase tracking-wider block text-amber-400 mb-1">
-                  [CẦN BTC XÁC NHẬN] - PLACEHOLDER LƯU TRỮ DỮ LIỆU
-                </span>
-                <span>
-                  Thời gian lưu trữ dữ liệu sau khi cuộc thi kết thúc (Ví dụ: Lưu trữ 01 năm phục vụ lưu trữ hồ sơ thành tích hoặc hủy dữ liệu sau 6 tháng). Ban Tổ chức và bộ phận tư vấn pháp lý cần xác nhận thời hạn chính xác trước khi ban hành chính thức.
-                </span>
-              </div>
-            </div>
+            <ul className="list-disc list-inside space-y-2 text-slate-300 text-sm leading-relaxed pl-2 mb-3">
+              <li><strong className="text-white">Dữ liệu tài khoản và đội thi</strong> (email, họ tên, thông tin đội, bài nộp): lưu trữ tối đa <strong className="text-cyan-400">12 tháng</strong> kể từ ngày cuộc thi kết thúc, sau đó sẽ được xóa hoặc ẩn danh hóa.</li>
+              <li><strong className="text-white">Dữ liệu tài chính và pháp lý</strong> (nếu có): lưu trữ <strong className="text-cyan-400">5 năm</strong> theo quy định của pháp luật Việt Nam về kế toán và thuế.</li>
+              <li><strong className="text-white">Bài nộp đoạt giải và thông tin công khai</strong>: có thể được lưu trữ lâu dài cho mục đích truyền thông, lưu trữ lịch sử cuộc thi và giới thiệu cho các mùa sau.</li>
+            </ul>
+            <p className="text-slate-300 text-sm leading-relaxed">
+              Người dùng có quyền yêu cầu xóa dữ liệu sớm hơn theo quy định tại Mục 5.
+            </p>
           </section>
 
-          {/* Section 8: Liên hệ (PLACEHOLDER) */}
+          {/* Section 8: Liên hệ */}
           <section className="tech-panel p-6 rounded-xl border-[#1e2d5a] relative">
             <h2 className="font-orbitron text-lg font-bold text-white uppercase tracking-wider mb-3 flex items-center gap-2">
               <Mail className="w-5 h-5 text-cyan-400" />
               <span>8. Thông Tin Liên Hệ Ban Tổ Chức</span>
             </h2>
             <p className="text-slate-300 text-sm leading-relaxed mb-4">
-              Nếu bạn có bất kỳ câu hỏi, thắc mắc hoặc khiếu nại nào liên quan đến Chính sách bảo mật hoặc việc xử lý dữ liệu cá nhân, vui lòng liên hệ với Ban Tổ chức qua:
+              Nếu bạn có bất kỳ câu hỏi, thắc mắc hoặc yêu cầu nào liên quan đến Chính sách bảo mật này, vui lòng liên hệ BTC qua:
             </p>
-            <div className="space-y-2 text-sm text-slate-300 mb-4">
-              <p>📍 <strong className="text-white">Địa chỉ:</strong> {siteConfig.contact.address}</p>
-              <p>📧 <strong className="text-white">Email chính thức:</strong> <a href={`mailto:${siteConfig.contact.email}`} className="text-cyan-400 underline">{siteConfig.contact.email}</a></p>
-            </div>
-
-            {/* TODO: BTC xác nhận email phụ trách bảo mật hoặc hotline nếu có */}
-            <div className="bg-amber-950/40 border border-amber-500/50 p-4 rounded-xl text-amber-300 text-xs leading-relaxed flex items-start gap-3 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-orbitron font-bold uppercase tracking-wider block text-amber-400 mb-1">
-                  [CẦN BTC XÁC NHẬN] - PLACEHOLDER THÔNG TIN LIÊN HỆ ĐẠI DIỆN BẢO MẬT
-                </span>
-                <span>
-                  Bổ sung số điện thoại Hotline giải đáp quyền riêng tư / Người phụ trách xử lý dữ liệu cá nhân đại diện Ban Tổ chức nếu có yêu cầu bổ sung từ đại diện pháp lý.
-                </span>
-              </div>
+            <div className="p-4 bg-[#0a1025] rounded-lg border border-[#1e2d5a] text-sm text-slate-300">
+              <p>📧 <strong className="text-white">Email:</strong> <a href={`mailto:${siteConfig.contact.email}`} className="text-cyan-400 underline font-semibold ml-1">{siteConfig.contact.email}</a></p>
             </div>
           </section>
 

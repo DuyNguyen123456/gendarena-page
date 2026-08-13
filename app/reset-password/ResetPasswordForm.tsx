@@ -24,24 +24,40 @@ export default function ResetPasswordForm() {
   const supabase = createClient()
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setCheckingSession((prev) => {
-        if (prev) {
-          setHasSession(false)
-        }
-        return false
-      })
-    }, 3000)
+    let settled = false
 
+    const settle = (ready: boolean) => {
+      if (settled) return
+      settled = true
+      setHasSession(ready)
+      setCheckingSession(false)
+    }
+
+    // Layer 1: Check for an existing session immediately.
+    // This covers the case where /auth/callback already exchanged the code and
+    // set the session cookie before this component mounted.
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        settle(true)
+      }
+    })
+
+    // Layer 2: Listen for auth state events in case session arrives after mount
+    // (e.g. slow network, cold-start server latency)
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (
         (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY' || event === 'INITIAL_SESSION') &&
         session
       ) {
-        setHasSession(true)
-        setCheckingSession(false)
+        settle(true)
       }
     })
+
+    // Fallback: 10s timeout — wider window than the original 3s to avoid
+    // false negatives on slow networks or cold-start server responses
+    const timer = setTimeout(() => {
+      settle(false)
+    }, 10000)
 
     return () => {
       clearTimeout(timer)

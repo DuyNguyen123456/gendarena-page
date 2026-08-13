@@ -82,7 +82,7 @@ export default function LoginForm() {
     setResetError('')
 
     try {
-      const redirectUrl = `${getAppUrl()}/auth/callback?next=/dat-lai-mat-khau`
+      const redirectUrl = `${getAppUrl()}/auth/callback?next=/reset-password`
       const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: redirectUrl,
       })
