@@ -9,24 +9,27 @@ import NextTopLoader from "nextjs-toploader"
 import { siteConfig } from "@/config/site"
 import "./globals.css"
 
-const beVietnamPro = Be_Vietnam_Pro({
-  subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  variable: "--font-display",
-  display: "swap",
-})
-
+// Inter — display/heading font (Latin + Vietnamese subset)
 const inter = Inter({
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-body",
+  variable: "--font-inter",
   display: "swap",
 })
 
+// Be Vietnam Pro — body font, optimised for Vietnamese diacritics
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600"],
+  variable: "--font-be-vietnam-pro",
+  display: "swap",
+})
+
+// JetBrains Mono — monospace font for code blocks and technical data
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  variable: "--font-mono",
+  weight: ["400", "500"],
+  variable: "--font-jetbrains-mono",
   display: "swap",
 })
 
@@ -57,8 +60,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="vi" className={`${beVietnamPro.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
-      <body style={{ margin: 0 }}>
+    <html lang="vi" className={`${inter.variable} ${beVietnamPro.variable} ${jetbrainsMono.variable}`}>
+      <body style={{ margin: 0 }} className="font-body">
         <NextTopLoader
           color="#00F0FF"
           initialPosition={0.08}

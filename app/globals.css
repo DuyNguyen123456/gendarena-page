@@ -3,17 +3,66 @@
 @import "shadcn/tailwind.css";
 
 @theme {
-  --font-display: var(--font-display);
-  --font-body: var(--font-body);
-  --font-mono: var(--font-mono);
-  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  --font-orbitron: var(--font-display);
+  /* ─── Font Families ─── */
+  /* Semantic aliases consumed by @theme utilities (font-display, font-body, font-mono) */
+  --font-display: var(--font-inter), system-ui, sans-serif;
+  --font-body: var(--font-be-vietnam-pro), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  /* Tailwind v4 font-sans override */
+  --font-sans: var(--font-be-vietnam-pro), ui-sans-serif, system-ui, sans-serif;
+
+  /* ─── Surface Colors ─── */
+  --color-surface-base: #050814;
+  --color-surface-raised: #0A1120;
+  --color-surface-overlay: #111B2E;
+  --color-surface-elevated: #182338;
+  --color-surface-border: #1E2A44;
+  --color-surface-border-strong: #2A3B5C;
+
+  /* ─── Brand Colors ─── */
+  --color-brand-navy: #0F1F3D;
+  --color-brand-navy-light: #1B3160;
+  --color-brand-cyan: #00D4FF;
+  --color-brand-cyan-bright: #33E0FF;
+  --color-brand-cyan-dim: #0099CC;
+
+  /* ─── Accent Colors ─── */
+  --color-accent-violet: #7C5CFF;
+  --color-accent-magenta: #FF3B8B;
+
+  /* ─── Semantic Colors ─── */
+  --color-semantic-success: #22D07A;
+  --color-semantic-warning: #FFB020;
+  --color-semantic-danger: #FF4D6D;
+  --color-semantic-info: #00D4FF;
+
+  /* ─── Text Colors ─── */
+  --color-text-primary: #F0F4FA;
+  --color-text-secondary: #A8B4C8;
+  --color-text-tertiary: #6B7A94;
+  --color-text-disabled: #3E4A62;
+  --color-text-on-brand: #050814;
+
+  /* ─── Legacy token aliases (backward compat — existing components) ─── */
   --color-brand-blue: #112E81;
   --color-accent-cyan: #00F0FF;
   --color-accent-yellow: #EAB308;
   --color-dark-bg: #050814;
   --color-dark-panel: #0b1124;
   --color-neon-border: rgba(0, 240, 255, 0.2);
+  --color-orbitron: var(--font-display);
+
+  /* ─── Border Radius ─── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* ─── Shadows / Elevation ─── */
+  --shadow-elevation-1: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-elevation-2: 0 4px 8px -2px rgba(0, 0, 0, 0.5);
+  --shadow-elevation-3: 0 12px 24px -4px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 24px rgba(0, 212, 255, 0.35);
 }
 
 :root {
