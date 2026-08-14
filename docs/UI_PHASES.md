@@ -15,8 +15,10 @@
 | U3 | Landing page redesign | ✅ Done | `main` | - |
 | U4 | Auth pages (login, register, reset-password) | ⏳ Pending | - | - |
 | U5 | Participant flow (dashboard, team, submissions, profile) | ⏳ Pending | - | - |
-| U6 | Judge dashboard + scoring UI | ⏳ Pending | - | - |
-| U7 | Admin panel (users, competitions, phases, submissions, assign, scoring, leaderboard, speakers, sponsors) | ⏳ Pending | - | - |
+| U6 | Judge dashboard + scoring UI | ✅ Done | `main` | - |
+| U7a | Admin Core & Entity Mgmt (Hub, Users, Competitions, Speakers, Sponsors) | ✅ Done | `main` | - |
+| U7b | Admin Timeline & Scoring Config (Phases, Scoring Rounds & Criteria) | ✅ Done | `main` | - |
+| U7c | Admin Submissions, Assign & Leaderboard | ✅ Done | `main` | - |
 | U8 | Polish (motion, empty states, error states, 404) | ⏳ Pending | - | - |
 
 ---
@@ -78,17 +80,47 @@
 
 ---
 
-### U6 — Judge Dashboard ⏳
+### U6 — Judge Dashboard ✅
 **Scope:** Scoring UI, submission review, judge panel
 **Prerequisites:** U1 ✅, U2 ✅
 
+**Deliverables:**
+- `app/judge/page.tsx` — Page header with BGK badge, Card-based status/expertise/rubric layout, design token colors, Button/Badge components
+- `app/judge/scoring/page.tsx` — Scoring list with semantic alert, accessible form inputs, submission status badges, proper empty/loading states
+
 ---
 
-### U7 — Admin Panel ⏳
-**Scope:** Users, competitions, phases, submissions, assignment, scoring, leaderboard, speakers, sponsors
+### U7a — Admin Core & Entity Management ✅
+**Scope:** Hub (`/admin`), Users (`/admin/users`), Competitions (`/admin/competitions`), Speakers (`/admin/speakers`), Sponsors (`/admin/sponsors`)
 **Prerequisites:** U1 ✅, U2 ✅
 
+**Deliverables:**
+- `app/admin/page.tsx` — Admin Hub dashboard with responsive stats cards, quick navigation grid, BTC badge, and tokenized layout
+- `app/admin/users/page.tsx` — Users table with search, role badges, ExpertiseEditorModal with topic checkboxes
+- `app/admin/competitions/page.tsx` — Competitions list with status badges, CRUD card form, formatted display dates
+- `app/admin/speakers/page.tsx` — Speakers management with avatar preview cards, category badges, CRUD form
+- `app/admin/sponsors/page.tsx` — Sponsors & partners management with logo preview, tier badges, CRUD form
+
 ---
+
+### U7b — Competition Timeline & Scoring Configuration ✅
+**Scope:** Phases (`/admin/phases`), Scoring Config (`/admin/scoring`)
+**Prerequisites:** U7a ✅
+
+**Deliverables:**
+- `app/admin/phases/page.tsx` — Timeline & gating management with accessible switch controls, formatted dates, status badges, and 13-field modal form
+- `app/admin/scoring/page.tsx` — Scoring rounds & criteria manager with weight sum validation, rubric URL preview, criteria list, and quick assignment widget
+
+---
+
+### U7c — Submissions, Judge Assignment & Leaderboard ✅
+**Scope:** Submissions (`/admin/submissions`), Assign (`/admin/assign`), Leaderboard (`/admin/leaderboard`)
+**Prerequisites:** U7b ✅
+
+**Deliverables:**
+- `app/admin/submissions/page.tsx` — Card-based submission list with tab-bar filter (All, Pending, by Phase), status badges, topic badges, judge assignment indicator, role-gated views (Admin vs Judge)
+- `app/admin/assign/page.tsx` — Assignment panel with topic filter chips, judge expertise match indicator, Card-based dual-panel (current judge + reassign select), `removeAssignment` 2-param signature preserved
+- `app/admin/leaderboard/page.tsx` — Animated progress-bar rankings, Trophy/Medal Lucide icons, accessible `role="list"` markup, `getLeaderboard` RPC frozen
 
 ### U8 — Polish ⏳
 **Scope:** Motion refinement, empty states, error states, 404/500 pages, `prefers-reduced-motion`

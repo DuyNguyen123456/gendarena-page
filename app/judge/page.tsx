@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Scale, FileText, Pencil, BookOpen, ChevronRight } from 'lucide-react'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { getPostLoginPath } from '@/lib/auth/routing'
 import { getScoringRounds, type ScoringRound } from '@/services/scoring'
 import { getPhases } from '@/services/phases'
@@ -91,51 +96,81 @@ export default function JudgeHomePage() {
   if (loading) return <Loading text="Đang tải dữ liệu..." />
 
   return (
-    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
-      <div className="absolute top-10 left-10 w-80 h-80 bg-purple-900/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="max-w-3xl mx-auto relative z-10">
-        <div className="mb-8 border-b border-[#1e2d5a] pb-6">
-          <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider uppercase">
-            ⚖️ BẢNG ĐIỀU KHIỂN GIÁM KHẢO
-          </h1>
-          <p className="text-xs text-slate-400 mt-1 font-semibold tracking-widest">
-            Xin chào, <span className="text-purple-300">{profileName}</span>
-          </p>
-        </div>
+    <div className="relative min-h-screen bg-surface-base text-text-primary overflow-hidden">
+      {/* Subtle background */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <DotGridBackground />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-accent-violet/8 blur-[120px]" />
+      </div>
 
-        <div className="grid gap-6 mb-8">
-          {/* Status & Assignment Count */}
-          <div className="tech-panel p-6 border-purple-500/20">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-orbitron tracking-widest text-slate-500 uppercase mb-1">Trạng thái chấm điểm</p>
-                <p className={`font-orbitron text-lg font-bold ${openPhase ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {openPhase ? `🟢 ĐANG MỞ (${openPhase.title})` : '🔒 ĐANG ĐÓNG'}
-                </p>
+      {/* Page header — internal style */}
+      <header className="relative z-10 border-b border-surface-border bg-surface-base/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-3xl px-4 py-8">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Scale className="size-5 text-brand-cyan shrink-0" aria-hidden="true" />
+                <Badge variant="brand" size="sm">BGK</Badge>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] font-orbitron tracking-widest text-slate-500 uppercase mb-1">Bài được phân công</p>
-                <p className="font-orbitron text-2xl font-bold text-cyan-400">{assignmentCount}</p>
-              </div>
+              <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
+                Bảng điều khiển giám khảo
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                Xin chào, <span className="text-brand-cyan font-medium">{profileName}</span>
+              </p>
             </div>
           </div>
+        </div>
+      </header>
 
-          {/* Expertise Section */}
-          <div className="tech-panel p-6 border-purple-500/20">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-[10px] font-orbitron tracking-widest text-slate-500 uppercase mb-1">Lĩnh vực chuyên môn</p>
-                <p className="text-xs text-slate-400">Giúp BTC phân công bài phù hợp với chuyên môn của bạn</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenExpertiseEdit}
-                className="text-xs font-orbitron font-bold text-purple-400 border border-purple-500/30 px-3 py-1.5 rounded-lg hover:bg-purple-950/30 transition uppercase tracking-widest"
-              >
-                ✏ Cập nhật
-              </button>
+      <main className="relative z-10 mx-auto max-w-3xl px-4 py-10 space-y-6">
+
+        {/* Status + assignment summary */}
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-6 pt-0">
+            <div>
+              <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1.5">
+                Trạng thái chấm điểm
+              </p>
+              {openPhase ? (
+                <Badge variant="success" size="md">{openPhase.title} — Đang mở</Badge>
+              ) : (
+                <Badge variant="warning" size="md">Đang đóng</Badge>
+              )}
             </div>
+            <div className="text-right">
+              <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1.5">
+                Bài được phân công
+              </p>
+              <p className="font-mono text-3xl font-bold text-brand-cyan leading-none">
+                {assignmentCount}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
+        {/* Expertise section */}
+        <Card>
+          <CardHeader className="flex-row items-start justify-between gap-4 pb-4">
+            <div>
+              <CardTitle>Lĩnh vực chuyên môn</CardTitle>
+              <CardDescription>
+                Giúp BTC phân công bài phù hợp với chuyên môn của bạn
+              </CardDescription>
+            </div>
+            {!editingExpertise && (
+              <Button
+                variant="ghost"
+                size="sm"
+                leftIcon={<Pencil />}
+                onClick={handleOpenExpertiseEdit}
+                className="shrink-0"
+              >
+                Cập nhật
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
             {editingExpertise ? (
               <div className="space-y-2">
                 {TOPIC_CATEGORIES.map((cat) => {
@@ -146,37 +181,43 @@ export default function JudgeHomePage() {
                       key={cat}
                       type="button"
                       onClick={() => toggleDraft(cat)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left text-xs font-bold tracking-wide transition ${
+                      className={[
+                        'w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left text-sm font-medium transition-colors duration-[150ms]',
                         isSelected
-                          ? `${cfg.cls} opacity-100`
-                          : 'border-[#1e2d5a] bg-slate-950/40 text-slate-400 hover:border-slate-600'
-                      }`}
+                          ? cfg.cls
+                          : 'border-surface-border bg-surface-base text-text-secondary hover:border-surface-border-strong',
+                      ].join(' ')}
                     >
-                      <span className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition ${
-                        isSelected ? 'bg-current border-current' : 'border-slate-600'
-                      }`}>
-                        {isSelected && <span className="text-[8px] text-[#0b1124] font-black">✓</span>}
+                      <span
+                        className={[
+                          'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors',
+                          isSelected ? 'bg-current border-current' : 'border-text-tertiary',
+                        ].join(' ')}
+                        aria-hidden="true"
+                      >
+                        {isSelected && <span className="text-[8px] text-surface-base font-bold">✓</span>}
                       </span>
                       {cfg.label}
                     </button>
                   )
                 })}
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
+                <div className="flex gap-3 pt-3">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    isLoading={savingExpertise}
                     onClick={handleSaveExpertise}
-                    disabled={savingExpertise}
-                    className="flex-1 px-4 py-2.5 bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white text-xs font-orbitron font-bold uppercase tracking-wider rounded-lg transition"
+                    className="flex-1"
                   >
-                    {savingExpertise ? '⏳ ĐANG LƯU...' : '💾 LƯU'}
-                  </button>
-                  <button
-                    type="button"
+                    {savingExpertise ? 'Đang lưu...' : 'Lưu'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setEditingExpertise(false)}
-                    className="px-4 py-2.5 border border-[#1e2d5a] text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-900/60 transition"
                   >
                     Huỷ
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : expertise.length > 0 ? (
@@ -184,46 +225,61 @@ export default function JudgeHomePage() {
                 {expertise.map((e) => {
                   const cfg = TOPIC_CATEGORY_CONFIG[e]
                   return (
-                    <span key={e} className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-xs font-bold ${cfg.cls}`}>
+                    <span
+                      key={e}
+                      className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-medium ${cfg.cls}`}
+                    >
                       {cfg.label}
                     </span>
                   )
                 })}
               </div>
             ) : (
-              <p className="text-sm text-slate-600 italic">Bạn chưa khai báo lĩnh vực chuyên môn. Bấm &quot;Cập nhật&quot; để chọn.</p>
+              <p className="text-sm text-text-tertiary italic">
+                Bạn chưa khai báo lĩnh vực chuyên môn. Nhấn &quot;Cập nhật&quot; để chọn.
+              </p>
             )}
-          </div>
+          </CardContent>
+        </Card>
 
-          {activeRound?.rubric_url && (
-            <a
-              href={activeRound.rubric_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="tech-panel p-6 border-cyan-500/30 hover:border-cyan-400/50 transition flex items-center gap-4 group"
-            >
-              <span className="text-3xl">📋</span>
-              <div>
-                <p className="font-orbitron text-sm font-bold text-cyan-400 group-hover:text-cyan-300 uppercase tracking-wider">
-                  Xem barem điểm
-                </p>
-                <p className="text-xs text-slate-400 mt-1">Tài liệu hướng dẫn chấm do BTC cung cấp</p>
-              </div>
-            </a>
-          )}
-
-          <Link
-            href="/judge/scoring"
-            className="tech-btn-accent font-orbitron block text-center py-4 rounded-lg text-sm font-bold tracking-widest uppercase text-black"
+        {/* Rubric link */}
+        {activeRound?.rubric_url && (
+          <a
+            href={activeRound.rubric_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-4 rounded-lg border border-surface-border bg-surface-raised p-5 transition-all duration-[250ms] hover:border-surface-border-strong hover:shadow-elevation-2"
           >
-            ⚖️ CHẤM ĐIỂM BÀI ĐƯỢC PHÂN CÔNG
-          </Link>
-        </div>
+            <BookOpen className="size-5 text-brand-cyan shrink-0" aria-hidden="true" />
+            <div className="flex-1 min-w-0">
+              <p className="font-display text-sm font-semibold text-brand-cyan group-hover:text-brand-cyan-bright transition-colors">
+                Xem barem điểm
+              </p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                Tài liệu hướng dẫn chấm do BTC cung cấp
+              </p>
+            </div>
+            <ChevronRight className="size-4 text-text-tertiary group-hover:text-brand-cyan shrink-0 transition-colors" aria-hidden="true" />
+          </a>
+        )}
 
-        <p className="text-xs text-slate-500 text-center font-semibold">
+        {/* Go to scoring */}
+        <Button
+          variant="primary"
+          size="lg"
+          asChild
+          className="w-full"
+        >
+          <Link href="/judge/scoring" className="inline-flex items-center justify-center gap-2">
+            <span>Chấm điểm bài được phân công</span>
+            <FileText className="size-5 shrink-0" aria-hidden="true" />
+          </Link>
+        </Button>
+
+        <p className="text-xs text-text-tertiary text-center">
           Bạn chỉ thấy các bài BTC đã phân công. Không có quyền xem bảng xếp hạng.
         </p>
-      </div>
+      </main>
     </div>
   )
 }

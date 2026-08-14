@@ -4,7 +4,25 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import {
+  ShieldAlert,
+  Users,
+  Trophy,
+  Layers,
+  FileText,
+  Clock,
+  Settings,
+  Scale,
+  Calendar,
+  Mic,
+  Handshake,
+  BarChart2,
+  ChevronRight,
+} from 'lucide-react'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ users: 0, competitions: 0, teams: 0, submissions: 0, pendingSubmissions: 0 })
@@ -45,92 +63,166 @@ export default function AdminDashboard() {
     loadData()
   }, [router, supabase])
 
-  if (loading) return <Loading text="LOADING SECURE DATABASE" />
+  if (loading) return <Loading text="Đang tải dữ liệu quản trị..." />
+
+  const statItems = [
+    {
+      label: 'Người dùng đăng ký',
+      value: stats.users,
+      icon: Users,
+      color: 'text-brand-cyan',
+      href: '/admin/users',
+    },
+    {
+      label: 'Cuộc thi thiết lập',
+      value: stats.competitions,
+      icon: Trophy,
+      color: 'text-semantic-warning',
+      href: '/admin/competitions',
+    },
+    {
+      label: 'Đội thi khởi tạo',
+      value: stats.teams,
+      icon: Layers,
+      color: 'text-accent-violet',
+      href: null,
+    },
+    {
+      label: 'Tổng bài nộp',
+      value: stats.submissions,
+      icon: FileText,
+      color: 'text-semantic-success',
+      href: '/admin/submissions',
+    },
+    {
+      label: 'Bài chờ chấm',
+      value: stats.pendingSubmissions,
+      icon: Clock,
+      color: 'text-semantic-warning',
+      href: '/admin/submissions',
+    },
+  ]
+
+  const navItems = [
+    { href: '/admin/competitions', icon: Trophy, title: 'Quản lý cuộc thi', desc: 'Thiết lập, hiệu chỉnh thông số các phân khu đấu trường' },
+    { href: '/admin/users', icon: Users, title: 'Quản lý người dùng', desc: 'Giám sát tài khoản và phân quyền truy cập, chuyên môn' },
+    { href: '/admin/submissions', icon: FileText, title: 'Quản lý bài nộp', desc: 'Xem danh sách bài nộp theo giai đoạn, lọc chờ chấm' },
+    { href: '/admin/assign', icon: Settings, title: 'Phân công giám khảo', desc: 'Gán giám khảo chấm điểm theo lĩnh vực chuyên môn' },
+    { href: '/admin/scoring', icon: Scale, title: 'Cấu hình chấm điểm', desc: 'Quản lý vòng chấm, tiêu chí, trọng số và barem điểm' },
+    { href: '/admin/leaderboard', icon: BarChart2, title: 'Bảng xếp hạng chung', desc: 'Theo dõi bảng xếp hạng điểm trung bình các đội thi' },
+    { href: '/admin/phases', icon: Calendar, title: 'Quản lý lịch trình', desc: 'Sắp xếp thời gian và cổng nộp bài/chấm điểm các giai đoạn' },
+    { href: '/admin/speakers', icon: Mic, title: 'Quản lý diễn giả', desc: 'Thêm, chỉnh sửa thông tin diễn giả, giám khảo và cố vấn' },
+    { href: '/admin/sponsors', icon: Handshake, title: 'Quản lý nhà tài trợ', desc: 'Quản lý logo, website và phân cấp đối tác tài trợ' },
+  ]
 
   return (
-    <div className="min-h-screen bg-dark-bg text-white py-12 px-4 relative scanline-container">
-      {/* Decorative Glows */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-brand-blue/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="relative min-h-screen bg-surface-base text-text-primary overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <DotGridBackground />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-brand-cyan/5 blur-[120px]" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-accent-violet/5 blur-[120px]" />
+      </div>
 
-      <div className="max-w-5xl mx-auto relative z-10">
-
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-[#1e2d5a] pb-6">
-          <div>
-            <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase">
-              ⚙️ TRUNG TÂM KIỂM SOÁT HỆ THỐNG
-            </h1>
-            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-              SYSTEM CONTROL CENTER // OVERLORD TERMINAL
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-orbitron bg-red-950/30 border border-red-500/30 px-4 py-2 rounded-lg text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.05)]">
-            <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
-            BẢO MẬT: CẤP CAO (ADMIN)
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-8">
-          {[
-            { icon: '👥', label: 'THÍ SINH ĐĂNG KÝ', value: stats.users, color: 'text-cyan-400', border: 'border-cyan-500/20', href: '/admin/users' },
-            { icon: '🏆', label: 'CUỘC THI THIẾT LẬP', value: stats.competitions, color: 'text-yellow-500', border: 'border-yellow-500/20', href: '/admin/competitions' },
-            { icon: '🧩', label: 'LIÊN MINH KHỞI TẠO', value: stats.teams, color: 'text-purple-400', border: 'border-purple-500/20', href: null },
-            { icon: '📝', label: 'BÀI NỘP TỔNG', value: stats.submissions, color: 'text-emerald-400', border: 'border-emerald-500/20', href: '/admin/submissions' },
-            { icon: '⏳', label: 'BÀI CHỜ CHẤM', value: stats.pendingSubmissions, color: 'text-amber-400', border: 'border-amber-500/20', href: '/admin/submissions' },
-          ].map((stat) => (
-            stat.href ? (
-              <Link key={stat.label} href={stat.href} className={`tech-panel-glow p-6 relative flex flex-col justify-between h-32 cyber-corners ${stat.border} hover:brightness-110 transition`}>
-                <div className="text-2xl">{stat.icon}</div>
-                <div>
-                  <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-1">{stat.label}</div>
-                  <div className={`font-orbitron text-3xl font-extrabold tracking-widest leading-none ${stat.color}`}>{stat.value}</div>
-                </div>
-              </Link>
-            ) : (
-              <div key={stat.label} className={`tech-panel-glow p-6 relative flex flex-col justify-between h-32 cyber-corners ${stat.border}`}>
-                <div className="text-2xl">{stat.icon}</div>
-                <div>
-                  <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-1">{stat.label}</div>
-                  <div className={`font-orbitron text-3xl font-extrabold tracking-widest leading-none ${stat.color}`}>{stat.value}</div>
-                </div>
+      {/* Internal Page Header */}
+      <header className="relative z-10 border-b border-surface-border bg-surface-base/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldAlert className="size-5 text-semantic-warning shrink-0" aria-hidden="true" />
+                <Badge variant="warning" size="sm">BTC</Badge>
               </div>
-            )
-          ))}
+              <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
+                Trung tâm kiểm soát hệ thống
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                Bảng điều khiển quản trị tổng thể cho Ban tổ chức GenD Arena
+              </p>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-semantic-danger/30 bg-semantic-danger/10 text-semantic-danger text-xs font-medium">
+              <span className="size-2 rounded-full bg-semantic-danger animate-pulse" aria-hidden="true" />
+              Bảo mật: Quản trị viên
+            </div>
+          </div>
         </div>
+      </header>
+
+      <main className="relative z-10 mx-auto max-w-5xl px-4 py-10 space-y-8">
+        {/* Stats Grid */}
+        <section aria-label="Thống kê hệ thống">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            {statItems.map((stat) => {
+              const Icon = stat.icon
+              const content = (
+                <Card
+                  key={stat.label}
+                  interactive={Boolean(stat.href)}
+                  className="flex flex-col justify-between h-32 p-4 transition-all duration-[200ms]"
+                >
+                  <div className="flex items-center justify-between">
+                    <Icon className={`size-5 ${stat.color}`} aria-hidden="true" />
+                    {stat.href && <ChevronRight className="size-3.5 text-text-tertiary" aria-hidden="true" />}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-text-tertiary truncate">{stat.label}</p>
+                    <p className={`font-mono text-2xl font-bold ${stat.color} leading-none mt-1`}>
+                      {stat.value}
+                    </p>
+                  </div>
+                </Card>
+              )
+
+              return stat.href ? (
+                <Link key={stat.label} href={stat.href} className="block outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan rounded-lg">
+                  {content}
+                </Link>
+              ) : (
+                <div key={stat.label}>{content}</div>
+              )
+            })}
+          </div>
+        </section>
 
         {/* Navigation Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[
-            { href: '/admin/competitions', icon: '🏆', title: 'QUẢN LÝ CUỘC THI', desc: 'Thiết lập, hiệu chỉnh thông số các Arena' },
-            { href: '/admin/users', icon: '👥', title: 'QUẢN LÝ NGƯỜI DÙNG', desc: 'Giám sát đấu thủ và phân quyền truy cập' },
-            { href: '/admin/submissions', icon: '📝', title: 'QUẢN LÝ BÀI NỘP', desc: 'Xem danh sách bài nộp theo giai đoạn, lọc chờ chấm' },
-            { href: '/admin/assign', icon: '👥', title: 'PHÂN CÔNG GIÁM KHẢO', desc: 'Gán giám khảo chấm điểm cho từng bài nộp' },
-            { href: '/admin/scoring', icon: '⚖️', title: 'CẤU HÌNH CHẤM ĐIỂM', desc: 'Trọng số, mở/đóng chấm, quản lý vòng chấm' },
-            { href: '/admin/leaderboard', icon: '🏅', title: 'BẢNG XẾP HẠNG CHUNG', desc: 'Xếp hạng hiệu năng của các liên minh' },
-            { href: '/admin/phases', icon: '🗓️', title: 'QUẢN LÝ LỊCH TRÌNH', desc: 'Sắp xếp, thay đổi thông tin các giai đoạn thi đấu' },
-            { href: '/admin/speakers', icon: '🎤', title: 'QUẢN LÝ DIỄN GIẢ', desc: 'Thêm, chỉnh sửa diễn giả, giám khảo và cố vấn' },
-            { href: '/admin/sponsors', icon: '🤝', title: 'QUẢN LÝ NHÀ TÀI TRỢ', desc: 'Quản lý logo và thông tin các đối tác tài trợ' },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="tech-panel p-6 text-slate-200 hover:border-cyan-400/40 hover:bg-cyan-950/10 hover:shadow-[0_0_15px_rgba(0,240,255,0.08)] transition duration-200 flex items-center gap-6 group relative"
-            >
-              {/* Corner tech line decoration */}
-              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-cyan-500/30 group-hover:border-cyan-400 transition" />
-              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-cyan-500/30 group-hover:border-cyan-400 transition" />
-
-              <div className="text-4.5xl group-hover:scale-110 transition duration-300">{item.icon}</div>
-              <div>
-                <div className="font-orbitron text-sm font-bold tracking-wider text-slate-100 group-hover:text-cyan-400 mb-1 transition">{item.title}</div>
-                <div className="text-slate-400 text-xs leading-relaxed">{item.desc}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-      </div>
+        <section aria-label="Chức năng quản trị">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-tertiary mb-4">
+            Phân hệ quản lý
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group block outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan rounded-lg"
+                >
+                  <Card
+                    interactive
+                    className="flex items-start gap-4 p-5 transition-all duration-[200ms] group-hover:border-surface-border-strong group-hover:shadow-elevation-2"
+                  >
+                    <div className="size-10 rounded-lg bg-surface-overlay border border-surface-border flex items-center justify-center shrink-0 text-brand-cyan group-hover:text-brand-cyan-bright transition-colors">
+                      <Icon className="size-5" aria-hidden="true" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <CardTitle className="text-base group-hover:text-brand-cyan transition-colors">
+                          {item.title}
+                        </CardTitle>
+                        <ChevronRight className="size-4 text-text-tertiary group-hover:text-brand-cyan group-hover:translate-x-0.5 transition-all shrink-0" aria-hidden="true" />
+                      </div>
+                      <CardDescription className="text-xs mt-1 line-clamp-2">
+                        {item.desc}
+                      </CardDescription>
+                    </div>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      </main>
     </div>
   )
 }

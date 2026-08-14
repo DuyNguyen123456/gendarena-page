@@ -4,7 +4,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft, BookOpen, ExternalLink, FileText, CheckCircle, AlertCircle, Clock } from 'lucide-react'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { getDownloadUrl } from '@/services/submissions'
 import { getPostLoginPath } from '@/lib/auth/routing'
 import {
@@ -19,6 +24,48 @@ import {
 
 import { getScoringGate } from '@/types/phase'
 
+// ── Reusable within this page (used 2+) ────────────────────────────────────
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1.5">
+      {children}
+    </p>
+  )
+}
+
+function AlertMessage({
+  type,
+  children,
+}: {
+  type: 'success' | 'error' | 'info'
+  children: React.ReactNode
+}) {
+  const variants = {
+    success: {
+      cls: 'bg-semantic-success/10 border-semantic-success/30 text-semantic-success',
+      Icon: CheckCircle,
+    },
+    error: {
+      cls: 'bg-semantic-danger/10 border-semantic-danger/30 text-semantic-danger',
+      Icon: AlertCircle,
+    },
+    info: {
+      cls: 'bg-semantic-info/10 border-semantic-info/30 text-semantic-info',
+      Icon: Clock,
+    },
+  }
+  const { cls, Icon } = variants[type]
+  return (
+    <div
+      role={type === 'error' ? 'alert' : 'status'}
+      className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${cls}`}
+    >
+      <Icon className="size-4 shrink-0 mt-0.5" aria-hidden="true" />
+      <span>{children}</span>
+    </div>
+  )
+}
+
 export default function JudgeScoringPage() {
   const [loading, setLoading] = useState(true)
   const [submissions, setSubmissions] = useState<AssignedSubmission[]>([])
@@ -27,7 +74,7 @@ export default function JudgeScoringPage() {
   const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null)
   const [scoringId, setScoringId] = useState<string | null>(null)
   const [savingSubId, setSavingSubId] = useState<string | null>(null)
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -85,10 +132,12 @@ export default function JudgeScoringPage() {
   const handleScore = async (e: React.FormEvent<HTMLFormElement>, submissionId: string) => {
     e.preventDefault()
     const sub = submissions.find((s) => s.id === submissionId)
-    const phaseGate = sub?.competition_phases ? getScoringGate(sub.competition_phases) : (currentRound ? getScoringGate(currentRound) : 'closed')
+    const phaseGate = sub?.competition_phases
+      ? getScoringGate(sub.competition_phases)
+      : currentRound ? getScoringGate(currentRound) : 'closed'
 
     if (!userId || !currentRound || phaseGate !== 'open') {
-      setMessage('❌ Vòng chấm cho bài nộp này hiện không mở do Ban tổ chức cấu hình.')
+      setMessage({ type: 'error', text: 'Vòng chấm cho bài nộp này hiện không mở do Ban tổ chức cấu hình.' })
       return
     }
 
@@ -116,9 +165,9 @@ export default function JudgeScoringPage() {
     setSavingSubId(null)
 
     if (!result.ok) {
-      setMessage('❌ ' + result.error)
+      setMessage({ type: 'error', text: result.error })
     } else {
-      setMessage('✅ Đã lưu điểm!')
+      setMessage({ type: 'success', text: 'Điểm đã được lưu thành công.' })
       setScoringId(null)
 
       if (result.score) {
@@ -149,133 +198,203 @@ export default function JudgeScoringPage() {
   if (loading) return <Loading text="Đang tải dữ liệu..." />
 
   return (
-    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
-      <div className="max-w-4xl mx-auto relative z-10">
-        <Link
-          href="/judge"
-          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-purple-400 hover:text-purple-300 uppercase mb-8"
-        >
-          ← QUAY LẠI PANEL GIÁM KHẢO
-        </Link>
+    <div className="relative min-h-screen bg-surface-base text-text-primary overflow-hidden">
+      {/* Subtle background */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <DotGridBackground />
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-accent-violet/8 blur-[120px]" />
+      </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-[#1e2d5a] pb-6">
-          <div>
-            <h1 className="font-orbitron text-2xl font-extrabold tracking-wider uppercase">📝 CHẤM ĐIỂM</h1>
-            <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
-              Thời gian chấm điểm do BTC quản lý theo từng vòng thi
-            </p>
+      {/* Page header */}
+      <header className="relative z-10 border-b border-surface-border bg-surface-base/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-4xl px-4 py-8">
+          <Link
+            href="/judge"
+            className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors duration-[150ms] mb-4"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Quay lại bảng điều khiển
+          </Link>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="brand" size="sm">BGK</Badge>
+              </div>
+              <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
+                Chấm điểm bài nộp
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                Thời gian chấm điểm do BTC quản lý theo từng vòng thi
+              </p>
+            </div>
+            {currentRound?.rubric_url && (
+              <a
+                href={currentRound.rubric_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-surface-border px-4 py-2 text-sm text-brand-cyan hover:border-surface-border-strong hover:bg-surface-raised transition-all duration-[150ms]"
+              >
+                <BookOpen className="size-4" aria-hidden="true" />
+                Barem điểm
+              </a>
+            )}
           </div>
-          {currentRound?.rubric_url && (
-            <a
-              href={currentRound.rubric_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-orbitron border border-cyan-500/30 text-cyan-400 px-4 py-2 rounded-lg hover:bg-cyan-950/30"
-            >
-              📋 BAREM ĐIỂM
-            </a>
-          )}
         </div>
+      </header>
 
+      <main className="relative z-10 mx-auto max-w-4xl px-4 py-10 space-y-6">
+
+        {/* Alert message */}
         {message && (
-          <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-6 text-sm">{message}</div>
+          <AlertMessage type={message.type}>
+            {message.text}
+          </AlertMessage>
         )}
 
+        {/* Round selector */}
         {rounds.length > 0 && (
-          <div className="tech-panel p-4 mb-6 border-cyan-500/30 text-white">
-            <label className="block text-xs uppercase tracking-widest text-slate-400 mb-2">Vòng chấm hiện tại</label>
-            <select
-              value={selectedRoundId ?? ''}
-              onChange={(e) => setSelectedRoundId(e.target.value)}
-              className="w-full bg-slate-950/80 border border-[#1e2d5a] rounded px-3 py-2 text-sm text-white"
-            >
-              {rounds.map((round) => (
-                <option key={round.id} value={round.id}>{round.title}</option>
-              ))}
-            </select>
-          </div>
+          <Card>
+            <CardContent className="pt-0">
+              <label
+                htmlFor="round-select"
+                className="block text-xs font-medium text-text-tertiary uppercase tracking-wider mb-2"
+              >
+                Vòng chấm hiện tại
+              </label>
+              <select
+                id="round-select"
+                value={selectedRoundId ?? ''}
+                onChange={(e) => setSelectedRoundId(e.target.value)}
+                className="w-full h-10 rounded-md border border-surface-border bg-surface-raised px-3 text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors duration-[150ms]"
+              >
+                {rounds.map((round) => (
+                  <option key={round.id} value={round.id}>{round.title}</option>
+                ))}
+              </select>
+            </CardContent>
+          </Card>
         )}
 
+        {/* No round warning */}
         {!currentRound && (
-          <div className="tech-panel p-6 mb-6 border-amber-500/30 text-amber-400 text-sm">
-            Hiện không có vòng chấm nào để chấm. Vui lòng chờ BTC cập nhật vòng.
-          </div>
+          <AlertMessage type="info">
+            Hiện không có vòng chấm nào. Vui lòng chờ BTC cập nhật.
+          </AlertMessage>
         )}
 
+        {/* Empty state */}
         {submissions.length === 0 ? (
-          <div className="tech-panel p-8 text-center text-slate-400 text-sm">
-            Chưa có bài nào được BTC phân công cho bạn.
-          </div>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16 gap-3">
+              <FileText className="size-10 text-text-disabled" aria-hidden="true" />
+              <p className="text-sm text-text-secondary text-center">
+                Chưa có bài nào được BTC phân công cho bạn.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {submissions.map((sub) => {
               const score = scores[sub.id]
-              const phaseGate = sub.competition_phases ? getScoringGate(sub.competition_phases) : (currentRound ? getScoringGate(currentRound) : 'closed')
+              const phaseGate = sub.competition_phases
+                ? getScoringGate(sub.competition_phases)
+                : currentRound ? getScoringGate(currentRound) : 'closed'
               const isPhaseScoringOpen = phaseGate === 'open'
 
               return (
-                <div key={sub.id} className="tech-panel-glow p-6 rounded-xl border-cyan-500/15">
-                  <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4">
-                    <div>
-                      <h3 className="font-orbitron text-lg font-bold uppercase">
-                        {sub.teams?.name ?? 'Đội'}
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Giai đoạn: {sub.competition_phases?.title ?? '—'} •{' '}
-                        {sub.submission_kind === 'file' ? `📄 ${sub.file_name}` : '🔗 Link nộp'}
-                      </p>
-                      <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-cyan-950/60 border border-cyan-500/30 rounded-lg text-xs font-semibold text-cyan-300">
-                        <span>🏷️ Chủ đề:</span>
-                        <span>{sub.topic ?? 'Chưa chọn chủ đề'}</span>
+                <Card key={sub.id}>
+                  {/* Submission header */}
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="truncate">
+                          {sub.teams?.name ?? 'Đội không xác định'}
+                        </CardTitle>
+                        <CardDescription>
+                          {sub.competition_phases?.title ?? '—'} &middot;{' '}
+                          {sub.submission_kind === 'file' ? sub.file_name : 'Nộp qua link'}
+                        </CardDescription>
+                        {sub.topic && (
+                          <div className="mt-2">
+                            <Badge variant="info" size="sm">
+                              {sub.topic}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        {/* Scoring gate status */}
+                        {isPhaseScoringOpen ? (
+                          <Badge variant="success" size="sm">Đang mở</Badge>
+                        ) : (
+                          <Badge variant="warning" size="sm">Đã đóng</Badge>
+                        )}
+                        {/* Existing score */}
+                        {score && (
+                          <span className="font-mono text-2xl font-bold text-semantic-success leading-none">
+                            {score.total_score?.toFixed(1)}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    {score && (
-                      <div className="text-emerald-400 font-orbitron text-2xl font-bold">
-                        {score.total_score?.toFixed(1)}
-                      </div>
-                    )}
-                  </div>
+                  </CardHeader>
 
-                  <button
-                    type="button"
-                    onClick={() => openAttachment(sub)}
-                    className="text-xs font-orbitron border border-[#1e2d5a] text-cyan-400 px-3 py-2 rounded-lg mb-4 hover:border-cyan-400 mr-3"
-                  >
-                    {sub.submission_kind === 'file' ? '📄 XEM FILE' : '🔗 MỞ LINK BÀI NỘP'}
-                  </button>
+                  <CardContent className="space-y-4">
+                    {/* Action buttons row */}
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        leftIcon={sub.submission_kind === 'file' ? <FileText /> : <ExternalLink />}
+                        onClick={() => openAttachment(sub)}
+                      >
+                        {sub.submission_kind === 'file' ? 'Xem file' : 'Mở link bài nộp'}
+                      </Button>
 
-                  {isPhaseScoringOpen && scoringId !== sub.id && (
-                    <button
-                      onClick={() => setScoringId(sub.id)}
-                      className="tech-btn-accent px-4 py-2 text-xs font-bold uppercase rounded-lg text-black"
-                    >
-                      {score ? '✏️ SỬA ĐIỂM' : '⚖️ CHẤM ĐIỂM'}
-                    </button>
-                  )}
+                      {isPhaseScoringOpen && scoringId !== sub.id && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => setScoringId(sub.id)}
+                        >
+                          {score ? 'Sửa điểm' : 'Chấm điểm'}
+                        </Button>
+                      )}
+                    </div>
 
-                  {!isPhaseScoringOpen && (
-                    <span className="inline-block px-3 py-1 bg-amber-950/20 border border-amber-500/30 text-amber-400 text-xs rounded-lg font-orbitron">
-                      🔒 CHẤM ĐIỂM ĐÃ ĐÓNG
-                    </span>
-                  )}
-
-                  {scoringId === sub.id && isPhaseScoringOpen && (
-                    <form onSubmit={(e) => handleScore(e, sub.id)} className="border border-[#1e2d5a] rounded-xl p-5 mt-4 space-y-4">
-                      <div className="space-y-4">
-                        <div className="text-sm text-slate-300">
-                          <div className="font-bold uppercase tracking-wider text-slate-100">Vòng chấm:</div>
-                          <div>{currentRound?.title ?? 'Không có vòng chấm được chọn'}</div>
-                          {currentRound?.description && <div className="text-xs text-slate-500">{currentRound.description}</div>}
+                    {/* Scoring form */}
+                    {scoringId === sub.id && isPhaseScoringOpen && (
+                      <form
+                        onSubmit={(e) => handleScore(e, sub.id)}
+                        className="rounded-lg border border-surface-border bg-surface-overlay p-5 space-y-5"
+                      >
+                        {/* Round context */}
+                        <div>
+                          <SectionLabel>Vòng chấm</SectionLabel>
+                          <p className="text-sm font-medium text-text-primary">
+                            {currentRound?.title ?? 'Không có vòng chấm được chọn'}
+                          </p>
+                          {currentRound?.description && (
+                            <p className="text-xs text-text-secondary mt-0.5">{currentRound.description}</p>
+                          )}
                         </div>
 
+                        {/* Criteria inputs */}
                         {currentRound?.criteria.length ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {currentRound.criteria.map((criterion) => (
-                              <div key={criterion.id} className="space-y-2">
-                                <label className="block text-[10px] uppercase text-slate-400 tracking-widest">
-                                  {criterion.name} • Weight: {criterion.weight}% • Max: {criterion.max_score}
+                              <div key={criterion.id} className="space-y-1.5">
+                                <label
+                                  htmlFor={`criterion_${criterion.id}_${sub.id}`}
+                                  className="block text-xs font-medium text-text-secondary"
+                                >
+                                  {criterion.name}
+                                  <span className="ml-1 text-text-tertiary font-normal">
+                                    · Trọng số {criterion.weight}% · Tối đa {criterion.max_score}
+                                  </span>
                                 </label>
                                 <input
+                                  id={`criterion_${criterion.id}_${sub.id}`}
                                   name={`criterion_${criterion.id}`}
                                   type="number"
                                   min="0"
@@ -283,52 +402,63 @@ export default function JudgeScoringPage() {
                                   step="0.5"
                                   required
                                   defaultValue={score?.criteria_scores?.[criterion.id] ?? ''}
-                                  className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white"
+                                  className="h-10 w-full rounded-md border border-surface-border bg-surface-raised px-3 text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors duration-[150ms]"
                                 />
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="p-4 rounded-lg bg-slate-950/70 border border-[#1e2d5a] text-slate-300 text-sm">
-                            Hiện tại vòng chấm không có tiêu chí nào. Vui lòng liên hệ BTC.
+                          <div className="rounded-md border border-surface-border bg-surface-base px-4 py-3 text-sm text-text-secondary">
+                            Vòng chấm này chưa có tiêu chí. Vui lòng liên hệ BTC.
                           </div>
                         )}
-                      </div>
 
-                      <textarea
-                        name="comment"
-                        rows={2}
-                        defaultValue={score?.comment ?? ''}
-                        placeholder="Nhận xét..."
-                        className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white text-sm"
-                      />
-                      <div className="flex gap-3 flex-wrap">
-                        <button
-                          type="submit"
-                          disabled={savingSubId === sub.id}
-                          className="px-5 py-2 bg-emerald-600 rounded-lg text-xs font-bold uppercase flex items-center gap-2 disabled:opacity-50"
-                        >
-                          {savingSubId === sub.id ? (
-                            <>
-                              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-                              Đang lưu...
-                            </>
-                          ) : (
-                            '💾 Lưu điểm'
-                          )}
-                        </button>
-                        <button type="button" onClick={() => setScoringId(null)} className="px-5 py-2 border border-[#1e2d5a] text-xs uppercase">
-                          Huỷ
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </div>
+                        {/* Comment */}
+                        <div className="space-y-1.5">
+                          <label
+                            htmlFor={`comment_${sub.id}`}
+                            className="block text-xs font-medium text-text-secondary"
+                          >
+                            Nhận xét
+                          </label>
+                          <textarea
+                            id={`comment_${sub.id}`}
+                            name="comment"
+                            rows={3}
+                            defaultValue={score?.comment ?? ''}
+                            placeholder="Nhận xét về bài nộp (tuỳ chọn)..."
+                            className="w-full rounded-md border border-surface-border bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors duration-[150ms] resize-none"
+                          />
+                        </div>
+
+                        {/* Form actions */}
+                        <div className="flex gap-3">
+                          <Button
+                            type="submit"
+                            variant="primary"
+                            size="sm"
+                            isLoading={savingSubId === sub.id}
+                          >
+                            {savingSubId === sub.id ? 'Đang lưu...' : 'Lưu điểm'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setScoringId(null)}
+                          >
+                            Huỷ
+                          </Button>
+                        </div>
+                      </form>
+                    )}
+                  </CardContent>
+                </Card>
               )
             })}
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft, Handshake, Plus, Pencil, Trash2, AlertCircle, ExternalLink, EyeOff } from 'lucide-react'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 type Sponsor = {
   id: string
@@ -26,17 +31,11 @@ const EMPTY_FORM: Omit<Sponsor, 'id'> = {
 }
 
 const TIERS: Sponsor['tier'][] = ['platinum', 'gold', 'silver', 'partner']
-const TIER_LABELS: Record<Sponsor['tier'], string> = {
-  platinum: '💎 Platinum',
-  gold: '🥇 Gold',
-  silver: '🥈 Silver',
-  partner: '🤝 Partner',
-}
-const TIER_COLORS: Record<Sponsor['tier'], string> = {
-  platinum: 'text-slate-300 bg-slate-800/30 border-slate-400/30',
-  gold: 'text-amber-400 bg-amber-950/30 border-amber-500/30',
-  silver: 'text-slate-400 bg-slate-800/20 border-slate-500/30',
-  partner: 'text-cyan-400 bg-cyan-950/20 border-cyan-500/20',
+const TIER_CONFIG: Record<Sponsor['tier'], { label: string; variant: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'brand' }> = {
+  platinum: { label: 'Platinum', variant: 'brand' },
+  gold: { label: 'Gold', variant: 'warning' },
+  silver: { label: 'Silver', variant: 'default' },
+  partner: { label: 'Partner', variant: 'info' },
 }
 
 export default function AdminSponsorsPage() {
@@ -118,142 +117,269 @@ export default function AdminSponsorsPage() {
   const setField = <K extends keyof typeof EMPTY_FORM>(key: K, value: typeof EMPTY_FORM[K]) =>
     setForm(prev => ({ ...prev, [key]: value }))
 
-  if (loading) return <Loading text="LOADING SPONSORS DATABASE" />
+  if (loading) return <Loading text="Đang tải danh sách đối tác & nhà tài trợ..." />
 
   return (
-    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
-      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="relative min-h-screen bg-surface-base text-text-primary overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <DotGridBackground />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-brand-cyan/5 blur-[120px]" />
+      </div>
 
-      <div className="max-w-5xl mx-auto relative z-10">
-        <Link href="/admin" className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-red-400 hover:text-red-300 uppercase mb-8 transition">
-          ← QUAY LẠI CONTROL CENTER
-        </Link>
-
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-[#1e2d5a] pb-6">
-          <div>
-            <h1 className="font-orbitron text-2xl font-extrabold tracking-wider text-white uppercase">
-              🤝 QUẢN LÝ NHÀ TÀI TRỢ & ĐỐI TÁC
-            </h1>
-            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-              SPONSORS PANEL // ADMIN CONTROL
-            </p>
+      {/* Internal Page Header */}
+      <header className="relative z-10 border-b border-surface-border bg-surface-base/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors duration-[150ms] mb-4"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Quay lại Control Center
+          </Link>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Handshake className="size-5 text-brand-cyan shrink-0" aria-hidden="true" />
+                <Badge variant="warning" size="sm">BTC</Badge>
+              </div>
+              <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
+                Quản lý đối tác & nhà tài trợ
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                Quản lý danh sách logo, phân cấp tài trợ và liên kết website của các đơn vị đồng hành
+              </p>
+            </div>
+            {!showForm && (
+              <Button
+                variant="primary"
+                size="md"
+                leftIcon={<Plus className="size-4" />}
+                onClick={() => setShowForm(true)}
+              >
+                Thêm nhà tài trợ
+              </Button>
+            )}
           </div>
-          {!showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="tech-btn-accent px-5 py-2.5 rounded-lg text-xs font-bold tracking-widest font-orbitron uppercase text-black cursor-pointer"
-            >
-              + THÊM MỚI
-            </button>
-          )}
         </div>
+      </header>
 
-        {/* Form */}
-        {showForm && (
-          <div className="tech-panel p-6 mb-8 border-cyan-500/20">
-            <h2 className="font-orbitron text-sm font-bold text-cyan-400 tracking-widest uppercase mb-5">
-              {editId ? '✏️ CHỈNH SỬA NHÀ TÀI TRỢ' : '➕ THÊM NHÀ TÀI TRỢ MỚI'}
-            </h2>
-            {error && <div className="bg-red-950/30 border border-red-500/40 text-red-400 px-4 py-3 rounded-lg mb-5 text-sm">{error}</div>}
-            <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-slate-400 mb-1.5">Tên nhà tài trợ *</label>
-                <input value={form.name} onChange={e => setField('name', e.target.value)} required
-                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-slate-400 mb-1.5">Hạng (Tier)</label>
-                <select value={form.tier} onChange={e => setField('tier', e.target.value as Sponsor['tier'])}
-                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition">
-                  {TIERS.map(t => <option key={t} value={t}>{TIER_LABELS[t]}</option>)}
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold tracking-widest uppercase text-slate-400 mb-1.5">URL Logo *</label>
-                <input value={form.logo_url} onChange={e => setField('logo_url', e.target.value)} required
-                  placeholder="https://..."
-                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 transition" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-slate-400 mb-1.5">URL Website</label>
-                <input value={form.website_url ?? ''} onChange={e => setField('website_url', e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 transition" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-slate-400 mb-1.5">Thứ tự hiển thị</label>
-                <input type="number" value={form.display_order} onChange={e => setField('display_order', parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 transition" />
-              </div>
-              <div className="flex items-end pb-1">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={form.is_active} onChange={e => setField('is_active', e.target.checked)} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500 relative"></div>
-                  <span className="text-xs font-bold tracking-widest text-slate-300 uppercase">Đang hoạt động</span>
-                </label>
-              </div>
-              <div className="md:col-span-2 flex gap-4 pt-2">
-                <button type="submit" disabled={saving}
-                  className="tech-btn-accent px-6 py-2.5 rounded-lg text-xs font-bold tracking-wider font-orbitron uppercase text-black cursor-pointer disabled:opacity-50">
-                  {saving ? '⏳ ĐANG LƯU...' : editId ? '✅ CẬP NHẬT' : '✅ THÊM MỚI'}
-                </button>
-                <button type="button" onClick={handleCancel}
-                  className="px-6 py-2.5 border border-[#1e2d5a] hover:bg-slate-900/60 text-slate-300 text-xs font-bold uppercase tracking-wider rounded-lg cursor-pointer transition">
-                  HỦY
-                </button>
-              </div>
-            </form>
+      <main className="relative z-10 mx-auto max-w-5xl px-4 py-8 space-y-6">
+        {/* Error alert */}
+        {error && (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-lg border border-semantic-danger/30 bg-semantic-danger/10 px-4 py-3 text-sm text-semantic-danger"
+          >
+            <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
           </div>
+        )}
+
+        {/* Form Create / Edit */}
+        {showForm && (
+          <Card className="border-brand-cyan/30 shadow-elevation-2 bg-surface-overlay">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Handshake className="size-5 text-brand-cyan" />
+                {editId ? 'Chỉnh sửa thông tin nhà tài trợ' : 'Thêm nhà tài trợ mới'}
+              </CardTitle>
+              <CardDescription>
+                Điền thông tin và liên kết logo định dạng PNG/SVG để hiển thị tối ưu
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="spons-name" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Tên đơn vị tài trợ *
+                  </label>
+                  <input
+                    id="spons-name"
+                    value={form.name}
+                    onChange={e => setField('name', e.target.value)}
+                    required
+                    placeholder="VD: Google Cloud / Techcombank"
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="spons-tier" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Hạng tài trợ (Tier)
+                  </label>
+                  <select
+                    id="spons-tier"
+                    value={form.tier}
+                    onChange={e => setField('tier', e.target.value as Sponsor['tier'])}
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors cursor-pointer"
+                  >
+                    {TIERS.map(t => (
+                      <option key={t} value={t}>{TIER_CONFIG[t].label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label htmlFor="spons-logo" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    URL Logo (ưu tiên nền trong suốt) *
+                  </label>
+                  <input
+                    id="spons-logo"
+                    value={form.logo_url}
+                    onChange={e => setField('logo_url', e.target.value)}
+                    required
+                    placeholder="https://.../logo.png"
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="spons-web" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    URL Website
+                  </label>
+                  <input
+                    id="spons-web"
+                    value={form.website_url ?? ''}
+                    onChange={e => setField('website_url', e.target.value)}
+                    placeholder="https://..."
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="spons-order" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Thứ tự hiển thị
+                  </label>
+                  <input
+                    id="spons-order"
+                    type="number"
+                    value={form.display_order}
+                    onChange={e => setField('display_order', parseInt(e.target.value) || 0)}
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                  />
+                </div>
+
+                <div className="md:col-span-2 flex items-center gap-3 pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={form.is_active}
+                      onChange={e => setField('is_active', e.target.checked)}
+                      className="size-4 rounded border-surface-border text-brand-cyan focus:ring-brand-cyan/20"
+                    />
+                    <span className="text-sm text-text-secondary font-medium">Đang hoạt động (hiển thị trên website)</span>
+                  </label>
+                </div>
+
+                <div className="md:col-span-2 flex items-center gap-3 pt-3">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    isLoading={saving}
+                  >
+                    {saving ? 'Đang lưu...' : editId ? 'Lưu thay đổi' : 'Thêm nhà tài trợ'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="md"
+                    onClick={handleCancel}
+                  >
+                    Huỷ
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         )}
 
         {/* Sponsors List */}
         <div className="space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-tertiary">
+            Danh sách đối tác & nhà tài trợ ({sponsors.length})
+          </h2>
+
           {sponsors.length === 0 ? (
-            <div className="tech-panel p-12 text-center border-cyan-500/10">
-              <p className="text-slate-500 text-sm font-semibold">Chưa có nhà tài trợ nào được thêm vào hệ thống.</p>
-            </div>
+            <Card className="p-12 text-center text-text-tertiary">
+              <Handshake className="size-10 text-text-disabled mx-auto mb-2" />
+              <p className="text-sm">Chưa có nhà tài trợ nào được thêm vào hệ thống.</p>
+            </Card>
           ) : (
-            sponsors.map((s) => (
-              <div key={s.id} className="tech-panel border-cyan-500/15 p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="flex items-center gap-4">
-                  {/* Logo preview */}
-                  <div className="w-20 h-12 rounded-lg border border-[#1e2d5a] bg-[#0a1025] flex items-center justify-center shrink-0 overflow-hidden px-2">
-                    {s.logo_url ? (
-                      <img src={s.logo_url} alt={s.name} className="max-h-8 max-w-full object-contain filter brightness-75" />
-                    ) : (
-                      <span className="text-slate-500 text-[10px]">NO LOGO</span>
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-bold text-white text-sm flex items-center gap-2">
-                      {s.name}
-                      <span className={`text-[10px] font-orbitron font-bold px-1.5 py-0.5 rounded border ${TIER_COLORS[s.tier]}`}>
-                        {TIER_LABELS[s.tier]}
-                      </span>
-                      {!s.is_active && <span className="text-[10px] text-slate-500 font-orbitron border border-slate-600/30 px-1.5 py-0.5 rounded">ẨN</span>}
+            sponsors.map((s) => {
+              const tierCfg = TIER_CONFIG[s.tier] ?? { label: s.tier, variant: 'default' }
+              return (
+                <Card key={s.id} className="p-5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                      {/* Logo preview */}
+                      <div className="w-24 h-12 rounded-lg border border-surface-border bg-surface-overlay flex items-center justify-center shrink-0 overflow-hidden px-2">
+                        {s.logo_url ? (
+                          <img
+                            src={s.logo_url}
+                            alt={s.name}
+                            className="max-h-8 max-w-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-text-tertiary text-[10px]">NO LOGO</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-display text-base font-semibold text-text-primary truncate">
+                            {s.name}
+                          </h3>
+                          <Badge variant={tierCfg.variant} size="sm">
+                            {tierCfg.label}
+                          </Badge>
+                          {!s.is_active && (
+                            <Badge variant="default" size="sm" className="opacity-60">
+                              <EyeOff className="size-3 mr-1" />
+                              Đang ẩn
+                            </Badge>
+                          )}
+                        </div>
+                        {s.website_url && (
+                          <a
+                            href={s.website_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-brand-cyan hover:underline mt-0.5"
+                          >
+                            <span>{s.website_url}</span>
+                            <ExternalLink className="size-3 shrink-0" />
+                          </a>
+                        )}
+                      </div>
                     </div>
-                    {s.website_url && (
-                      <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-500/60 hover:text-cyan-400 transition">{s.website_url}</a>
-                    )}
+
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        leftIcon={<Pencil className="size-3.5" />}
+                        onClick={() => handleEdit(s)}
+                      >
+                        Sửa
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        leftIcon={<Trash2 className="size-3.5" />}
+                        onClick={() => handleDelete(s.id, s.name)}
+                        className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger"
+                      >
+                        Xoá
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <button onClick={() => handleEdit(s)}
-                    className="px-3 py-1.5 border border-cyan-500/30 bg-cyan-950/20 hover:bg-cyan-500 hover:text-black text-cyan-400 text-xs font-bold uppercase tracking-wider rounded cursor-pointer transition">
-                    SỬA
-                  </button>
-                  <button onClick={() => handleDelete(s.id, s.name)}
-                    className="px-3 py-1.5 border border-red-500/30 bg-red-950/20 hover:bg-red-500 hover:text-white text-red-400 text-xs font-bold uppercase tracking-wider rounded cursor-pointer transition">
-                    XÓA
-                  </button>
-                </div>
-              </div>
-            ))
+                </Card>
+              )
+            })
           )}
         </div>
-      </div>
+      </main>
     </div>
   )
 }

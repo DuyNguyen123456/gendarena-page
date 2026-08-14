@@ -4,7 +4,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft, Users, Search, Pencil, CheckCircle, AlertCircle } from 'lucide-react'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { updateProfileExpertise } from '@/services/profile'
 import type { TopicCategory } from '@/types/submission'
 import { TOPIC_CATEGORIES, TOPIC_CATEGORY_CONFIG } from '@/types/submission'
@@ -20,9 +26,9 @@ interface UserRow {
   created_at: string
 }
 
-// ─── Expertise Editor Popover ─────────────────────────────────────────────────
+// ─── Expertise Editor Modal ──────────────────────────────────────────────────
 
-function ExpertiseEditor({
+function ExpertiseEditorModal({
   userId,
   current,
   onSave,
@@ -52,23 +58,29 @@ function ExpertiseEditor({
     const result = await updateProfileExpertise(userId, selected)
     setSaving(false)
     if (!result.ok) {
-      setMsg({ ok: false, text: '❌ ' + result.error })
+      setMsg({ ok: false, text: result.error })
     } else {
-      setMsg({ ok: true, text: '✅ Đã lưu lĩnh vực chuyên môn' })
-      setTimeout(() => { onSave(); onClose() }, 800)
+      setMsg({ ok: true, text: 'Đã cập nhật lĩnh vực chuyên môn.' })
+      setTimeout(() => {
+        onSave()
+        onClose()
+      }, 700)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-[#0b1124] border border-purple-500/30 rounded-xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(168,85,247,0.1)]">
-        <h3 className="font-orbitron text-base font-bold text-purple-300 uppercase tracking-wider mb-1">
-          ⭐ Lĩnh vực chuyên môn
-        </h3>
-        <p className="text-xs text-slate-400 mb-5">
-          Chọn các lĩnh vực mà giám khảo này có chuyên môn để hỗ trợ phân công đúng hướng.
-        </p>
-        <div className="space-y-2 mb-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="modal-expertise-title">
+      <div className="w-full max-w-md rounded-xl border border-surface-border bg-surface-overlay p-6 shadow-elevation-3 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div>
+          <h3 id="modal-expertise-title" className="font-display text-base font-semibold text-text-primary">
+            Lĩnh vực chuyên môn của giám khảo
+          </h3>
+          <p className="text-xs text-text-secondary mt-1">
+            Chọn các lĩnh vực để hỗ trợ thuật toán phân công bài nộp chuẩn xác.
+          </p>
+        </div>
+
+        <div className="space-y-2">
           {TOPIC_CATEGORIES.map((cat) => {
             const cfg = TOPIC_CATEGORY_CONFIG[cat]
             const isSelected = selected.includes(cat)
@@ -77,56 +89,72 @@ function ExpertiseEditor({
                 key={cat}
                 type="button"
                 onClick={() => toggle(cat)}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left text-xs font-bold tracking-wide transition ${
+                className={[
+                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left text-xs font-medium transition-colors duration-[150ms]',
                   isSelected
-                    ? `${cfg.cls} opacity-100 shadow-sm`
-                    : 'border-[#1e2d5a] bg-slate-950/40 text-slate-400 hover:border-slate-600 hover:text-slate-300'
-                }`}
+                    ? cfg.cls
+                    : 'border-surface-border bg-surface-base text-text-secondary hover:border-surface-border-strong',
+                ].join(' ')}
               >
-                <span className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition ${
-                  isSelected ? 'bg-current border-current' : 'border-slate-600'
-                }`}>
-                  {isSelected && <span className="text-[8px] text-[#0b1124] font-black">✓</span>}
+                <span
+                  className={[
+                    'size-4 rounded border flex items-center justify-center shrink-0 transition-colors',
+                    isSelected ? 'bg-current border-current' : 'border-text-tertiary',
+                  ].join(' ')}
+                  aria-hidden="true"
+                >
+                  {isSelected && <span className="text-[9px] text-surface-base font-bold">✓</span>}
                 </span>
                 {cfg.label}
               </button>
             )
           })}
         </div>
+
         {msg && (
-          <p className={`text-xs font-semibold mb-3 ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>
-            {msg.text}
-          </p>
-        )}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 px-4 py-2.5 bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white text-xs font-orbitron font-bold uppercase tracking-wider rounded-lg transition"
+          <div
+            role={msg.ok ? 'status' : 'alert'}
+            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+              msg.ok
+                ? 'bg-semantic-success/10 border-semantic-success/30 text-semantic-success'
+                : 'bg-semantic-danger/10 border-semantic-danger/30 text-semantic-danger'
+            }`}
           >
-            {saving ? '⏳ ĐANG LƯU...' : '💾 LƯU'}
-          </button>
-          <button
-            type="button"
+            {msg.ok ? <CheckCircle className="size-3.5 shrink-0" /> : <AlertCircle className="size-3.5 shrink-0" />}
+            <span>{msg.text}</span>
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="primary"
+            size="sm"
+            isLoading={saving}
+            onClick={handleSave}
+            className="flex-1"
+          >
+            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="px-4 py-2.5 border border-[#1e2d5a] text-slate-400 text-xs font-semibold rounded-lg hover:bg-slate-900/60 transition"
           >
             Huỷ
-          </button>
+          </Button>
         </div>
       </div>
     </div>
   )
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
+// ─── Main Users Page ───────────────────────────────────────────────────────────
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<UserRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [editingExpertiseFor, setEditingExpertiseFor] = useState<UserRow | null>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -162,8 +190,12 @@ export default function AdminUsers() {
   const handleRoleChange = async (userId: string, newRole: string) => {
     const { error } = await supabase
       .from('profiles').update({ role: newRole } as never).eq('id', userId)
-    if (error) setMessage('❌ Lỗi: ' + error.message)
-    else { setMessage('✅ Đã cập nhật quyền'); await loadUsers() }
+    if (error) {
+      setMessage({ type: 'error', text: 'Lỗi cập nhật quyền: ' + error.message })
+    } else {
+      setMessage({ type: 'success', text: 'Đã cập nhật quyền người dùng thành công.' })
+      await loadUsers()
+    }
   }
 
   const filteredUsers = users.filter(u =>
@@ -172,16 +204,18 @@ export default function AdminUsers() {
     u.organization?.toLowerCase().includes(search.toLowerCase())
   )
 
-  if (loading) return <Loading text="LOADING USER REGISTRY" />
+  if (loading) return <Loading text="Đang tải danh sách người dùng..." />
 
   return (
-    <div className="min-h-screen bg-dark-bg text-white py-12 px-4 relative scanline-container">
-      {/* Decorative Glows */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-brand-blue/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="relative min-h-screen bg-surface-base text-text-primary overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <DotGridBackground />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-brand-cyan/5 blur-[120px]" />
+      </div>
 
       {editingExpertiseFor && (
-        <ExpertiseEditor
+        <ExpertiseEditorModal
           userId={editingExpertiseFor.id}
           current={editingExpertiseFor.expertise ?? []}
           onSave={() => loadUsers()}
@@ -189,102 +223,136 @@ export default function AdminUsers() {
         />
       )}
 
-      <div className="max-w-6xl mx-auto relative z-10">
-
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-red-400 hover:text-red-300 transition-colors uppercase mb-8"
-        >
-          ← QUAY LẠI PANEL ADMIN
-        </Link>
-
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-[#1e2d5a] pb-6">
-          <div>
-            <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase">
-              👥 CƠ SỞ DỮ LIỆU ĐẤU THỦ
-            </h1>
-            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-              USER DATABASE MONITOR // ACCESS CONTROL
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-orbitron bg-cyan-950/30 border border-cyan-500/30 px-4 py-2 rounded-lg text-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.05)]">
-            TỔNG SỐ: {users.length} THÀNH VIÊN
+      {/* Internal Page Header */}
+      <header className="relative z-10 border-b border-surface-border bg-surface-base/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-6xl px-4 py-8">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors duration-[150ms] mb-4"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Quay lại Control Center
+          </Link>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="size-5 text-brand-cyan shrink-0" aria-hidden="true" />
+                <Badge variant="warning" size="sm">BTC</Badge>
+              </div>
+              <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
+                Quản lý người dùng & phân quyền
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                Giám sát danh sách thành viên, cập nhật quyền hạn và lĩnh vực chuyên môn của BGK
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="info" size="md">Tổng số: {users.length} thành viên</Badge>
+            </div>
           </div>
         </div>
+      </header>
 
+      <main className="relative z-10 mx-auto max-w-6xl px-4 py-8 space-y-6">
+        {/* Status Message */}
         {message && (
-          <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-6 text-sm font-semibold tracking-wide flex items-center gap-2">
-            <span>📡</span> {message}
+          <div
+            role={message.type === 'error' ? 'alert' : 'status'}
+            className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${
+              message.type === 'success'
+                ? 'bg-semantic-success/10 border-semantic-success/30 text-semantic-success'
+                : 'bg-semantic-danger/10 border-semantic-danger/30 text-semantic-danger'
+            }`}
+          >
+            {message.type === 'success' ? <CheckCircle className="size-4 shrink-0 mt-0.5" /> : <AlertCircle className="size-4 shrink-0 mt-0.5" />}
+            <span>{message.text}</span>
           </div>
         )}
 
-        <div className="relative mb-6">
-          <input
+        {/* Search Bar */}
+        <div className="max-w-md">
+          <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="🔍 Tìm kiếm đấu thủ theo tên, email, đơn vị công tác..."
-            className="w-full bg-slate-950/60 border border-[#1e2d5a] px-4 py-3 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
+            placeholder="Tìm kiếm theo tên, email, đơn vị..."
+            leftIcon={<Search className="size-4" />}
           />
         </div>
 
-        <div className="tech-panel border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden">
+        {/* Users Table */}
+        <Card className="overflow-hidden p-0 border-surface-border">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-sm text-slate-350">
+            <table className="w-full border-collapse text-left text-sm">
               <thead>
-                <tr className="bg-dark-panel border-b border-[#1e2d5a] text-slate-300 font-bold tracking-widest uppercase text-xs">
-                  <th className="px-6 py-4">Họ tên</th>
-                  <th className="px-6 py-4">Email</th>
-                  <th className="px-6 py-4">SĐT</th>
-                  <th className="px-6 py-4">Đơn vị</th>
-                  <th className="px-6 py-4">Quyền truy cập</th>
-                  <th className="px-6 py-4">Lĩnh vực chuyên môn (BGK)</th>
+                <tr className="border-b border-surface-border bg-surface-overlay text-text-secondary font-medium text-xs">
+                  <th scope="col" className="px-5 py-3.5">Họ và tên</th>
+                  <th scope="col" className="px-5 py-3.5">Email</th>
+                  <th scope="col" className="px-5 py-3.5">SĐT</th>
+                  <th scope="col" className="px-5 py-3.5">Đơn vị</th>
+                  <th scope="col" className="px-5 py-3.5">Quyền truy cập</th>
+                  <th scope="col" className="px-5 py-3.5">Chuyên môn (BGK)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1e2d5a]/40">
+              <tbody className="divide-y divide-surface-border">
                 {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-[#131e3d]/30 transition duration-150">
-                    <td className="px-6 py-4 font-semibold text-white">{u.full_name}</td>
-                    <td className="px-6 py-4 text-slate-300">{u.email}</td>
-                    <td className="px-6 py-4 text-slate-400">{u.phone || '-'}</td>
-                    <td className="px-6 py-4 text-slate-400">{u.organization || '-'}</td>
-                    <td className="px-6 py-4">
+                  <tr key={u.id} className="hover:bg-surface-overlay/50 transition-colors duration-150">
+                    <td className="px-5 py-4 font-medium text-text-primary whitespace-nowrap">
+                      {u.full_name || 'Chưa cập nhật'}
+                    </td>
+                    <td className="px-5 py-4 text-text-secondary whitespace-nowrap">
+                      {u.email}
+                    </td>
+                    <td className="px-5 py-4 text-text-tertiary whitespace-nowrap">
+                      {u.phone || '—'}
+                    </td>
+                    <td className="px-5 py-4 text-text-tertiary whitespace-nowrap">
+                      {u.organization || '—'}
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
                       <select
                         value={u.role || 'participant'}
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                        className="bg-slate-950/80 border border-[#1e2d5a] text-xs font-bold font-orbitron tracking-wide uppercase rounded px-3 py-1.5 focus:outline-none focus:border-cyan-400 text-white cursor-pointer transition"
+                        className="h-8 rounded-md border border-surface-border bg-surface-raised px-2.5 text-xs text-text-primary outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/30 transition-colors cursor-pointer"
                       >
-                        <option value="participant" className="bg-dark-bg">Thí sinh (PILOT)</option>
-                        <option value="judge" className="bg-dark-bg">Giám khảo (JUDGE)</option>
-                        <option value="admin" className="bg-dark-bg">Quản trị (ADMIN)</option>
+                        <option value="participant">Thí sinh</option>
+                        <option value="judge">Giám khảo</option>
+                        <option value="admin">Quản trị viên</option>
                       </select>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-4">
                       {u.role === 'judge' ? (
-                        <div>
+                        <div className="space-y-1.5">
                           {u.expertise?.length ? (
-                            <div className="flex flex-wrap gap-1 mb-1.5">
+                            <div className="flex flex-wrap gap-1">
                               {u.expertise.map((e) => {
                                 const cfg = TOPIC_CATEGORY_CONFIG[e as TopicCategory]
                                 return cfg ? (
-                                  <span key={e} className={`inline-flex items-center px-1.5 py-px rounded border text-[8px] font-bold ${cfg.cls}`}>
+                                  <span
+                                    key={e}
+                                    className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium ${cfg.cls}`}
+                                  >
                                     {cfg.label}
                                   </span>
                                 ) : null
                               })}
                             </div>
                           ) : (
-                            <p className="text-[9px] text-slate-600 italic mb-1.5">Chưa khai báo</p>
+                            <span className="text-xs text-text-tertiary italic">Chưa khai báo</span>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => setEditingExpertiseFor(u)}
-                            className="text-[9px] font-orbitron font-bold text-purple-400 border border-purple-500/30 px-2 py-1 rounded hover:bg-purple-950/30 transition uppercase tracking-widest"
-                          >
-                            ✏ Cập nhật
-                          </button>
+                          <div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              leftIcon={<Pencil className="size-3" />}
+                              onClick={() => setEditingExpertiseFor(u)}
+                              className="h-6 px-2 text-xs text-brand-cyan hover:text-brand-cyan-bright"
+                            >
+                              Cập nhật
+                            </Button>
+                          </div>
                         </div>
                       ) : (
-                        <span className="text-slate-600 text-xs">—</span>
+                        <span className="text-text-disabled text-xs">—</span>
                       )}
                     </td>
                   </tr>
@@ -294,13 +362,13 @@ export default function AdminUsers() {
           </div>
 
           {filteredUsers.length === 0 && (
-            <div className="p-8 text-center text-slate-500 text-sm font-semibold">
-              Không tìm thấy người dùng nào khớp với truy vấn tìm kiếm.
-            </div>
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center text-text-tertiary text-sm">
+              <Users className="size-8 text-text-disabled mb-2" aria-hidden="true" />
+              <p>Không tìm thấy người dùng nào phù hợp với từ khóa tìm kiếm.</p>
+            </CardContent>
           )}
-        </div>
-
-      </div>
+        </Card>
+      </main>
     </div>
   )
 }

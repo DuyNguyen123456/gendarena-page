@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Loading from '@/components/loading'
 import {
   getScoringRounds,
   createOrUpdateScoringRound,
@@ -17,6 +16,12 @@ import {
   removeAssignment,
   type ScoringRound,
 } from '@/services/scoring'
+import { ArrowLeft, Scale, Plus, Trash2, CheckCircle, AlertCircle, ExternalLink, Link2, UserCheck, Shield } from 'lucide-react'
+import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 export default function AdminScoringPage() {
   const [loading, setLoading] = useState(true)
@@ -36,8 +41,11 @@ export default function AdminScoringPage() {
   const [selectedSubmission, setSelectedSubmission] = useState('')
   const [roundOpen, setRoundOpen] = useState(false)
   const [roundRubricUrl, setRoundRubricUrl] = useState('')
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+  const [savingSettings, setSavingSettings] = useState(false)
+  const [creatingRound, setCreatingRound] = useState(false)
+  const [addingCriterion, setAddingCriterion] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -53,7 +61,10 @@ export default function AdminScoringPage() {
     setSubmissions(subList)
     setAssignments(assignList)
     if (!selectedRoundId && roundsData.length > 0) {
-      setSelectedRoundId(roundsData.find((round) => round.scoring_open)?.id ?? roundsData[0].id)
+      const defaultRound = roundsData.find((round) => round.scoring_open) ?? roundsData[0]
+      setSelectedRoundId(defaultRound.id)
+      setRoundOpen(defaultRound.scoring_open)
+      setRoundRubricUrl(defaultRound.rubric_url ?? '')
     }
   }, [selectedRoundId])
 
@@ -80,12 +91,22 @@ export default function AdminScoringPage() {
     init()
   }, [router, supabase, loadAll])
 
+  // Sync selected round settings into local state
+  useEffect(() => {
+    if (!selectedRoundId) return
+    const cur = rounds.find(r => r.id === selectedRoundId)
+    if (cur) {
+      setRoundOpen(cur.scoring_open)
+      setRoundRubricUrl(cur.rubric_url ?? '')
+    }
+  }, [selectedRoundId, rounds])
+
   const handleAssign = async () => {
     if (!userId || !selectedJudge || !selectedSubmission) return
     const result = await assignJudgeToSubmission(selectedJudge, selectedSubmission, userId)
-    if (!result.ok) setMessage('❌ ' + result.error)
+    if (!result.ok) setMessage({ text: result.error, ok: false })
     else {
-      setMessage('✅ Đã phân công bài chấm')
+      setMessage({ text: 'Đã phân công bài chấm thành công.', ok: true })
       setSelectedJudge('')
       setSelectedSubmission('')
       await loadAll()
@@ -95,10 +116,10 @@ export default function AdminScoringPage() {
   const handleRemove = async (assignmentId: string) => {
     const result = await removeAssignment(assignmentId)
     if (!result.ok) {
-      setMessage('❌ ' + result.error)
+      setMessage({ text: result.error, ok: false })
       return
     }
-    setMessage('✅ Đã xoá phân công')
+    setMessage({ text: 'Đã xoá phân công thành công.', ok: true })
     await loadAll()
   }
 
@@ -108,23 +129,25 @@ export default function AdminScoringPage() {
   const handleCreateRound = async () => {
     if (!userId) return
     if (!newRoundTitle.trim()) {
-      setMessage('❌ Vui lòng nhập tên vòng.')
+      setMessage({ text: 'Vui lòng nhập tên vòng chấm.', ok: false })
       return
     }
 
+    setCreatingRound(true)
     const result = await createOrUpdateScoringRound({
       title: newRoundTitle.trim(),
       description: newRoundDescription.trim() || null,
       sort_order: rounds.length,
       is_active: true,
     })
+    setCreatingRound(false)
 
     if (!result.ok) {
-      setMessage('❌ ' + result.error)
+      setMessage({ text: result.error, ok: false })
       return
     }
 
-    setMessage('✅ Đã tạo vòng chấm mới')
+    setMessage({ text: 'Đã tạo vòng chấm mới thành công.', ok: true })
     setNewRoundTitle('')
     setNewRoundDescription('')
     await loadAll()
@@ -134,14 +157,15 @@ export default function AdminScoringPage() {
   const handleAddCriterion = async () => {
     if (!userId || !selectedRoundId) return
     if (!newCriterionName.trim()) {
-      setMessage('❌ Vui lòng nhập tên tiêu chí.')
+      setMessage({ text: 'Vui lòng nhập tên tiêu chí.', ok: false })
       return
     }
     if (newCriterionWeight <= 0 || newCriterionWeight > 100) {
-      setMessage('❌ Trọng số phải lớn hơn 0 và không quá 100.')
+      setMessage({ text: 'Trọng số phải lớn hơn 0 và không quá 100%.', ok: false })
       return
     }
 
+    setAddingCriterion(true)
     const result = await saveScoringCriterion({
       round_id: selectedRoundId,
       name: newCriterionName.trim(),
@@ -149,13 +173,14 @@ export default function AdminScoringPage() {
       max_score: newCriterionMaxScore,
       sort_order: selectedRound?.criteria.length ?? 0,
     })
+    setAddingCriterion(false)
 
     if (!result.ok) {
-      setMessage('❌ ' + result.error)
+      setMessage({ text: result.error, ok: false })
       return
     }
 
-    setMessage('✅ Đã thêm tiêu chí')
+    setMessage({ text: 'Đã thêm tiêu chí chấm điểm thành công.', ok: true })
     setNewCriterionName('')
     setNewCriterionWeight(0)
     setNewCriterionMaxScore(10)
@@ -165,16 +190,17 @@ export default function AdminScoringPage() {
   const handleDeleteCriterion = async (criterionId: string) => {
     const result = await deleteScoringCriterion(criterionId)
     if (!result.ok) {
-      setMessage('❌ ' + result.error)
+      setMessage({ text: result.error, ok: false })
       return
     }
-    setMessage('✅ Đã xoá tiêu chí')
+    setMessage({ text: 'Đã xoá tiêu chí thành công.', ok: true })
     await loadAll()
   }
 
   const handleSaveRoundSettings = async () => {
     if (!userId || !selectedRound) return
 
+    setSavingSettings(true)
     const result = await createOrUpdateScoringRound({
       id: selectedRound.id,
       phase_id: selectedRound.phase_id,
@@ -185,240 +211,416 @@ export default function AdminScoringPage() {
       sort_order: selectedRound.sort_order,
       is_active: selectedRound.is_active,
     })
+    setSavingSettings(false)
 
     if (!result.ok) {
-      setMessage('❌ ' + result.error)
+      setMessage({ text: result.error, ok: false })
       return
     }
-    setMessage('✅ Đã cập nhật vòng chấm')
+    setMessage({ text: 'Đã lưu cài đặt vòng chấm thành công.', ok: true })
     await loadAll()
   }
 
-  if (loading) return <Loading text="LOADING SCORING CONFIG" />
+  if (loading) return <Loading text="Đang tải cấu hình chấm điểm..." />
 
   return (
-    <div className="min-h-screen bg-dark-bg text-white py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <Link href="/admin" className="text-xs font-orbitron text-red-400 uppercase mb-8 inline-block">
-          ← QUAY LẠI PANEL ADMIN
-        </Link>
+    <div className="relative min-h-screen bg-surface-base text-text-primary overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <DotGridBackground />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-brand-cyan/5 blur-[120px]" />
+      </div>
 
-        <h1 className="font-orbitron text-2xl font-extrabold uppercase mb-8">⚙️ CẤU HÌNH CHẤM ĐIỂM</h1>
-
-        {message && (
-          <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-6 text-sm">{message}</div>
-        )}
-
-        <div className="tech-panel p-6 mb-8 space-y-4">
-          <h2 className="font-orbitron text-sm font-bold text-cyan-400 uppercase">Quản lý vòng chấm</h2>
-          <p className="text-sm text-slate-400">Mỗi vòng có URL barem và trạng thái mở/chưa mở độc lập. Chọn vòng để chỉnh sửa.</p>
-        </div>
-
-        {selectedRound && (
-          <div className="tech-panel p-6 mb-8 space-y-4">
-            <h2 className="font-orbitron text-sm font-bold text-cyan-400 uppercase">Cài đặt vòng được chọn</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={roundOpen}
-                  onChange={(e) => setRoundOpen(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm font-semibold">Mở vòng chấm</span>
-              </label>
-              <div />
-            </div>
+      {/* Internal Page Header */}
+      <header className="relative z-10 border-b border-surface-border bg-surface-base/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors duration-[150ms] mb-4"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Quay lại Control Center
+          </Link>
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <label className="block text-[10px] uppercase text-slate-400 mb-1">URL barem điểm (PDF/link)</label>
-              <input
-                type="url"
-                value={roundRubricUrl}
-                onChange={(e) => setRoundRubricUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white"
-              />
+              <div className="flex items-center gap-2 mb-2">
+                <Scale className="size-5 text-brand-cyan shrink-0" aria-hidden="true" />
+                <Badge variant="warning" size="sm">BTC</Badge>
+              </div>
+              <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
+                Cấu hình vòng chấm & tiêu chí
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                Quản lý các vòng chấm điểm, trọng số tiêu chí, liên kết barem và phân công bài thi
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={handleSaveRoundSettings}
-              className="tech-btn-accent px-6 py-2 rounded-lg text-xs font-bold uppercase text-black"
-            >
-              💾 Lưu cài đặt vòng
-            </button>
+            <div className="flex items-center gap-2">
+              <Badge variant="brand" size="md">Tổng số: {rounds.length} vòng chấm</Badge>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="relative z-10 mx-auto max-w-5xl px-4 py-8 space-y-6">
+        {/* Status Message */}
+        {message && (
+          <div
+            role={message.ok ? 'status' : 'alert'}
+            className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${
+              message.ok
+                ? 'bg-semantic-success/10 border-semantic-success/30 text-semantic-success'
+                : 'bg-semantic-danger/10 border-semantic-danger/30 text-semantic-danger'
+            }`}
+          >
+            {message.ok ? <CheckCircle className="size-4 shrink-0 mt-0.5" /> : <AlertCircle className="size-4 shrink-0 mt-0.5" />}
+            <span>{message.text}</span>
           </div>
         )}
 
-        <div className="tech-panel p-6 mb-8 space-y-4">
-          <h2 className="font-orbitron text-sm font-bold text-cyan-400 uppercase">Cấu hình vòng và tiêu chí chấm</h2>
-
-          <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-            <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  value={newRoundTitle}
-                  onChange={(e) => setNewRoundTitle(e.target.value)}
-                  placeholder="Tên vòng"
-                  className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white"
-                />
-                <input
-                  value={newRoundDescription}
-                  onChange={(e) => setNewRoundDescription(e.target.value)}
-                  placeholder="Mô tả vòng"
-                  className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleCreateRound}
-                className="px-5 py-2 bg-cyan-600 rounded-lg text-xs font-bold uppercase"
-              >
-                ➕ Tạo vòng mới
-              </button>
-
-              {rounds.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <label className="text-xs uppercase tracking-widest text-slate-400">Chọn vòng hiện tại</label>
-                    <span className="text-[10px] uppercase text-slate-500">Tổng trọng số: {totalRoundWeight}%</span>
-                  </div>
-                  <select
-                    value={selectedRoundId ?? ''}
-                    onChange={(e) => setSelectedRoundId(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white"
-                  >
-                    {rounds.map((round) => (
-                      <option key={round.id} value={round.id}>{round.title}</option>
-                    ))}
-                  </select>
+        {/* Round Settings Card */}
+        {selectedRound && (
+          <Card className="border-surface-border">
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Scale className="size-4 text-brand-cyan" />
+                    Cài đặt vòng chấm: <span className="text-brand-cyan">{selectedRound.title}</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Cấu hình trạng thái mở cổng chấm và đường dẫn barem điểm chính thức
+                  </CardDescription>
                 </div>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  value={newCriterionName}
-                  onChange={(e) => setNewCriterionName(e.target.value)}
-                  placeholder="Tên tiêu chí"
-                  className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white"
-                />
-                <input
-                  value={newCriterionWeight}
-                  onChange={(e) => setNewCriterionWeight(Number(e.target.value))}
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  placeholder="Trọng số"
-                  className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white"
-                />
+                <Badge variant={roundOpen ? 'success' : 'default'} size="sm">
+                  {roundOpen ? 'Đang mở chấm' : 'Đang đóng'}
+                </Badge>
               </div>
-              <input
-                value={newCriterionMaxScore}
-                onChange={(e) => setNewCriterionMaxScore(Number(e.target.value))}
-                type="number"
-                min={1}
-                step={1}
-                placeholder="Điểm tối đa"
-                className="w-full px-3 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded text-white"
-              />
-              <button
-                type="button"
-                onClick={handleAddCriterion}
-                disabled={!selectedRoundId}
-                className="w-full px-5 py-2 bg-emerald-600 rounded-lg text-xs font-bold uppercase disabled:opacity-50"
-              >
-                ➕ Thêm tiêu chí
-              </button>
-            </div>
-          </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Scoring open toggle */}
+                <div className="flex items-center justify-between p-3 rounded-lg border border-surface-border bg-surface-overlay">
+                  <div>
+                    <label htmlFor="round-open-toggle" className="text-sm font-medium text-text-primary block cursor-pointer">
+                      Mở cổng chấm điểm
+                    </label>
+                    <span className="text-xs text-text-tertiary">Cho phép BGK truy cập và nhập điểm</span>
+                  </div>
+                  <input
+                    id="round-open-toggle"
+                    type="checkbox"
+                    checked={roundOpen}
+                    onChange={(e) => setRoundOpen(e.target.checked)}
+                    className="size-4 rounded border-surface-border text-brand-cyan focus:ring-brand-cyan/20 cursor-pointer"
+                  />
+                </div>
 
-          {selectedRound && (
-            <div className="mt-4 rounded-xl border border-[#1e2d5a] bg-slate-950/40 p-4">
-              <h3 className="text-sm font-bold uppercase text-cyan-300 mb-3">Tiêu chí của vòng: {selectedRound.title}</h3>
-              {selectedRound.criteria.length === 0 ? (
-                <p className="text-sm text-slate-400">Chưa có tiêu chí nào cho vòng này.</p>
-              ) : (
+                {/* Rubric URL */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label htmlFor="rubric-url-input" className="block text-xs font-medium text-text-secondary">
+                      URL barem điểm (PDF / Drive)
+                    </label>
+                    {roundRubricUrl && (
+                      <a
+                        href={roundRubricUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-brand-cyan hover:underline"
+                      >
+                        <span>Xem thử</span>
+                        <ExternalLink className="size-3" />
+                      </a>
+                    )}
+                  </div>
+                  <input
+                    id="rubric-url-input"
+                    type="url"
+                    value={roundRubricUrl}
+                    onChange={(e) => setRoundRubricUrl(e.target.value)}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  isLoading={savingSettings}
+                  onClick={handleSaveRoundSettings}
+                >
+                  {savingSettings ? 'Đang lưu...' : 'Lưu cài đặt vòng'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Create Round & Configure Criteria */}
+        <Card className="border-surface-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              Cấu hình vòng và tiêu chí chấm điểm
+            </CardTitle>
+            <CardDescription>
+              Thiết lập trọng số cho từng tiêu chí chấm (tổng trọng số nên đạt 100%)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+              {/* Left Column: Create Round & Selector */}
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg border border-surface-border bg-surface-overlay space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                    Tạo vòng chấm mới
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input
+                      value={newRoundTitle}
+                      onChange={(e) => setNewRoundTitle(e.target.value)}
+                      placeholder="Tên vòng chấm (VD: Vòng Sơ Loại)"
+                      className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                    />
+                    <input
+                      value={newRoundDescription}
+                      onChange={(e) => setNewRoundDescription(e.target.value)}
+                      placeholder="Mô tả vòng chấm..."
+                      className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                    />
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<Plus className="size-3.5" />}
+                    isLoading={creatingRound}
+                    onClick={handleCreateRound}
+                  >
+                    {creatingRound ? 'Đang tạo...' : 'Tạo vòng mới'}
+                  </Button>
+                </div>
+
+                {rounds.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <label htmlFor="round-select-box" className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                        Chọn vòng chấm để chỉnh sửa
+                      </label>
+                      <Badge
+                        variant={totalRoundWeight === 100 ? 'success' : 'warning'}
+                        size="sm"
+                      >
+                        Tổng trọng số: {totalRoundWeight}%
+                      </Badge>
+                    </div>
+                    <select
+                      id="round-select-box"
+                      value={selectedRoundId ?? ''}
+                      onChange={(e) => setSelectedRoundId(e.target.value)}
+                      className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors cursor-pointer"
+                    >
+                      {rounds.map((round) => (
+                        <option key={round.id} value={round.id}>{round.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Add Criterion */}
+              <div className="p-4 rounded-lg border border-surface-border bg-surface-overlay space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                  Thêm tiêu chí vào vòng
+                </p>
                 <div className="space-y-3">
-                  {selectedRound.criteria.map((criterion) => (
-                    <div key={criterion.id} className="flex flex-col gap-2 rounded-lg border border-[#1e2d5a] p-3 bg-[#0e1428]/70">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="font-semibold text-white">{criterion.name}</p>
-                          <p className="text-xs text-slate-400">Trọng số: {criterion.weight}% • Điểm tối đa: {criterion.max_score}</p>
+                  <div>
+                    <label htmlFor="crit-name" className="block text-xs font-medium text-text-secondary mb-1">
+                      Tên tiêu chí *
+                    </label>
+                    <input
+                      id="crit-name"
+                      value={newCriterionName}
+                      onChange={(e) => setNewCriterionName(e.target.value)}
+                      placeholder="VD: Tính sáng tạo & Đổi mới"
+                      className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label htmlFor="crit-weight" className="block text-xs font-medium text-text-secondary mb-1">
+                        Trọng số (%) *
+                      </label>
+                      <input
+                        id="crit-weight"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={newCriterionWeight}
+                        onChange={(e) => setNewCriterionWeight(Number(e.target.value))}
+                        className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="crit-max" className="block text-xs font-medium text-text-secondary mb-1">
+                        Điểm tối đa *
+                      </label>
+                      <input
+                        id="crit-max"
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={newCriterionMaxScore}
+                        onChange={(e) => setNewCriterionMaxScore(Number(e.target.value))}
+                        className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    leftIcon={<Plus className="size-3.5" />}
+                    isLoading={addingCriterion}
+                    disabled={!selectedRoundId}
+                    onClick={handleAddCriterion}
+                    className="w-full mt-1"
+                  >
+                    {addingCriterion ? 'Đang thêm...' : 'Thêm tiêu chí'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Criteria List for Selected Round */}
+            {selectedRound && (
+              <div className="pt-2 border-t border-surface-border">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-3">
+                  Danh sách tiêu chí của vòng: <span className="text-text-primary">{selectedRound.title}</span>
+                </h3>
+                {selectedRound.criteria.length === 0 ? (
+                  <p className="text-sm text-text-tertiary italic">Chưa có tiêu chí nào được thiết lập cho vòng này.</p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {selectedRound.criteria.map((criterion) => (
+                      <div
+                        key={criterion.id}
+                        className="flex items-center justify-between gap-3 p-3.5 rounded-lg border border-surface-border bg-surface-overlay hover:border-surface-border-strong transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm text-text-primary truncate">{criterion.name}</p>
+                          <p className="text-xs text-text-tertiary mt-0.5">
+                            Trọng số: <span className="text-brand-cyan font-mono">{criterion.weight}%</span> · Tối đa: <span className="text-text-secondary font-mono">{criterion.max_score}đ</span>
+                          </p>
                         </div>
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          leftIcon={<Trash2 className="size-3.5" />}
                           onClick={() => handleDeleteCriterion(criterion.id)}
-                          className="text-red-400 text-xs uppercase font-bold hover:text-red-300"
+                          className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger shrink-0"
                         >
                           Xoá
-                        </button>
+                        </Button>
                       </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quick Assignment Widget */}
+        <Card className="border-surface-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <UserCheck className="size-4 text-brand-cyan" />
+              Phân công nhanh Giám khảo ↔ Bài nộp
+            </CardTitle>
+            <CardDescription>
+              Gán giám khảo trực tiếp cho bài nộp (để quản lý chuyên sâu theo ma trận chuyên môn, sử dụng phân hệ Phân công)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="assign-judge-select" className="block text-xs font-medium text-text-secondary mb-1.5">
+                  Chọn giám khảo
+                </label>
+                <select
+                  id="assign-judge-select"
+                  value={selectedJudge}
+                  onChange={(e) => setSelectedJudge(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors cursor-pointer"
+                >
+                  <option value="">-- Chọn giám khảo --</option>
+                  {judges.map((j) => (
+                    <option key={j.id} value={j.id}>{j.full_name} ({j.email})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="assign-sub-select" className="block text-xs font-medium text-text-secondary mb-1.5">
+                  Chọn bài nộp
+                </label>
+                <select
+                  id="assign-sub-select"
+                  value={selectedSubmission}
+                  onChange={(e) => setSelectedSubmission(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors cursor-pointer"
+                >
+                  <option value="">-- Chọn bài nộp --</option>
+                  {submissions.map((s) => (
+                    <option key={s.id} value={s.id}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Plus className="size-3.5" />}
+              onClick={handleAssign}
+              disabled={!selectedJudge || !selectedSubmission}
+            >
+              Phân công bài nộp
+            </Button>
+
+            {assignments.length > 0 && (
+              <div className="mt-4 space-y-2 border-t border-surface-border pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2">
+                  Danh sách phân công hiện tại ({assignments.length})
+                </p>
+                <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                  {assignments.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex justify-between items-center bg-surface-overlay border border-surface-border rounded-lg px-4 py-2.5 text-sm"
+                    >
+                      <span className="truncate pr-2">
+                        <strong className="text-text-primary font-medium">{a.judge?.full_name || 'Giám khảo'}</strong>
+                        <span className="text-text-tertiary mx-2">→</span>
+                        <span className="text-text-secondary">{a.submission_label ?? a.submission_id}</span>
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        leftIcon={<Trash2 className="size-3.5" />}
+                        onClick={() => handleRemove(a.id)}
+                        className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger h-7 px-2"
+                      >
+                        Huỷ
+                      </Button>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="tech-panel p-6 mb-8 space-y-4">
-          <h2 className="font-orbitron text-sm font-bold text-cyan-400 uppercase">Phân công BGK ↔ Bài nộp</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <select
-              value={selectedJudge}
-              onChange={(e) => setSelectedJudge(e.target.value)}
-              className="bg-slate-950/60 border border-[#1e2d5a] rounded px-3 py-2 text-sm"
-            >
-              <option value="">Chọn giám khảo</option>
-              {judges.map((j) => (
-                <option key={j.id} value={j.id}>{j.full_name} ({j.email})</option>
-              ))}
-            </select>
-            <select
-              value={selectedSubmission}
-              onChange={(e) => setSelectedSubmission(e.target.value)}
-              className="bg-slate-950/60 border border-[#1e2d5a] rounded px-3 py-2 text-sm"
-            >
-              <option value="">Chọn bài nộp</option>
-              {submissions.map((s) => (
-                <option key={s.id} value={s.id}>{s.label}</option>
-              ))}
-            </select>
-          </div>
-          <button
-            type="button"
-            onClick={handleAssign}
-            disabled={!selectedJudge || !selectedSubmission}
-            className="px-5 py-2 bg-purple-700 hover:bg-purple-600 rounded-lg text-xs font-bold uppercase disabled:opacity-50"
-          >
-            ➕ Phân công
-          </button>
-
-          {assignments.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {assignments.map((a) => (
-                <div key={a.id} className="flex justify-between items-center bg-[#131e3d]/40 border border-[#1e2d5a] rounded px-4 py-3 text-sm">
-                  <span>
-                    <strong className="text-white">{a.judge?.full_name}</strong>
-                    <span className="text-slate-500 mx-2">→</span>
-                    {a.submission_label ?? a.submission_id}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(a.id)}
-                    className="text-red-400 text-xs font-bold uppercase hover:text-red-300"
-                  >
-                    Xoá
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </main>
     </div>
   )
 }

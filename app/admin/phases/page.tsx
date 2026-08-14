@@ -3,34 +3,41 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import type { CompetitionPhase, PhaseFormData, PhaseStatus, SubmissionType } from '@/types/phase'
 import { getPhases, createPhase, updatePhase, deletePhase, toggleSubmissionOpen, toggleScoringOpen } from '@/services/phases'
-import { Edit2, Trash2, Plus, ToggleLeft, ToggleRight, Scale } from 'lucide-react'
+import { ArrowLeft, Calendar, Plus, Pencil, Trash2, Scale, CheckCircle, AlertCircle, Clock, FileText, Link2, Layers } from 'lucide-react'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: PhaseStatus }) {
   if (status === 'active') {
-    return <span className="bg-emerald-950/50 border border-emerald-500/40 text-emerald-400 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest font-orbitron">● ĐANG MỞ</span>
+    return <Badge variant="success" size="sm">Đang mở</Badge>
   }
   if (status === 'completed') {
-    return <span className="bg-blue-950/50 border border-blue-500/40 text-blue-400 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest font-orbitron">✓ ĐÃ KẾT THÚC</span>
+    return <Badge variant="info" size="sm">Đã kết thúc</Badge>
   }
-  return <span className="bg-slate-800/60 border border-slate-600/40 text-slate-400 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest font-orbitron">SẮP TỚI</span>
+  return <Badge variant="default" size="sm">Sắp tới</Badge>
 }
 
 function SubmissionTypeBadge({ type }: { type: SubmissionType }) {
   const config = {
-    file: { label: '📄 FILE', className: 'bg-cyan-950/40 border-cyan-500/30 text-cyan-400' },
-    link: { label: '🔗 LINK', className: 'bg-violet-950/40 border-violet-500/30 text-violet-400' },
-    both: { label: '📄+🔗 CẢ HAI', className: 'bg-amber-950/40 border-amber-500/30 text-amber-400' },
+    file: { label: 'File PDF', variant: 'info' as const, icon: FileText },
+    link: { label: 'Link URL', variant: 'brand' as const, icon: Link2 },
+    both: { label: 'File + Link', variant: 'warning' as const, icon: Layers },
   }
   const c = config[type] ?? config.file
+  const Icon = c.icon
   return (
-    <span className={`border px-2 py-0.5 rounded text-[10px] font-bold tracking-widest font-orbitron ${c.className}`}>
+    <Badge variant={c.variant} size="sm">
+      <Icon className="size-3 mr-1" />
       {c.label}
-    </span>
+    </Badge>
   )
 }
 
@@ -66,7 +73,35 @@ function datetimeLocalToIso(value: string): string | null {
   return new Date(value).toISOString()
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+function formatDisplayDate(iso: string | null) {
+  if (!iso) return null
+  try {
+    return new Date(iso).toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  } catch {
+    return iso
+  }
+}
+
+function formatDisplayDateTime(iso: string | null) {
+  if (!iso) return null
+  try {
+    return new Date(iso).toLocaleString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return iso
+  }
+}
+
+// ─── Page Component ───────────────────────────────────────────────────────────
 
 export default function AdminPhasesPage() {
   const [phases, setPhases] = useState<CompetitionPhase[]>([])
@@ -147,14 +182,15 @@ export default function AdminPhasesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xoá phase này không?')) return
+    if (!confirm('Bạn có chắc chắn muốn xoá giai đoạn này không?')) return
     try {
       const { error } = await deletePhase(id)
       if (error) throw new Error(error)
       await loadData()
+      setMessage({ text: 'Đã xoá giai đoạn thành công.', ok: true })
     } catch (e) {
       console.error('Failed to delete phase:', e)
-      setMessage({ text: 'Lỗi khi xóa phase.', ok: false })
+      setMessage({ text: 'Lỗi khi xóa phase: ' + (e instanceof Error ? e.message : 'Không xác định'), ok: false })
     }
   }
 
@@ -165,11 +201,15 @@ export default function AdminPhasesPage() {
     setTogglingId(null)
     if (error) {
       console.error('Toggle error:', error)
-      setMessage({ text: 'Lỗi khi thay đổi trạng thái nộp bài.', ok: false })
+      setMessage({ text: 'Lỗi khi thay đổi trạng thái nộp bài: ' + error, ok: false })
     } else {
       setPhases((prev) =>
         prev.map((p) => (p.id === phase.id ? { ...p, submission_open: !p.submission_open } : p))
       )
+      setMessage({
+        text: `Đã ${!phase.submission_open ? 'mở' : 'đóng'} cổng nộp bài cho "${phase.title}".`,
+        ok: true,
+      })
     }
   }
 
@@ -180,12 +220,15 @@ export default function AdminPhasesPage() {
     setTogglingScoringId(null)
     if (error) {
       console.error('Toggle scoring error:', error)
-      setMessage({ text: 'Lỗi khi thay đổi trạng thái chấm điểm.', ok: false })
+      setMessage({ text: 'Lỗi khi thay đổi trạng thái chấm điểm: ' + error, ok: false })
     } else {
       setPhases((prev) =>
         prev.map((p) => (p.id === phase.id ? { ...p, scoring_open: !p.scoring_open } : p))
       )
-      setMessage({ text: `Đã ${!phase.scoring_open ? 'MỞ' : 'ĐÓNG'} chấm bài cho vòng "${phase.title}".`, ok: true })
+      setMessage({
+        text: `Đã ${!phase.scoring_open ? 'mở' : 'đóng'} cổng chấm bài cho "${phase.title}".`,
+        ok: true,
+      })
     }
   }
 
@@ -218,7 +261,7 @@ export default function AdminPhasesPage() {
       if (result.error) throw new Error(result.error)
 
       setShowModal(false)
-      setMessage({ text: editingId ? 'Đã cập nhật phase.' : 'Đã tạo phase mới.', ok: true })
+      setMessage({ text: editingId ? 'Đã cập nhật giai đoạn thành công.' : 'Đã tạo giai đoạn mới thành công.', ok: true })
       await loadData()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Lỗi không xác định'
@@ -229,289 +272,374 @@ export default function AdminPhasesPage() {
     }
   }
 
-  // ─── Shared input classes ────────────────────────────────────────────────────
-
-  const inputCls = 'w-full bg-[#131e3d] border border-[#1e2d5a] rounded p-2 text-white text-sm focus:border-cyan-500/60 focus:outline-none transition'
-  const labelCls = 'block text-xs font-bold text-slate-400 mb-1 uppercase tracking-widest'
-
-  if (loading) return <Loading text="LOADING TIMELINE DATA" />
+  if (loading) return <Loading text="Đang tải dữ liệu lịch trình..." />
 
   return (
-    <div className="min-h-screen bg-dark-bg text-white py-12 px-4 relative scanline-container">
-      <div className="max-w-5xl mx-auto relative z-10">
+    <div className="relative min-h-screen bg-surface-base text-text-primary overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <DotGridBackground />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-brand-cyan/5 blur-[120px]" />
+      </div>
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-[#1e2d5a] pb-6">
-          <div>
-            <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase">
-              🗓️ QUẢN LÝ LỊCH TRÌNH & MỞ CHẤM BÀI
-            </h1>
-            <p className="text-xs text-slate-400 font-semibold tracking-widest mt-1 uppercase">
-              TIMELINE & SCORING WINDOW TERMINAL
-            </p>
-          </div>
-          <button
-            id="add-phase-btn"
-            onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 text-sm font-orbitron bg-cyan-950/50 border border-cyan-500/50 px-4 py-2 rounded-lg text-cyan-400 hover:bg-cyan-900/50 hover:shadow-[0_0_15px_rgba(0,240,255,0.2)] transition-all"
+      {/* Internal Page Header */}
+      <header className="relative z-10 border-b border-surface-border bg-surface-base/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors duration-[150ms] mb-4"
           >
-            <Plus className="w-4 h-4" />
-            THÊM PHASE MỚI
-          </button>
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Quay lại Control Center
+          </Link>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="size-5 text-brand-cyan shrink-0" aria-hidden="true" />
+                <Badge variant="warning" size="sm">BTC</Badge>
+              </div>
+              <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
+                Quản lý lịch trình & mở cổng chấm điểm
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                Kiểm soát các giai đoạn thi đấu, thời gian nộp bài của thí sinh và gating chấm điểm cho BGK
+              </p>
+            </div>
+            <Button
+              id="add-phase-btn"
+              variant="primary"
+              size="md"
+              leftIcon={<Plus className="size-4" />}
+              onClick={() => handleOpenModal()}
+            >
+              Thêm giai đoạn mới
+            </Button>
+          </div>
         </div>
+      </header>
 
-        {/* Status message */}
+      <main className="relative z-10 mx-auto max-w-5xl px-4 py-8 space-y-6">
+        {/* Status Message */}
         {message && (
-          <div className={`mb-5 px-5 py-3.5 rounded-xl border text-sm font-semibold flex items-center gap-2.5 ${
-            message.ok
-              ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-400'
-              : 'bg-red-950/50 border-red-500/40 text-red-400'
-          }`}>
-            {message.ok ? '✅' : '❌'} {message.text}
+          <div
+            role={message.ok ? 'status' : 'alert'}
+            className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${
+              message.ok
+                ? 'bg-semantic-success/10 border-semantic-success/30 text-semantic-success'
+                : 'bg-semantic-danger/10 border-semantic-danger/30 text-semantic-danger'
+            }`}
+          >
+            {message.ok ? <CheckCircle className="size-4 shrink-0 mt-0.5" /> : <AlertCircle className="size-4 shrink-0 mt-0.5" />}
+            <span>{message.text}</span>
           </div>
         )}
 
         {/* Phase List */}
-        <div className="grid gap-4">
+        <div className="space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-tertiary">
+            Danh sách giai đoạn thi đấu ({phases.length})
+          </h2>
+
           {phases.length === 0 ? (
-            <div className="tech-panel p-8 text-center text-slate-400 text-sm">
-              Chưa có phase nào. Hãy thêm phase mới!
-            </div>
+            <Card className="p-12 text-center text-text-tertiary">
+              <Calendar className="size-10 text-text-disabled mx-auto mb-2" />
+              <p className="text-sm">Chưa có giai đoạn nào được tạo. Nhấn &quot;Thêm giai đoạn mới&quot; để thiết lập.</p>
+            </Card>
           ) : (
             phases.map((phase) => (
-              <div
-                key={phase.id}
-                className="tech-panel p-5 border-[#1e2d5a]/60 hover:border-cyan-500/20 transition-colors"
-              >
-                <div className="flex flex-col md:flex-row gap-4 justify-between md:items-start">
-                  {/* Left: Phase info */}
-                  <div className="flex gap-4 items-start flex-1">
-                    <div className="w-10 h-10 rounded-full bg-[#0b1124] border border-[#1e2d5a] flex items-center justify-center font-orbitron font-bold text-cyan-500 shrink-0">
+              <Card key={phase.id} className="p-5">
+                <div className="flex flex-col md:flex-row gap-5 justify-between md:items-center">
+                  {/* Left: Phase Info */}
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    <div className="size-10 rounded-full bg-surface-overlay border border-surface-border flex items-center justify-center font-mono font-bold text-brand-cyan shrink-0">
                       {phase.phase_number}
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="font-orbitron font-bold text-white tracking-wide uppercase flex flex-wrap items-center gap-2">
-                        {phase.title}
+                    <div className="min-w-0 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-display text-base font-semibold text-text-primary truncate">
+                          {phase.title}
+                        </h3>
                         <StatusBadge status={phase.status} />
                         <SubmissionTypeBadge type={phase.submission_type ?? 'file'} />
-                        {/* Scoring badge */}
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold font-orbitron border ${
-                          phase.scoring_open
-                            ? 'bg-purple-950/50 border-purple-500/40 text-purple-300'
-                            : 'bg-slate-900 border-slate-700 text-slate-500'
-                        }`}>
-                          ⚖️ {phase.scoring_open ? 'MỞ CHẤM' : 'ĐÓNG CHẤM'}
-                        </span>
-                      </h3>
-                      <div className="text-xs text-slate-400 mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5">
-                        <span>Order: {phase.display_order}</span>
+                        <Badge variant={phase.scoring_open ? 'brand' : 'default'} size="sm">
+                          <Scale className="size-3 mr-1" />
+                          {phase.scoring_open ? 'Đang mở chấm' : 'Đóng chấm'}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-text-secondary line-clamp-2">
+                        {phase.description}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-tertiary pt-0.5">
+                        <span>Thứ tự: {phase.display_order}</span>
                         {phase.start_date && (
-                          <span>
-                            {new Date(phase.start_date).toLocaleDateString('vi-VN')}
-                            {phase.end_date ? ` → ${new Date(phase.end_date).toLocaleDateString('vi-VN')}` : ''}
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="size-3" />
+                            {formatDisplayDate(phase.start_date)}
+                            {phase.end_date ? ` → ${formatDisplayDate(phase.end_date)}` : ''}
                           </span>
                         )}
                         {phase.submission_opens_at && (
-                          <span className="text-cyan-500/70">
-                            Nộp từ: {new Date(phase.submission_opens_at).toLocaleString('vi-VN')}
+                          <span className="text-brand-cyan/80">
+                            Nộp từ: {formatDisplayDateTime(phase.submission_opens_at)}
                           </span>
                         )}
                         {phase.scoring_opens_at && (
-                          <span className="text-purple-400/70">
-                            Chấm từ: {new Date(phase.scoring_opens_at).toLocaleString('vi-VN')}
+                          <span className="text-accent-violet/90">
+                            Chấm từ: {formatDisplayDateTime(phase.scoring_opens_at)}
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Right: Submission & Scoring toggles + actions */}
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                    {/* Inline submission toggle */}
+                  {/* Right: Gating Toggles & Actions */}
+                  <div className="flex items-center gap-3 shrink-0 flex-wrap pt-2 md:pt-0 border-t md:border-t-0 border-surface-border">
+                    {/* Submission Toggle */}
                     <button
+                      type="button"
+                      role="switch"
+                      aria-checked={phase.submission_open}
                       id={`toggle-submission-${phase.id}`}
                       onClick={() => handleToggleOpen(phase)}
                       disabled={togglingId === phase.id}
-                      title={phase.submission_open ? 'Tắt nộp bài' : 'Bật nộp bài'}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold tracking-wider font-orbitron uppercase transition-all ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan ${
                         phase.submission_open
-                          ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/50'
-                          : 'bg-slate-800/40 border-[#1e2d5a] text-slate-500 hover:border-cyan-500/30 hover:text-slate-300'
+                          ? 'bg-semantic-success/15 border-semantic-success/30 text-semantic-success hover:bg-semantic-success/20'
+                          : 'bg-surface-overlay border-surface-border text-text-tertiary hover:border-surface-border-strong hover:text-text-secondary'
                       } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {togglingId === phase.id ? (
-                        <span className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-                      ) : phase.submission_open ? (
-                        <ToggleRight className="w-3.5 h-3.5" />
+                        <span className="size-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
                       ) : (
-                        <ToggleLeft className="w-3.5 h-3.5" />
+                        <span className={`size-2 rounded-full ${phase.submission_open ? 'bg-semantic-success' : 'bg-text-tertiary'}`} />
                       )}
-                      NỘP: {phase.submission_open ? 'MỞ' : 'ĐÓNG'}
+                      Nộp: {phase.submission_open ? 'Mở' : 'Đóng'}
                     </button>
 
-                    {/* Inline scoring toggle */}
+                    {/* Scoring Toggle */}
                     <button
+                      type="button"
+                      role="switch"
+                      aria-checked={phase.scoring_open}
                       id={`toggle-scoring-${phase.id}`}
                       onClick={() => handleToggleScoringOpen(phase)}
                       disabled={togglingScoringId === phase.id}
-                      title={phase.scoring_open ? 'Tắt chấm điểm' : 'Bật chấm điểm'}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold tracking-wider font-orbitron uppercase transition-all ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan ${
                         phase.scoring_open
-                          ? 'bg-purple-950/50 border-purple-500/40 text-purple-300 hover:bg-purple-900/50'
-                          : 'bg-slate-800/40 border-[#1e2d5a] text-slate-500 hover:border-purple-500/30 hover:text-slate-300'
+                          ? 'bg-brand-cyan/15 border-brand-cyan/30 text-brand-cyan hover:bg-brand-cyan/20'
+                          : 'bg-surface-overlay border-surface-border text-text-tertiary hover:border-surface-border-strong hover:text-text-secondary'
                       } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {togglingScoringId === phase.id ? (
-                        <span className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                        <span className="size-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
                       ) : (
-                        <Scale className="w-3.5 h-3.5" />
+                        <Scale className="size-3" />
                       )}
-                      CHẤM: {phase.scoring_open ? 'MỞ' : 'ĐÓNG'}
+                      Chấm: {phase.scoring_open ? 'Mở' : 'Đóng'}
                     </button>
 
-                    <button
+                    {/* Edit & Delete Buttons */}
+                    <Button
                       id={`edit-phase-${phase.id}`}
+                      variant="secondary"
+                      size="sm"
+                      leftIcon={<Pencil className="size-3.5" />}
                       onClick={() => handleOpenModal(phase)}
-                      className="p-2 bg-blue-950/30 border border-blue-500/30 rounded text-blue-400 hover:bg-blue-900/50 transition"
-                      title="Chỉnh sửa"
                     >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
+                      Sửa
+                    </Button>
+                    <Button
                       id={`delete-phase-${phase.id}`}
+                      variant="ghost"
+                      size="sm"
+                      leftIcon={<Trash2 className="size-3.5" />}
                       onClick={() => handleDelete(phase.id)}
-                      className="p-2 bg-red-950/30 border border-red-500/30 rounded text-red-400 hover:bg-red-900/50 transition"
-                      title="Xóa"
+                      className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      Xoá
+                    </Button>
                   </div>
                 </div>
-              </div>
+              </Card>
             ))
           )}
         </div>
-      </div>
+      </main>
 
-      {/* ─── Modal ────────────────────────────────────────────────────────────── */}
+      {/* ─── Modal Form ────────────────────────────────────────────────────────── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 bg-black/70 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-[#0b1124] border border-cyan-500/30 p-6 rounded-xl max-w-2xl w-full shadow-[0_0_40px_rgba(0,240,255,0.08)] relative">
-            <h2 className="font-orbitron text-xl font-bold text-white uppercase mb-6 tracking-wide border-b border-[#1e2d5a] pb-3">
-              {editingId ? 'CHỈNH SỬA PHASE' : 'THÊM PHASE MỚI'}
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 bg-black/60 backdrop-blur-sm overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modal-phase-title">
+          <div className="w-full max-w-2xl rounded-xl border border-surface-border bg-surface-overlay p-6 shadow-elevation-3 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <h2 id="modal-phase-title" className="font-display text-lg font-semibold text-text-primary border-b border-surface-border pb-3">
+              {editingId ? 'Chỉnh sửa giai đoạn thi đấu' : 'Thêm giai đoạn mới'}
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* ── Basic info ───────────────────────────────────────────── */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls}>Phase Number</label>
-                  <input type="number" required value={formData.phase_number}
+                  <label htmlFor="p-number" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Số thứ tự Phase *
+                  </label>
+                  <input
+                    id="p-number"
+                    type="number"
+                    required
+                    value={formData.phase_number}
                     onChange={e => setFormData({ ...formData, phase_number: Number(e.target.value) })}
-                    className={inputCls} />
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                  />
                 </div>
                 <div>
-                  <label className={labelCls}>Display Order</label>
-                  <input type="number" required value={formData.display_order}
+                  <label htmlFor="p-order" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Thứ tự hiển thị *
+                  </label>
+                  <input
+                    id="p-order"
+                    type="number"
+                    required
+                    value={formData.display_order}
                     onChange={e => setFormData({ ...formData, display_order: Number(e.target.value) })}
-                    className={inputCls} />
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className={labelCls}>Tiêu đề</label>
-                <input type="text" required value={formData.title}
+                <label htmlFor="p-title" className="block text-xs font-medium text-text-secondary mb-1.5">
+                  Tiêu đề giai đoạn *
+                </label>
+                <input
+                  id="p-title"
+                  type="text"
+                  required
+                  value={formData.title}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
-                  className={inputCls} placeholder="VD: VÒNG SƠ KHẢO" />
+                  placeholder="VD: VÒNG SƠ KHẢO — Ý TƯỞNG & ĐỀ ÁN"
+                  className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                />
               </div>
 
               <div>
-                <label className={labelCls}>Mô tả</label>
-                <textarea required value={formData.description}
+                <label htmlFor="p-desc" className="block text-xs font-medium text-text-secondary mb-1.5">
+                  Mô tả chi tiết *
+                </label>
+                <textarea
+                  id="p-desc"
+                  required
+                  rows={2}
+                  value={formData.description}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
-                  className={`${inputCls} h-20 resize-none`} placeholder="Chi tiết vòng thi..." />
+                  placeholder="Chi tiết yêu cầu và nội dung của vòng thi..."
+                  className="w-full px-3 py-2 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors resize-none"
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls}>Ngày bắt đầu</label>
-                  <input type="date" value={formData.start_date || ''}
+                  <label htmlFor="p-start-date" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Ngày bắt đầu
+                  </label>
+                  <input
+                    id="p-start-date"
+                    type="date"
+                    value={formData.start_date || ''}
                     onChange={e => setFormData({ ...formData, start_date: e.target.value || null })}
-                    className={inputCls} />
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                  />
                 </div>
                 <div>
-                  <label className={labelCls}>Ngày kết thúc</label>
-                  <input type="date" value={formData.end_date || ''}
+                  <label htmlFor="p-end-date" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Ngày kết thúc
+                  </label>
+                  <input
+                    id="p-end-date"
+                    type="date"
+                    value={formData.end_date || ''}
                     onChange={e => setFormData({ ...formData, end_date: e.target.value || null })}
-                    className={inputCls} />
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls}>Trạng thái phase</label>
-                  <select value={formData.status}
+                  <label htmlFor="p-status" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Trạng thái giai đoạn
+                  </label>
+                  <select
+                    id="p-status"
+                    value={formData.status}
                     onChange={e => setFormData({ ...formData, status: e.target.value as PhaseStatus })}
-                    className={inputCls}>
-                    <option value="upcoming">SẮP TỚI</option>
-                    <option value="active">ĐANG MỞ</option>
-                    <option value="completed">ĐÃ KẾT THÚC</option>
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors cursor-pointer"
+                  >
+                    <option value="upcoming">Sắp tới (Upcoming)</option>
+                    <option value="active">Đang mở (Active)</option>
+                    <option value="completed">Đã kết thúc (Completed)</option>
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>Icon (Lucide name)</label>
-                  <input type="text" required value={formData.icon}
+                  <label htmlFor="p-icon" className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Biểu tượng (Lucide icon name)
+                  </label>
+                  <input
+                    id="p-icon"
+                    type="text"
+                    required
+                    value={formData.icon}
                     onChange={e => setFormData({ ...formData, icon: e.target.value })}
-                    className={inputCls} placeholder="book, trophy, target..." />
+                    placeholder="circle, trophy, target..."
+                    className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
+                  />
                 </div>
               </div>
 
-              {/* ── Submission controls section ──────────────────────────── */}
-              <div className="border-t border-[#1e2d5a] pt-5 space-y-4">
-                <h3 className="font-orbitron text-xs font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-2">
-                  📤 CÀI ĐẶT NỘP BÀI (THÍ SINH)
+              {/* Submission Controls Section */}
+              <div className="border-t border-surface-border pt-4 space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-brand-cyan">
+                  Cài đặt nộp bài (Thí sinh)
                 </h3>
 
-                {/* submission_open toggle */}
-                <div className="flex items-center justify-between p-3.5 bg-slate-950/40 border border-[#1e2d5a] rounded-lg">
+                <div className="flex items-center justify-between p-3.5 bg-surface-base border border-surface-border rounded-lg">
                   <div>
-                    <p className="text-sm font-bold text-white">Mở nộp bài</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Cho phép thí sinh nộp bài trong vòng này</p>
+                    <p className="text-sm font-medium text-text-primary">Mở cổng nộp bài</p>
+                    <p className="text-xs text-text-tertiary">Cho phép các đội nộp hoặc thay thế bài thi</p>
                   </div>
                   <button
                     type="button"
+                    role="switch"
+                    aria-checked={formData.submission_open}
                     id="modal-submission-open-toggle"
                     onClick={() => setFormData({ ...formData, submission_open: !formData.submission_open })}
-                    className={`relative inline-flex h-6 w-11 rounded-full border-2 transition-colors duration-200 focus:outline-none ${
-                      formData.submission_open
-                        ? 'bg-emerald-500 border-emerald-400'
-                        : 'bg-slate-700 border-slate-600'
+                    className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan ${
+                      formData.submission_open ? 'bg-semantic-success' : 'bg-surface-elevated'
                     }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                        formData.submission_open ? 'translate-x-5' : 'translate-x-0.5'
+                      className={`inline-block size-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                        formData.submission_open ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </button>
                 </div>
 
-                {/* submission_type */}
                 <div>
-                  <label className={labelCls}>Loại nộp bài</label>
+                  <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                    Hình thức nộp bài
+                  </label>
                   <div className="grid grid-cols-3 gap-2">
                     {(['file', 'link', 'both'] as SubmissionType[]).map((t) => {
-                      const labels = { file: '📄 File', link: '🔗 Link', both: '📄+🔗 Cả hai' }
+                      const labels = { file: 'File PDF', link: 'Link URL', both: 'Cả hai' }
                       const isSelected = formData.submission_type === t
                       return (
                         <button
                           key={t}
                           type="button"
                           onClick={() => setFormData({ ...formData, submission_type: t })}
-                          className={`py-2 px-3 rounded-lg border text-xs font-bold tracking-wide transition ${
+                          className={`py-2 px-3 rounded-lg border text-xs font-medium transition-colors ${
                             isSelected
-                              ? 'bg-cyan-950/60 border-cyan-500/60 text-cyan-400 shadow-[0_0_8px_rgba(0,240,255,0.15)]'
-                              : 'bg-slate-950/40 border-[#1e2d5a] text-slate-500 hover:border-cyan-500/30 hover:text-slate-300'
+                              ? 'bg-brand-cyan/15 border-brand-cyan text-brand-cyan font-semibold'
+                              : 'bg-surface-base border-surface-border text-text-secondary hover:border-surface-border-strong'
                           }`}
                         >
                           {labels[t]}
@@ -521,98 +649,109 @@ export default function AdminPhasesPage() {
                   </div>
                 </div>
 
-                {/* submission windows */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>Mở nộp lúc (tuỳ chọn)</label>
+                    <label htmlFor="p-sub-open" className="block text-xs font-medium text-text-secondary mb-1.5">
+                      Mở nộp lúc (tuỳ chọn)
+                    </label>
                     <input
+                      id="p-sub-open"
                       type="datetime-local"
                       value={isoToDatetimeLocal(formData.submission_opens_at)}
                       onChange={e => setFormData({ ...formData, submission_opens_at: e.target.value || null })}
-                      className={inputCls}
+                      className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>Đóng nộp lúc (tuỳ chọn)</label>
+                    <label htmlFor="p-sub-close" className="block text-xs font-medium text-text-secondary mb-1.5">
+                      Đóng nộp lúc (tuỳ chọn)
+                    </label>
                     <input
+                      id="p-sub-close"
                       type="datetime-local"
                       value={isoToDatetimeLocal(formData.submission_closes_at)}
                       onChange={e => setFormData({ ...formData, submission_closes_at: e.target.value || null })}
-                      className={inputCls}
+                      className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* ── Scoring controls section ───────────────────────────── */}
-              <div className="border-t border-[#1e2d5a] pt-5 space-y-4">
-                <h3 className="font-orbitron text-xs font-bold text-purple-400 uppercase tracking-widest flex items-center gap-2">
-                  ⚖️ CÀI ĐẶT CHẤM ĐIỂM (BAN GIÁM KHẢO)
+              {/* Scoring Controls Section */}
+              <div className="border-t border-surface-border pt-4 space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-accent-violet">
+                  Cài đặt chấm điểm (Ban Giám khảo)
                 </h3>
 
-                {/* scoring_open toggle */}
-                <div className="flex items-center justify-between p-3.5 bg-purple-950/20 border border-purple-500/30 rounded-lg">
+                <div className="flex items-center justify-between p-3.5 bg-surface-base border border-surface-border rounded-lg">
                   <div>
-                    <p className="text-sm font-bold text-white">Mở chấm điểm</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Cho phép Giám khảo nhập/sửa điểm bài nộp của vòng này</p>
+                    <p className="text-sm font-medium text-text-primary">Mở cổng chấm điểm</p>
+                    <p className="text-xs text-text-tertiary">Cho phép Giám khảo nhập và cập nhật điểm bài nộp</p>
                   </div>
                   <button
                     type="button"
+                    role="switch"
+                    aria-checked={formData.scoring_open}
                     id="modal-scoring-open-toggle"
                     onClick={() => setFormData({ ...formData, scoring_open: !formData.scoring_open })}
-                    className={`relative inline-flex h-6 w-11 rounded-full border-2 transition-colors duration-200 focus:outline-none ${
-                      formData.scoring_open
-                        ? 'bg-purple-500 border-purple-400'
-                        : 'bg-slate-700 border-slate-600'
+                    className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan ${
+                      formData.scoring_open ? 'bg-accent-violet' : 'bg-surface-elevated'
                     }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                        formData.scoring_open ? 'translate-x-5' : 'translate-x-0.5'
+                      className={`inline-block size-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                        formData.scoring_open ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </button>
                 </div>
 
-                {/* scoring windows */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>Mở chấm lúc (tuỳ chọn)</label>
+                    <label htmlFor="p-score-open" className="block text-xs font-medium text-text-secondary mb-1.5">
+                      Mở chấm lúc (tuỳ chọn)
+                    </label>
                     <input
+                      id="p-score-open"
                       type="datetime-local"
                       value={isoToDatetimeLocal(formData.scoring_opens_at)}
                       onChange={e => setFormData({ ...formData, scoring_opens_at: e.target.value || null })}
-                      className={inputCls}
+                      className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>Đóng chấm lúc (tuỳ chọn)</label>
+                    <label htmlFor="p-score-close" className="block text-xs font-medium text-text-secondary mb-1.5">
+                      Đóng chấm lúc (tuỳ chọn)
+                    </label>
                     <input
+                      id="p-score-close"
                       type="datetime-local"
                       value={isoToDatetimeLocal(formData.scoring_closes_at)}
                       onChange={e => setFormData({ ...formData, scoring_closes_at: e.target.value || null })}
-                      className={inputCls}
+                      className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 mt-2 pt-4 border-t border-[#1e2d5a]">
-                <button
+              <div className="flex justify-end gap-3 pt-4 border-t border-surface-border">
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="md"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition"
                 >
                   Huỷ bỏ
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold tracking-wide transition disabled:opacity-50"
+                  variant="primary"
+                  size="md"
+                  isLoading={submitting}
                 >
-                  {submitting ? '⏳ ĐANG LƯU...' : '💾 LƯU PHASE'}
-                </button>
+                  {submitting ? 'Đang lưu...' : 'Lưu giai đoạn'}
+                </Button>
               </div>
             </form>
           </div>
