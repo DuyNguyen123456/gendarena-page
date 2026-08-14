@@ -7,7 +7,9 @@ import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { siteConfig } from '@/config/site'
 import Image from 'next/image'
-import { Settings, Scale, Calendar, Crown, User as UserIcon } from 'lucide-react'
+import { Settings, Scale, Calendar, Crown, User as UserIcon, Menu, X, LogOut } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null)
@@ -59,6 +61,7 @@ export default function Navbar() {
     setUser(null)
     setProfile(null)
     await supabase.auth.signOut()
+    router.push('/login')
   }
 
   const isAdmin = profile?.role === 'admin'
@@ -66,53 +69,66 @@ export default function Navbar() {
 
   const getLinkClass = (path: string) => {
     const isActive = (path !== '/' && pathname.startsWith(path)) || pathname === path
-    return `px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${isActive
-        ? 'text-cyan-400 bg-cyan-950/30 border border-cyan-500/30 shadow-[0_0_10px_rgba(0,240,255,0.1)] font-bold'
-        : 'text-slate-300 hover:text-cyan-400 hover:bg-cyan-950/10'
-      }`
+    return `px-3.5 py-2 rounded-md text-sm font-medium transition-colors duration-[150ms] ${
+      isActive
+        ? 'text-brand-cyan bg-brand-cyan/10 font-semibold'
+        : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
+    }`
   }
 
   const getMobileLinkClass = (path: string) => {
     const isActive = (path !== '/' && pathname.startsWith(path)) || pathname === path
-    return `block w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${isActive
-        ? 'text-cyan-400 bg-cyan-950/30 border border-cyan-500/30 font-bold'
-        : 'text-slate-300 hover:text-cyan-400 hover:bg-cyan-950/10'
-      }`
+    return `block w-full px-4 py-2.5 rounded-md text-sm font-medium transition-colors duration-[150ms] ${
+      isActive
+        ? 'text-brand-cyan bg-brand-cyan/10 font-semibold'
+        : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
+    }`
   }
 
-  const getAdminLinkClass = (path: string) => {
-    const isActive = pathname === path
-    return `px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${isActive
-        ? 'text-red-400 bg-red-950/30 border border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.1)] font-bold'
-        : 'text-slate-300 hover:text-red-400 hover:bg-red-950/10'
+  const getRoleLinkClass = (path: string, activeColor: 'cyan' | 'warning' | 'purple' = 'cyan') => {
+    const isActive = (path !== '/' && pathname.startsWith(path)) || pathname === path
+    if (activeColor === 'warning') {
+      return `px-3.5 py-2 rounded-md text-sm font-medium transition-colors duration-[150ms] ${
+        isActive
+          ? 'text-semantic-warning bg-semantic-warning/10 font-semibold'
+          : 'text-text-secondary hover:text-semantic-warning hover:bg-surface-raised'
       }`
+    }
+    if (activeColor === 'purple') {
+      return `px-3.5 py-2 rounded-md text-sm font-medium transition-colors duration-[150ms] ${
+        isActive
+          ? 'text-accent-violet bg-accent-violet/10 font-semibold'
+          : 'text-text-secondary hover:text-accent-violet hover:bg-surface-raised'
+      }`
+    }
+    return getLinkClass(path)
   }
 
   return (
     <nav
       ref={menuRef}
-      className="bg-[#070c1e]/85 backdrop-blur-md border-b border-[#1e2d5a] px-6 md:px-8 py-3.5 sticky top-0 z-50 shadow-[0_4px_30px_rgba(0,240,255,0.03)]"
+      className="sticky top-0 z-sticky bg-surface-base/80 backdrop-blur-md border-b border-surface-border transition-colors duration-[250ms]"
     >
-      <div className="flex justify-between items-center">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link
           href="/"
-          className="font-orbitron text-lg font-bold tracking-wider text-white hover:text-cyan-400 transition duration-300 flex items-center gap-2 group"
+          className="flex items-center gap-2.5 group transition-opacity hover:opacity-85"
         >
           <Image
             src="/logo/gendarena-logo.png"
             alt="Logo GenD Arena 2026"
-            width={28}
-            height={28}
-            className="object-contain group-hover:animate-pulse"
+            width={32}
+            height={32}
+            className="object-contain shrink-0"
           />
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-cyan-400">
+          <span className="font-display text-base md:text-lg font-bold tracking-wider text-text-primary">
             {siteConfig.name.toUpperCase()}
           </span>
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-1.5 lg:gap-2">
           {siteConfig.navItems.map((item) => (
             <Link key={item.href} href={item.href} className={getLinkClass(item.href)}>
               {item.label}
@@ -130,16 +146,22 @@ export default function Navbar() {
           )}
 
           {isAdmin && (
-            <Link href="/admin" className={`${getAdminLinkClass('/admin')} flex items-center gap-1.5`}>
-              <Settings className="w-4 h-4" />
-              <span>Quản lý</span>
-            </Link>
+            <>
+              <Link href="/admin" className={`${getRoleLinkClass('/admin', 'warning')} flex items-center gap-1.5`}>
+                <Settings className="size-4" />
+                <span>Quản lý</span>
+              </Link>
+              <Link href="/admin/phases" className={`${getRoleLinkClass('/admin/phases', 'warning')} flex items-center gap-1.5`}>
+                <Calendar className="size-4" />
+                <span>Timeline</span>
+              </Link>
+            </>
           )}
 
           {isJudge && (
             <>
-              <Link href="/judge" className={`${getAdminLinkClass('/judge')} flex items-center gap-1.5`}>
-                <Scale className="w-4 h-4 text-purple-400" />
+              <Link href="/judge" className={`${getRoleLinkClass('/judge', 'purple')} flex items-center gap-1.5`}>
+                <Scale className="size-4" />
                 <span>Giám khảo</span>
               </Link>
               <Link href="/profile" className={getLinkClass('/profile')}>
@@ -148,75 +170,70 @@ export default function Navbar() {
             </>
           )}
 
-          {isAdmin && (
-            <Link href="/admin/phases" className={`${getAdminLinkClass('/admin/phases')} flex items-center gap-1.5`}>
-              <Calendar className="w-4 h-4 text-red-400" />
-              <span>Timeline</span>
-            </Link>
-          )}
-
-          <div className="w-[1px] h-5 bg-[#1e2d5a] mx-2" />
+          <div className="w-px h-5 bg-surface-border mx-2" />
 
           {loading ? (
-            <div className="w-20 h-9 bg-slate-800/30 animate-pulse rounded-lg" />
+            <div className="w-24 h-9 bg-surface-elevated animate-pulse rounded-md" />
           ) : user ? (
-            <div className="flex items-center gap-3.5">
-              <span className="text-slate-300 text-xs font-medium bg-[#131e3d] border border-[#1e2d5a] px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                {isAdmin ? <Crown className="w-3.5 h-3.5 text-amber-400" /> : isJudge ? <Scale className="w-3.5 h-3.5 text-purple-400" /> : <UserIcon className="w-3.5 h-3.5 text-cyan-400" />}
-                <span>{profile?.full_name || 'Đấu thủ'}</span>
-              </span>
-              <button
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-surface-raised border border-surface-border px-3 py-1 rounded-full">
+                <span className="size-1.5 rounded-full bg-semantic-success animate-pulse" />
+                {isAdmin ? (
+                  <Badge variant="warning" size="sm">BTC</Badge>
+                ) : isJudge ? (
+                  <Badge variant="brand" size="sm">BGK</Badge>
+                ) : (
+                  <Badge variant="info" size="sm">Thí sinh</Badge>
+                )}
+                <span className="text-xs font-medium text-text-primary max-w-[120px] truncate">
+                  {profile?.full_name || 'Đấu thủ'}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleLogout}
-                className="px-4 py-2 border border-red-500/30 bg-red-950/20 hover:bg-red-500 hover:text-white text-red-400 text-xs font-semibold rounded-lg cursor-pointer transition-all duration-200 active:translate-y-px"
+                className="text-text-tertiary hover:text-semantic-danger hover:bg-semantic-danger/10"
+                rightIcon={<LogOut className="size-3.5" />}
               >
                 Đăng xuất
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Link
-                href="/login"
-                className="px-4 py-2 rounded-lg text-slate-300 hover:text-white text-sm font-semibold transition"
-              >
-                Đăng nhập
+              <Link href="/login">
+                <Button variant="ghost" size="sm">
+                  Đăng nhập
+                </Button>
               </Link>
-              <Link
-                href="/register"
-                className="tech-btn-accent px-4 py-2 rounded-lg text-sm font-bold"
-              >
-                Đăng ký ngay
+              <Link href="/register">
+                <Button variant="primary" size="sm">
+                  Đăng ký ngay
+                </Button>
               </Link>
             </div>
           )}
         </div>
 
         {/* Mobile Hamburger Button */}
-        <button
-          id="mobile-menu-btn"
-          className="md:hidden flex flex-col gap-[6px] p-2 rounded-lg hover:bg-cyan-950/20 transition cursor-pointer"
-          onClick={() => setMenuOpen(o => !o)}
-          aria-label="Toggle menu"
-          aria-expanded={menuOpen}
-        >
-          <span
-            className="block w-5 h-0.5 bg-slate-300 transition-all duration-300 origin-center"
-            style={menuOpen ? { transform: 'translateY(7px) rotate(45deg)' } : {}}
-          />
-          <span
-            className="block w-5 h-0.5 bg-slate-300 transition-all duration-300"
-            style={menuOpen ? { opacity: 0, transform: 'scaleX(0)' } : {}}
-          />
-          <span
-            className="block w-5 h-0.5 bg-slate-300 transition-all duration-300 origin-center"
-            style={menuOpen ? { transform: 'translateY(-7px) rotate(-45deg)' } : {}}
-          />
-        </button>
+        <div className="md:hidden flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            id="mobile-menu-btn"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-label="Toggle menu"
+            aria-expanded={menuOpen}
+            className="p-2"
+          >
+            {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Dropdown Menu */}
       {menuOpen && (
-        <div className="md:hidden mobile-menu-open mt-3 pb-3 border-t border-[#1e2d5a] pt-3 space-y-1">
+        <div className="md:hidden bg-surface-overlay border-b border-surface-border px-4 py-4 space-y-1 animate-in fade-in-0 duration-200">
           {siteConfig.navItems.map((item) => (
             <Link key={item.href} href={item.href} className={getMobileLinkClass(item.href)}>
               {item.label}
@@ -234,28 +251,43 @@ export default function Navbar() {
           )}
 
           {isAdmin && (
-            <Link
-              href="/admin"
-              className={`flex items-center gap-2 w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname === '/admin'
-                  ? 'text-red-400 bg-red-950/30 border border-red-500/30'
-                  : 'text-slate-300 hover:text-red-400 hover:bg-red-950/10'
+            <>
+              <Link
+                href="/admin"
+                className={`flex items-center gap-2 w-full px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                  pathname === '/admin'
+                    ? 'text-semantic-warning bg-semantic-warning/10 font-semibold'
+                    : 'text-text-secondary hover:text-semantic-warning hover:bg-surface-raised'
                 }`}
-            >
-              <Settings className="w-4 h-4 text-red-400" />
-              <span>Quản lý</span>
-            </Link>
+              >
+                <Settings className="size-4" />
+                <span>Quản lý</span>
+              </Link>
+              <Link
+                href="/admin/phases"
+                className={`flex items-center gap-2 w-full px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                  pathname === '/admin/phases'
+                    ? 'text-semantic-warning bg-semantic-warning/10 font-semibold'
+                    : 'text-text-secondary hover:text-semantic-warning hover:bg-surface-raised'
+                }`}
+              >
+                <Calendar className="size-4" />
+                <span>Timeline</span>
+              </Link>
+            </>
           )}
 
           {isJudge && (
             <>
               <Link
                 href="/judge"
-                className={`flex items-center gap-2 w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname.startsWith('/judge')
-                    ? 'text-purple-400 bg-purple-950/30 border border-purple-500/30'
-                    : 'text-slate-300 hover:text-purple-400 hover:bg-purple-950/10'
-                  }`}
+                className={`flex items-center gap-2 w-full px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                  pathname.startsWith('/judge')
+                    ? 'text-accent-violet bg-accent-violet/10 font-semibold'
+                    : 'text-text-secondary hover:text-accent-violet hover:bg-surface-raised'
+                }`}
               >
-                <Scale className="w-4 h-4 text-purple-400" />
+                <Scale className="size-4" />
                 <span>Giám khảo</span>
               </Link>
               <Link href="/profile" className={getMobileLinkClass('/profile')}>
@@ -264,43 +296,47 @@ export default function Navbar() {
             </>
           )}
 
-          {isAdmin && (
-            <Link
-              href="/admin/phases"
-              className={`flex items-center gap-2 w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${pathname === '/admin/phases'
-                  ? 'text-red-400 bg-red-950/30 border border-red-500/30'
-                  : 'text-slate-300 hover:text-red-400 hover:bg-red-950/10'
-                }`}
-            >
-              <Calendar className="w-4 h-4 text-red-400" />
-              <span>Timeline</span>
-            </Link>
-          )}
-
-          <div className="pt-2 border-t border-[#1e2d5a] mt-2">
+          <div className="pt-3 border-t border-surface-border mt-3">
             {loading ? (
-              <div className="w-full h-9 bg-slate-800/30 animate-pulse rounded-lg" />
+              <div className="w-full h-10 bg-surface-elevated animate-pulse rounded-md" />
             ) : user ? (
-              <div className="flex items-center justify-between px-1">
-                <span className="text-slate-300 text-xs font-medium flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  {isAdmin ? <Crown className="w-3.5 h-3.5 text-amber-400" /> : isJudge ? <Scale className="w-3.5 h-3.5 text-purple-400" /> : <UserIcon className="w-3.5 h-3.5 text-cyan-400" />}
-                  <span>{profile?.full_name || 'Đấu thủ'}</span>
-                </span>
-                <button
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-2 py-1 bg-surface-raised rounded-lg border border-surface-border">
+                  <div className="flex items-center gap-2">
+                    <span className="size-1.5 rounded-full bg-semantic-success animate-pulse" />
+                    {isAdmin ? (
+                      <Badge variant="warning" size="sm">BTC</Badge>
+                    ) : isJudge ? (
+                      <Badge variant="brand" size="sm">BGK</Badge>
+                    ) : (
+                      <Badge variant="info" size="sm">Thí sinh</Badge>
+                    )}
+                    <span className="text-xs font-medium text-text-primary">
+                      {profile?.full_name || 'Đấu thủ'}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="md"
                   onClick={handleLogout}
-                  className="px-4 py-2 border border-red-500/30 bg-red-950/20 hover:bg-red-500 hover:text-white text-red-400 text-xs font-semibold rounded-lg cursor-pointer transition-all duration-200"
+                  className="w-full justify-center text-semantic-danger hover:bg-semantic-danger/10"
+                  leftIcon={<LogOut className="size-4" />}
                 >
                   Đăng xuất
-                </button>
+                </Button>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
-                <Link href="/login" className="block text-center px-4 py-2.5 rounded-lg text-slate-300 hover:text-white text-sm font-semibold border border-[#1e2d5a] hover:border-cyan-500/30 transition">
-                  Đăng nhập
+              <div className="flex flex-col gap-2 pt-1">
+                <Link href="/login" className="w-full">
+                  <Button variant="secondary" size="md" className="w-full justify-center">
+                    Đăng nhập
+                  </Button>
                 </Link>
-                <Link href="/register" className="tech-btn-accent block text-center px-4 py-2.5 rounded-lg text-sm font-bold">
-                  Đăng ký ngay
+                <Link href="/register" className="w-full">
+                  <Button variant="primary" size="md" className="w-full justify-center">
+                    Đăng ký ngay
+                  </Button>
                 </Link>
               </div>
             )}

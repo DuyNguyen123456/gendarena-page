@@ -10,8 +10,8 @@
 | Phase | Scope | Status | Branch | Commit |
 |-------|-------|--------|--------|--------|
 | U0 | Design foundation (tokens, DESIGN.md, fonts, Tailwind @theme) | ✅ Done | `main` | - |
-| U1 | Atomic components (Button, Input, Card, Modal, Badge) | ✅ Done | `design-update-1.0` | - |
-| U2 | Shared layout (Navbar, Footer, Loading states) | ⏳ Pending | - | - |
+| U1 | Atomic components (Button, Input, Card, Modal, Badge) | ✅ Done | `main` | - |
+| U2 | Shared layout (Navbar, Footer, Loading states) | ✅ Done | `main` | - |
 | U3 | Landing page redesign | ⏳ Pending | - | - |
 | U4 | Auth pages (login, register, reset-password) | ⏳ Pending | - | - |
 | U5 | Participant flow (dashboard, team, submissions, profile) | ⏳ Pending | - | - |
