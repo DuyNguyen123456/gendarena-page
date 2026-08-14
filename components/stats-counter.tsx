@@ -5,9 +5,6 @@ import { useEffect, useRef, useState } from 'react'
 interface Stat {
   value: string
   label: string
-  desc: string
-  textGlow?: string
-  border: string
 }
 
 function useCountUp(target: number, duration = 1800, start = false) {
@@ -20,7 +17,6 @@ function useCountUp(target: number, duration = 1800, start = false) {
     const step = (timestamp: number) => {
       if (!startTime) startTime = timestamp
       const progress = Math.min((timestamp - startTime) / duration, 1)
-      // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3)
       setCount(Math.floor(eased * target))
       if (progress < 1) {
@@ -36,10 +32,7 @@ function useCountUp(target: number, duration = 1800, start = false) {
   return count
 }
 
-function StatCard({ stat, animated }: { stat: Stat; animated: boolean }) {
-  // Parse value: e.g. "500+" → target=500, suffix="+"
-  //              "100 TR" → target=100, suffix=" TR"
-  //              "50+" → target=50, suffix="+"
+function StatItem({ stat, animated }: { stat: Stat; animated: boolean }) {
   const match = stat.value.match(/^(\d+)(.*)$/)
   const numTarget = match ? parseInt(match[1]) : 0
   const suffix = match ? match[2] : ''
@@ -47,20 +40,21 @@ function StatCard({ stat, animated }: { stat: Stat; animated: boolean }) {
   const count = useCountUp(numTarget, 1800, animated)
 
   return (
-    <div className={`tech-panel cyber-corners p-6 flex flex-col items-center justify-center transition hover:border-cyan-400/40 hover:bg-cyan-950/10 group ${stat.border}`}>
-      <div className={`font-orbitron text-4xl font-extrabold mb-1 tracking-tight ${stat.textGlow ? `text-yellow-400 ${stat.textGlow}` : 'text-cyan-400'}`}>
+    <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
+      <div className="font-mono text-xl sm:text-2xl md:text-3xl font-semibold text-text-primary">
         {animated ? `${count}${suffix}` : stat.value}
       </div>
-      <div className="text-xs font-bold tracking-widest text-slate-300 mb-2">{stat.label}</div>
-      <div className="text-slate-500 text-xs text-center">{stat.desc}</div>
+      <div className="font-display text-[10px] sm:text-xs text-text-tertiary uppercase tracking-wide mt-0.5 sm:mt-1">
+        {stat.label}
+      </div>
     </div>
   )
 }
 
 const STATS: Stat[] = [
-  { value: '500+', label: 'ĐẤU THỦ THAM GIA', desc: 'Các thí sinh trên toàn thành phố', border: 'border-cyan-500/20' },
-  { value: '100.000.000', label: 'TỔNG GIẢI THƯỞNG', desc: 'Hỗ trợ vốn và cơ hội đầu tư', border: 'border-yellow-500/20', textGlow: 'neon-text-yellow' },
-  { value: '50+', label: 'HỘI ĐỒNG CHUYÊN GIA', desc: 'Mentors và ban giám khảo công nghệ', border: 'border-cyan-500/20' },
+  { value: '500+', label: 'Thí sinh tham dự' },
+  { value: '100tr', label: 'Tổng giải thưởng' },
+  { value: '50+', label: 'Chuyên gia & Cố vấn' },
 ]
 
 export default function StatsCounter() {
@@ -74,16 +68,24 @@ export default function StatsCounter() {
           setAnimated(true)
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.2 }
     )
     if (ref.current) observer.observe(ref.current)
     return () => observer.disconnect()
   }, [animated])
 
   return (
-    <div ref={ref} className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+    <div
+      ref={ref}
+      className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 md:gap-8 pt-6 sm:pt-8 mt-6 sm:mt-8 border-t border-surface-border/60"
+    >
       {STATS.map((stat, idx) => (
-        <StatCard key={idx} stat={stat} animated={animated} />
+        <div key={idx} className="flex items-center gap-4 sm:gap-6 md:gap-8">
+          <StatItem stat={stat} animated={animated} />
+          {idx < STATS.length - 1 && (
+            <div className="hidden sm:block w-px h-8 bg-surface-border/80" />
+          )}
+        </div>
       ))}
     </div>
   )

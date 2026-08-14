@@ -4,7 +4,13 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion, useReducedMotion } from 'framer-motion'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   updateProfile,
   uploadAvatar,
@@ -29,7 +35,6 @@ import {
   Square,
   AlertTriangle,
   CheckCircle2,
-  Loader2,
   ExternalLink,
   Pencil,
   X,
@@ -64,51 +69,19 @@ function Toast({ text, type, onDismiss }: { text: string; type: ToastType; onDis
   }, [onDismiss])
   return (
     <div
-      className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-4 rounded-xl border backdrop-blur-xl text-sm font-semibold shadow-2xl cursor-pointer max-w-sm ${
+      className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-xl border backdrop-blur-xl text-sm font-medium shadow-elevation-3 cursor-pointer max-w-sm animate-in fade-in slide-in-from-bottom-2 duration-300 ${
         type === 'success'
-          ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300'
-          : 'bg-red-950/90 border-red-500/50 text-red-300'
+          ? 'bg-surface-raised/95 border-semantic-success/40 text-semantic-success'
+          : 'bg-surface-raised/95 border-semantic-danger/40 text-semantic-danger'
       }`}
       onClick={onDismiss}
     >
       {type === 'success' ? (
-        <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+        <CheckCircle2 className="size-5 text-semantic-success shrink-0" />
       ) : (
-        <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+        <AlertTriangle className="size-5 text-semantic-danger shrink-0" />
       )}
-      <span>{text}</span>
-    </div>
-  )
-}
-
-function FieldRow({
-  label,
-  icon,
-  children,
-}: {
-  label: string
-  icon: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-        {icon}
-        {label}
-      </label>
-      {children}
-    </div>
-  )
-}
-
-function ReadOnlyValue({ value, mono }: { value: string | null | undefined; mono?: boolean }) {
-  return (
-    <div
-      className={`px-4 py-3 bg-slate-950/60 border border-[#1e2d5a]/60 rounded-lg text-sm ${
-        mono ? 'font-mono text-cyan-300 select-all' : 'text-slate-400'
-      }`}
-    >
-      {value || <span className="text-slate-600 italic">Chưa cập nhật</span>}
+      <span className="leading-snug">{text}</span>
     </div>
   )
 }
@@ -145,6 +118,7 @@ export default function ProfilePage() {
 
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
+  const prefersReducedMotion = useReducedMotion()
 
   const showToast = (text: string, type: ToastType) => setToast({ text, type })
 
@@ -159,7 +133,9 @@ export default function ProfilePage() {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, email, phone, organization, uid, facebook_url, avatar_url, role, expertise')
+      .select(
+        'id, full_name, email, phone, organization, uid, facebook_url, avatar_url, role, expertise'
+      )
       .eq('id', user.id)
       .single()
 
@@ -183,7 +159,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     void loadProfile()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Avatar preview
@@ -262,61 +238,96 @@ export default function ProfilePage() {
     )
   }
 
-  if (loading) return <Loading text="Đang tải hồ sơ..." />
+  if (loading) return <Loading text="Đang tải hồ sơ cá nhân..." />
 
   const isJudge = profile?.role === 'judge'
   const displayAvatar = avatarPreview ?? profile?.avatar_url
 
   return (
-    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
-      {/* Decorative glows */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
-
-      <div className="max-w-3xl mx-auto relative z-10">
-        {/* Back link */}
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-xs font-orbitron font-bold tracking-widest text-cyan-400 hover:text-cyan-300 transition-colors uppercase mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Quay lại Dashboard</span>
-        </Link>
-
-        {/* Page header */}
-        <div className="mb-8 border-b border-[#1e2d5a] pb-6">
-          <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase flex items-center gap-2">
-            <UserIcon className="w-6 h-6 text-cyan-400" />
-            <span>Hồ sơ cá nhân</span>
-          </h1>
+    <div className="min-h-screen bg-surface-base text-text-primary">
+      {/* Hero Header với Subtle Background */}
+      <div className="relative overflow-hidden border-b border-surface-border bg-surface-raised/40">
+        <DotGridBackground />
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <motion.div
+            className="absolute -top-20 left-1/2 -translate-x-1/2 size-[450px] rounded-full bg-brand-cyan/8 blur-3xl"
+            animate={prefersReducedMotion ? {} : { x: ['-3%', '3%', '-3%'] }}
+            transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
+          />
         </div>
 
+        <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12">
+          {/* Back link */}
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs text-brand-cyan hover:text-brand-cyan-bright font-medium transition mb-4 group"
+          >
+            <ArrowLeft className="size-4 transition group-hover:-translate-x-0.5" />
+            <span>Quay lại Bảng điều khiển</span>
+          </Link>
+
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <div className="flex items-center gap-2.5 mb-2">
+                <Badge variant="brand" size="sm">
+                  GenD Arena 2026
+                </Badge>
+                <Badge
+                  variant={isJudge ? 'brand' : profile?.role === 'admin' ? 'danger' : 'info'}
+                  size="sm"
+                >
+                  {ROLE_LABELS[profile?.role ?? ''] ?? profile?.role ?? 'Thí sinh'}
+                </Badge>
+              </div>
+              <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
+                Hồ sơ cá nhân
+              </h1>
+              <p className="text-sm text-text-secondary mt-1">
+                Quản lý thông tin tài khoản và cập nhật hồ sơ của bạn
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Form Content */}
+      <motion.main
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12 space-y-8"
+      >
         <form onSubmit={handleSave} className="space-y-8">
           {/* Identity card (read-only + avatar) */}
-          <div className="tech-panel p-6 border-cyan-500/20 relative cyber-corners">
-            <h2 className="font-orbitron text-xs font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-2">
-              <Shield className="w-4 h-4 text-cyan-400" />
-              <span>Thông tin tài khoản</span>
-            </h2>
+          <Card className="p-6 sm:p-8">
+            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-surface-border">
+              <Shield className="size-5 text-brand-cyan" />
+              <h2 className="font-display text-lg font-semibold text-text-primary">
+                Thông tin tài khoản
+              </h2>
+            </div>
 
-            <div className="flex flex-col sm:flex-row gap-6 items-start">
-              {/* Avatar */}
+            <div className="flex flex-col sm:flex-row gap-8 items-center sm:items-start">
+              {/* Avatar Pick */}
               <div className="shrink-0 flex flex-col items-center gap-3">
-                <div className="w-24 h-24 rounded-full border-2 border-cyan-500/40 bg-[#131e3d] overflow-hidden flex items-center justify-center shadow-[0_0_20px_rgba(0,240,255,0.1)]">
+                <div className="size-24 rounded-full border-2 border-brand-cyan/30 bg-surface-overlay overflow-hidden flex items-center justify-center shadow-elevation-1">
                   {displayAvatar ? (
                     <img src={displayAvatar} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <UserIcon className="w-12 h-12 text-slate-600" />
+                    <UserIcon className="size-12 text-text-tertiary" />
                   )}
                 </div>
-                <button
+
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={<Camera className="size-3.5" />}
                   onClick={() => avatarInputRef.current?.click()}
-                  className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-cyan-400 hover:text-cyan-300 uppercase border border-cyan-500/30 px-3 py-1.5 rounded-lg transition hover:bg-cyan-950/30"
                 >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Đổi ảnh</span>
-                </button>
+                  Đổi ảnh
+                </Button>
+
                 <input
                   ref={avatarInputRef}
                   type="file"
@@ -324,70 +335,97 @@ export default function ProfilePage() {
                   className="hidden"
                   onChange={(e) => handleAvatarPick(e.target.files?.[0] ?? null)}
                 />
+
                 {avatarFile && (
                   <button
                     type="button"
                     onClick={() => handleAvatarPick(null)}
-                    className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 transition"
+                    className="flex items-center gap-1 text-xs text-semantic-danger hover:underline transition"
                   >
-                    <X className="w-3 h-3" />
-                    <span>Huỷ</span>
+                    <X className="size-3" />
+                    <span>Huỷ ảnh chọn</span>
                   </button>
                 )}
-                <p className="text-[9px] text-slate-600 text-center">JPEG · PNG · WebP<br />tối đa 2 MB</p>
+                <p className="text-[11px] text-text-tertiary text-center">
+                  JPEG · PNG · WebP<br />tối đa 2 MB
+                </p>
               </div>
 
-              {/* Read-only fields */}
+              {/* Read-only details */}
               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                <FieldRow label="Email" icon={<Mail className="w-3.5 h-3.5" />}>
-                  <ReadOnlyValue value={profile?.email} />
-                </FieldRow>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-text-secondary">
+                    Email liên kết
+                  </label>
+                  <Input
+                    value={profile?.email ?? ''}
+                    disabled
+                    leftIcon={<Mail className="size-4" />}
+                    className="cursor-not-allowed opacity-80"
+                  />
+                  <p className="text-[11px] text-text-tertiary">Email không thể thay đổi</p>
+                </div>
 
-                <FieldRow label="UID cá nhân" icon={<Hash className="w-3.5 h-3.5" />}>
-                  <ReadOnlyValue value={profile?.uid} mono />
-                </FieldRow>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-text-secondary">
+                    UID cá nhân
+                  </label>
+                  <Input
+                    value={profile?.uid ?? 'Chưa cập nhật'}
+                    disabled
+                    leftIcon={<Hash className="size-4" />}
+                    className="font-mono text-brand-cyan select-all opacity-90"
+                  />
+                  <p className="text-[11px] text-text-tertiary">Dùng để nhận lời mời vào đội</p>
+                </div>
 
-                <FieldRow label="Vai trò" icon={<Shield className="w-3.5 h-3.5" />}>
-                  <div className="px-4 py-3 bg-slate-950/60 border border-[#1e2d5a]/60 rounded-lg flex items-center gap-2">
-                    <span
-                      className={`w-2 h-2 rounded-full shrink-0 ${
-                        isJudge
-                          ? 'bg-purple-400'
-                          : profile?.role === 'admin'
-                          ? 'bg-red-400'
-                          : 'bg-cyan-400'
-                      }`}
-                    />
-                    <span className="text-sm font-semibold text-slate-300">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="block text-xs font-semibold text-text-secondary">
+                    Vai trò trên hệ thống
+                  </label>
+                  <div className="px-3.5 py-2.5 bg-surface-overlay border border-surface-border rounded-lg flex items-center justify-between text-sm">
+                    <span className="text-text-secondary">Quyền hạn tài khoản</span>
+                    <Badge
+                      variant={isJudge ? 'brand' : profile?.role === 'admin' ? 'danger' : 'info'}
+                      size="sm"
+                    >
                       {ROLE_LABELS[profile?.role ?? ''] ?? profile?.role ?? 'Thí sinh'}
-                    </span>
+                    </Badge>
                   </div>
-                </FieldRow>
+                </div>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Editable profile fields */}
-          <div className="tech-panel p-6 border-cyan-500/20 relative">
-            <h2 className="font-orbitron text-xs font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-2">
-              <Pencil className="w-4 h-4 text-cyan-400" />
-              <span>Thông tin cá nhân</span>
-            </h2>
+          <Card className="p-6 sm:p-8">
+            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-surface-border">
+              <Pencil className="size-5 text-brand-cyan" />
+              <h2 className="font-display text-lg font-semibold text-text-primary">
+                Thông tin cá nhân
+              </h2>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <FieldRow label="Họ và tên" icon={<UserIcon className="w-3.5 h-3.5" />}>
-                <input
+              <div className="space-y-1.5">
+                <label htmlFor="profile-full-name" className="block text-xs font-semibold text-text-secondary">
+                  Họ và tên
+                </label>
+                <Input
                   id="profile-full-name"
                   type="text"
                   value={form.full_name}
                   onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
                   placeholder="Nguyễn Văn A"
-                  className="w-full px-4 py-3 bg-slate-950/80 border border-[#1e2d5a] focus:border-cyan-400/60 rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none transition"
+                  leftIcon={<UserIcon className="size-4" />}
                 />
-              </FieldRow>
+              </div>
 
-              <FieldRow label="Số điện thoại" icon={<Phone className="w-3.5 h-3.5" />}>
-                <input
+              <div className="space-y-1.5">
+                <label htmlFor="profile-phone" className="block text-xs font-semibold text-text-secondary">
+                  Số điện thoại
+                </label>
+                <Input
                   id="profile-phone"
                   type="tel"
                   value={form.phone}
@@ -396,33 +434,30 @@ export default function ProfilePage() {
                     setFormErrors((fe) => ({ ...fe, phone: undefined }))
                   }}
                   placeholder="09xxxxxxxx"
-                  className={`w-full px-4 py-3 bg-slate-950/80 border rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none transition ${
-                    formErrors.phone
-                      ? 'border-red-500/60 bg-red-950/10'
-                      : 'border-[#1e2d5a] focus:border-cyan-400/60'
-                  }`}
+                  error={formErrors.phone}
+                  leftIcon={<Phone className="size-4" />}
                 />
-                {formErrors.phone && (
-                  <p className="text-xs text-red-400 font-semibold flex items-center gap-1.5 mt-0.5">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    {formErrors.phone}
-                  </p>
-                )}
-              </FieldRow>
+              </div>
 
-              <FieldRow label="Đơn vị / Trường học" icon={<Building2 className="w-3.5 h-3.5" />}>
-                <input
+              <div className="space-y-1.5">
+                <label htmlFor="profile-organization" className="block text-xs font-semibold text-text-secondary">
+                  Đơn vị / Trường học
+                </label>
+                <Input
                   id="profile-organization"
                   type="text"
                   value={form.organization}
                   onChange={(e) => setForm((f) => ({ ...f, organization: e.target.value }))}
                   placeholder="Tên trường / công ty..."
-                  className="w-full px-4 py-3 bg-slate-950/80 border border-[#1e2d5a] focus:border-cyan-400/60 rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none transition"
+                  leftIcon={<Building2 className="size-4" />}
                 />
-              </FieldRow>
+              </div>
 
-              <FieldRow label="Facebook URL" icon={<LinkIcon className="w-3.5 h-3.5" />}>
-                <input
+              <div className="space-y-1.5">
+                <label htmlFor="profile-facebook" className="block text-xs font-semibold text-text-secondary">
+                  Facebook URL
+                </label>
+                <Input
                   id="profile-facebook"
                   type="url"
                   value={form.facebook_url}
@@ -431,52 +466,54 @@ export default function ProfilePage() {
                     setFormErrors((fe) => ({ ...fe, facebook_url: undefined }))
                   }}
                   placeholder="https://facebook.com/..."
-                  className={`w-full px-4 py-3 bg-slate-950/80 border rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none transition ${
-                    formErrors.facebook_url
-                      ? 'border-red-500/60 bg-red-950/10'
-                      : 'border-[#1e2d5a] focus:border-cyan-400/60'
-                  }`}
+                  error={formErrors.facebook_url}
+                  leftIcon={<LinkIcon className="size-4" />}
                 />
-                {formErrors.facebook_url && (
-                  <p className="text-xs text-red-400 font-semibold flex items-center gap-1.5 mt-0.5">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    {formErrors.facebook_url}
-                  </p>
-                )}
-              </FieldRow>
+              </div>
             </div>
 
-            <div className="mt-6 flex justify-end">
-              <button
+            <div className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-surface-border">
+              {profile?.facebook_url ? (
+                <a
+                  href={profile.facebook_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-brand-cyan hover:text-brand-cyan-bright transition font-medium"
+                >
+                  <ExternalLink className="size-3.5" />
+                  <span>Xem liên kết Facebook</span>
+                </a>
+              ) : (
+                <div />
+              )}
+
+              <Button
                 id="save-profile-btn"
                 type="submit"
-                disabled={saving}
-                className="tech-btn-accent font-orbitron px-6 py-2.5 rounded-lg text-xs font-bold tracking-wider text-black disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                variant="primary"
+                size="md"
+                isLoading={saving}
+                leftIcon={<Save className="size-4" />}
+                className="w-full sm:w-auto"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Đang lưu...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    <span>Lưu hồ sơ</span>
-                  </>
-                )}
-              </button>
+                Lưu hồ sơ
+              </Button>
             </div>
-          </div>
+          </Card>
         </form>
 
         {/* Judge expertise section */}
         {isJudge && (
-          <div className="tech-panel p-6 border-purple-500/20 relative mt-8">
-            <h2 className="font-orbitron text-xs font-bold tracking-widest text-purple-400 uppercase mb-1 flex items-center gap-2">
-              <Shield className="w-4 h-4 text-purple-400" />
-              <span>Chuyên môn giám khảo</span>
-            </h2>
-            <p className="text-xs text-slate-500 mb-5">Chọn các nhóm chủ đề bạn có chuyên môn đánh giá.</p>
+          <Card className="p-6 sm:p-8 border-brand-cyan/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="size-5 text-brand-cyan" />
+              <h2 className="font-display text-lg font-semibold text-text-primary">
+                Chuyên môn giám khảo
+              </h2>
+            </div>
+            <p className="text-xs text-text-secondary mb-6">
+              Chọn các nhóm chủ đề bạn có chuyên môn để tham gia chấm thi các đề án phù hợp.
+            </p>
 
             <div className="space-y-3">
               {TOPIC_CATEGORIES.map((cat) => {
@@ -487,16 +524,16 @@ export default function ProfilePage() {
                     type="button"
                     id={`expertise-${cat.replace(/[\s,/]/g, '-')}`}
                     onClick={() => toggleExpertise(cat)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition text-left cursor-pointer ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-sm font-medium transition text-left cursor-pointer ${
                       selected
-                        ? 'border-purple-500/50 bg-purple-950/30 text-purple-300'
-                        : 'border-[#1e2d5a] bg-slate-950/30 text-slate-400 hover:border-purple-500/30 hover:text-purple-400'
+                        ? 'border-brand-cyan/60 bg-brand-cyan/10 text-brand-cyan-bright'
+                        : 'border-surface-border bg-surface-overlay text-text-secondary hover:border-brand-cyan/30 hover:text-text-primary'
                     }`}
                   >
                     {selected ? (
-                      <CheckSquare className="w-5 h-5 text-purple-400 shrink-0" />
+                      <CheckSquare className="size-5 text-brand-cyan shrink-0" />
                     ) : (
-                      <Square className="w-5 h-5 text-slate-600 shrink-0" />
+                      <Square className="size-5 text-text-tertiary shrink-0" />
                     )}
                     <span>{cat}</span>
                   </button>
@@ -504,45 +541,22 @@ export default function ProfilePage() {
               })}
             </div>
 
-            <div className="mt-5 flex justify-end">
-              <button
+            <div className="mt-6 flex justify-end">
+              <Button
                 id="save-expertise-btn"
                 type="button"
-                disabled={expertiseSaving}
+                variant="primary"
+                size="md"
+                isLoading={expertiseSaving}
                 onClick={handleExpertiseSave}
-                className="px-6 py-2.5 border border-purple-500/40 bg-purple-950/30 hover:bg-purple-900/50 text-purple-300 text-xs font-orbitron font-bold tracking-wider rounded-lg transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                leftIcon={<Save className="size-4" />}
               >
-                {expertiseSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Đang lưu...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    <span>Lưu chuyên môn</span>
-                  </>
-                )}
-              </button>
+                Lưu chuyên môn
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
-
-        {/* Facebook quick link */}
-        {profile?.facebook_url && (
-          <div className="mt-6 flex justify-end">
-            <a
-              href={profile.facebook_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Xem Facebook</span>
-            </a>
-          </div>
-        )}
-      </div>
+      </motion.main>
 
       {/* Toast notification */}
       {toast && (
@@ -551,3 +565,4 @@ export default function ProfilePage() {
     </div>
   )
 }
+

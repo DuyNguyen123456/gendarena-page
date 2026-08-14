@@ -4,13 +4,27 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { KeyRound, XCircle, Loader2, X, CheckCircle } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { Mail, Lock, Eye, EyeOff, XCircle, CheckCircle, KeyRound } from 'lucide-react'
 import { getPostLoginPath } from '@/lib/auth/routing'
 import { getAppUrl } from '@/lib/utils'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 
 export default function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  const [showPassword, setShowPassword] = useState(false)
 
   // Password Recovery state
   const [showResetModal, setShowResetModal] = useState(false)
@@ -22,6 +36,7 @@ export default function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
     const errorParam = searchParams.get('error')
@@ -116,168 +131,186 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#050814] p-4 relative scanline-container">
-      {/* Glow Effects */}
-      <div className="absolute top-1/3 left-1/3 w-72 h-72 bg-[#112E81]/20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/3 right-1/3 w-72 h-72 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen relative flex items-center justify-center px-4 py-12 overflow-hidden bg-surface-base">
+      {/* Background layer 1: Dot grid */}
+      <DotGridBackground />
 
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-6 right-6 z-50 bg-[#0d1630] border border-cyan-500/40 text-cyan-300 px-4 py-3 rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.2)] text-sm font-medium flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
-          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
-          <span>{toast.text}</span>
-          <button type="button" onClick={() => setToast(null)} className="text-slate-400 hover:text-white ml-2">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      <div className="tech-panel-glow p-8 max-w-md w-full relative cyber-corners border-cyan-500/20 shadow-[0_0_30px_rgba(0,240,255,0.05)]">
-        <h2 className="font-orbitron text-2xl font-extrabold text-center text-white mb-6 tracking-wider flex items-center justify-center gap-2">
-          <KeyRound className="w-5 h-5 text-cyan-400" />
-          <span>Đăng nhập</span>
-        </h2>
-
-        {error && (
-          <div className="bg-red-950/30 border border-red-500/40 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm font-medium flex items-center gap-2">
-            <XCircle className="w-4 h-4 shrink-0 text-red-400" />
-            <span>Lỗi: {error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Email
-            </label>
-            <input
-              name="email"
-              type="email"
-              required
-              placeholder="email@example.com"
-              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
-            />
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <label className="block text-xs font-semibold text-slate-300">
-                Mật khẩu
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setResetEmail('')
-                  setResetError('')
-                  setShowResetModal(true)
-                }}
-                className="text-xs text-cyan-400 hover:text-cyan-300 hover:underline font-semibold transition cursor-pointer"
-              >
-                Quên mật khẩu?
-              </button>
-            </div>
-            <input
-              name="password"
-              type="password"
-              required
-              placeholder="••••••"
-              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 bg-gradient-to-r from-blue-900 to-[#112E81] hover:from-blue-800 hover:to-blue-700 text-white border border-cyan-500/30 font-bold tracking-wider rounded-lg shadow-[0_0_15px_rgba(17,46,129,0.3)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)] disabled:opacity-50 transition duration-200 cursor-pointer text-sm font-orbitron flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Đang xử lý...</span>
-              </>
-            ) : (
-              'Đăng nhập'
-            )}
-          </button>
-        </form>
-
-        <p className="text-center text-xs text-slate-400 mt-6 font-semibold tracking-wide">
-          Chưa có tài khoản?{' '}
-          <Link href="/register" className="text-cyan-400 hover:text-cyan-300 hover:underline transition ml-1">
-            Đăng ký ngay
-          </Link>
-        </p>
+      {/* Background layer 2: Subtle beam */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+        <motion.div
+          className="absolute -top-40 left-1/2 -translate-x-1/2 size-[500px] rounded-full bg-brand-cyan/8 blur-3xl"
+          animate={prefersReducedMotion ? {} : { x: ['-5%', '5%', '-5%'], y: ['-3%', '3%', '-3%'] }}
+          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
+        />
       </div>
 
-      {/* Password Recovery Modal */}
-      {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="tech-panel p-6 max-w-md w-full relative border-cyan-500/30 bg-[#0a0f24] rounded-xl shadow-2xl space-y-4">
-            <div className="flex justify-between items-center border-b border-[#1e2d5a] pb-3">
-              <h3 className="font-orbitron text-base font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-cyan-400" />
-                <span>Khôi phục mật khẩu</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowResetModal(false)}
-                className="text-slate-400 hover:text-white transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {/* Form Card */}
+      <motion.div
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 w-full max-w-md"
+      >
+        <Card className="p-6 sm:p-8 bg-surface-raised border border-surface-border shadow-elevation-2">
+          {/* Brand header */}
+          <div className="text-center mb-6">
+            <Badge variant="brand" size="sm" className="mb-3">
+              GenD Arena 2026
+            </Badge>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary font-display tracking-tight">
+              Đăng nhập
+            </h1>
+            <p className="text-sm text-text-secondary mt-1.5">
+              Chào mừng bạn trở lại hệ thống đấu trường
+            </p>
+          </div>
+
+          {/* Toast / Success notification */}
+          {toast && (
+            <div className="p-3.5 rounded-lg bg-semantic-success/10 border border-semantic-success/30 text-sm text-semantic-success flex items-start gap-2.5 mb-5">
+              <CheckCircle className="size-4 shrink-0 mt-0.5 text-semantic-success" />
+              <span className="leading-snug">{toast.text}</span>
+            </div>
+          )}
+
+          {/* Error display */}
+          {error && (
+            <div className="p-3.5 rounded-lg bg-semantic-danger/10 border border-semantic-danger/30 text-sm text-semantic-danger flex items-start gap-2.5 mb-5">
+              <XCircle className="size-4 shrink-0 mt-0.5 text-semantic-danger" />
+              <span className="leading-snug">Lỗi: {error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Email
+              </label>
+              <Input
+                name="email"
+                type="email"
+                required
+                placeholder="email@example.com"
+                leftIcon={<Mail className="size-4" />}
+              />
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Nhập địa chỉ email đã đăng ký tài khoản. Chúng tôi sẽ gửi đường dẫn khôi phục mật khẩu vào email của bạn.
-            </p>
-
-            {resetError && (
-              <div className="bg-red-950/40 border border-red-500/40 text-red-400 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
-                <XCircle className="w-4 h-4 shrink-0 text-red-400" />
-                <span>{resetError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleResetPassword} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email liên kết</label>
-                <input
-                  type="email"
-                  required
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  placeholder="email@example.com"
-                  className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 text-sm transition"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Mật khẩu
+                </label>
                 <button
                   type="button"
-                  onClick={() => setShowResetModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white border border-[#1e2d5a] rounded-lg transition cursor-pointer"
+                  onClick={() => {
+                    setResetEmail('')
+                    setResetError('')
+                    setShowResetModal(true)
+                  }}
+                  className="text-xs text-brand-cyan hover:text-brand-cyan-bright font-medium transition cursor-pointer"
                 >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={resetLoading}
-                  className="px-5 py-2 bg-gradient-to-r from-blue-900 to-[#112E81] hover:from-blue-800 hover:to-blue-700 border border-cyan-500/30 text-white font-bold rounded-lg text-xs tracking-wider font-orbitron flex items-center gap-2 disabled:opacity-50 transition cursor-pointer"
-                >
-                  {resetLoading ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Đang gửi...</span>
-                    </>
-                  ) : (
-                    'Gửi email khôi phục'
-                  )}
+                  Quên mật khẩu?
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+              <Input
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                placeholder="••••••••"
+                leftIcon={<Lock className="size-4" />}
+                rightIcon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="pointer-events-auto text-text-tertiary hover:text-text-primary transition focus:outline-none"
+                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                }
+              />
+            </div>
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              isLoading={loading}
+              className="w-full mt-2"
+            >
+              Đăng nhập
+            </Button>
+          </form>
+
+          <p className="text-center text-xs text-text-secondary mt-6 font-medium">
+            Chưa có tài khoản?{' '}
+            <Link
+              href="/register"
+              className="text-brand-cyan hover:text-brand-cyan-bright font-semibold hover:underline transition ml-1"
+            >
+              Đăng ký ngay
+            </Link>
+          </p>
+        </Card>
+      </motion.div>
+
+      {/* Password Recovery Dialog Modal */}
+      <Dialog open={showResetModal} onOpenChange={setShowResetModal}>
+        <DialogContent size="md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="size-5 text-brand-cyan" />
+              <span>Khôi phục mật khẩu</span>
+            </DialogTitle>
+            <DialogDescription>
+              Nhập địa chỉ email đã đăng ký tài khoản. Chúng tôi sẽ gửi đường dẫn khôi phục mật khẩu vào email của bạn.
+            </DialogDescription>
+          </DialogHeader>
+
+          {resetError && (
+            <div className="p-3 rounded-lg bg-semantic-danger/10 border border-semantic-danger/30 text-xs font-medium text-semantic-danger flex items-start gap-2">
+              <XCircle className="size-4 shrink-0 mt-0.5 text-semantic-danger" />
+              <span>{resetError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleResetPassword} className="space-y-4 pt-1">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Email liên kết
+              </label>
+              <Input
+                type="email"
+                required
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="email@example.com"
+                leftIcon={<Mail className="size-4" />}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => setShowResetModal(false)}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                isLoading={resetLoading}
+              >
+                Gửi email khôi phục
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+

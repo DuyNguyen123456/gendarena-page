@@ -4,7 +4,20 @@ import { useEffect, useState, useMemo, Suspense } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { motion, useReducedMotion } from 'framer-motion'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  ArrowLeft,
+  Users,
+  Trophy,
+  FileText,
+  AlertTriangle,
+} from 'lucide-react'
 
 type Competition = {
   id: string
@@ -21,15 +34,18 @@ function CreateTeamForm() {
   const [loading, setLoading] = useState(true)
   const [submitLoading, setSubmitLoading] = useState(false)
   const [error, setError] = useState('')
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ id: string } | null>(null)
 
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = useMemo(() => createClient(), [])
+  const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
         return
@@ -37,7 +53,7 @@ function CreateTeamForm() {
       setUser(user)
 
       // Fetch competitions
-      const { data: comps, error: compsError } = await supabase
+      const { data: comps } = await supabase
         .from('competitions')
         .select('id, title')
         .order('created_at', { ascending: false })
@@ -45,7 +61,7 @@ function CreateTeamForm() {
       if (comps) {
         setCompetitions(comps)
         const paramId = searchParams.get('competitionId')
-        if (paramId && comps.some(c => c.id === paramId)) {
+        if (paramId && comps.some((c) => c.id === paramId)) {
           setSelectedCompId(paramId)
         } else if (comps.length > 0) {
           setSelectedCompId(comps[0].id)
@@ -72,7 +88,7 @@ function CreateTeamForm() {
     setError('')
 
     // INSERT teams only. trigger_sync_leader on teams will auto-insert into team_members.
-    const { data: team, error: teamError } = await supabase
+    const { error: teamError } = await supabase
       .from('teams')
       .insert({
         name: name.trim(),
@@ -97,129 +113,162 @@ function CreateTeamForm() {
     router.refresh()
   }
 
-  if (loading) return <Loading text="Đang tải dữ liệu..." />
+  if (loading) return <Loading text="Đang tải thông tin thành lập đội..." />
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#050814] p-4 relative scanline-container">
-      {/* Glow Effects */}
-      <div className="absolute top-1/3 left-1/3 w-72 h-72 bg-[#112E81]/20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/3 right-1/3 w-72 h-72 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-surface-base text-text-primary">
+      {/* Hero Header với Subtle Background */}
+      <div className="relative overflow-hidden border-b border-surface-border bg-surface-raised/40">
+        <DotGridBackground />
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <motion.div
+            className="absolute -top-20 left-1/2 -translate-x-1/2 size-[450px] rounded-full bg-brand-cyan/8 blur-3xl"
+            animate={prefersReducedMotion ? {} : { x: ['-3%', '3%', '-3%'] }}
+            transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </div>
 
-      <div className="tech-panel-glow p-8 max-w-lg w-full relative cyber-corners border-cyan-500/20 shadow-[0_0_30px_rgba(0,240,255,0.05)]">
-        
-
-
-        <h2 className="font-orbitron text-2xl font-extrabold text-center text-white mb-1 uppercase tracking-wider">
-          👥 THÀNH LẬP LIÊN MINH
-        </h2>
-        <p className="text-slate-400 text-xs font-medium text-center tracking-widest uppercase mb-8">
-          Khởi tạo chiến đội để bắt đầu tham chiến
-        </p>
-
-        {error && (
-          <div className="bg-red-950/30 border border-red-500/40 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm font-medium">
-            ❌ HỆ THỐNG BÁO LỖI: {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-350 mb-1.5">
-              CHỌN CUỘC THI / ĐẤU TRƯỜNG *
-            </label>
-            <select
-              value={selectedCompId}
-              onChange={(e) => setSelectedCompId(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
-            >
-              {competitions.map((comp) => (
-                <option key={comp.id} value={comp.id} className="bg-slate-950 text-white">
-                  {comp.title}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12">
+          {/* Back link */}
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs text-brand-cyan hover:text-brand-cyan-bright font-medium transition mb-4 group"
+          >
+            <ArrowLeft className="size-4 transition group-hover:-translate-x-0.5" />
+            <span>Quay lại Bảng điều khiển</span>
+          </Link>
 
           <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-350 mb-1.5">
-              TÊN LIÊN MINH / CHIẾN ĐỘI *
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="VD: Cybernetic Innovators"
-              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-650 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
-            />
+            <Badge variant="brand" size="sm" className="mb-2">
+              GenD Arena 2026
+            </Badge>
+            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
+              Thành lập đội thi mới
+            </h1>
+            <p className="text-sm text-text-secondary mt-1">
+              Khởi tạo liên minh thi đấu của riêng bạn để bắt đầu tham chiến và chiêu mộ thành viên
+            </p>
           </div>
+        </div>
+      </div>
 
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-350 mb-1.5">
-              MÔ TẢ CHIẾN ĐỘI
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Mô tả mục tiêu của đội hoặc các kỹ năng đang tìm kiếm..."
-              className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-650 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition resize-none"
-            />
-          </div>
+      {/* Main Form Content */}
+      <motion.main
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="max-w-2xl mx-auto px-4 md:px-6 py-8 md:py-12"
+      >
+        <Card className="p-6 sm:p-8 shadow-elevation-2">
+          {error && (
+            <div className="p-3.5 rounded-lg bg-semantic-danger/10 border border-semantic-danger/30 text-sm text-semantic-danger flex items-start gap-2.5 mb-6">
+              <AlertTriangle className="size-4 shrink-0 mt-0.5 text-semantic-danger" />
+              <span>{error}</span>
+            </div>
+          )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-slate-350 mb-1.5">
-                SỐ THÀNH VIÊN TỐI ĐA
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Cuộc thi / Đấu trường tham dự <span className="text-semantic-danger">*</span>
               </label>
-              <input
-                type="number"
-                min={2}
-                max={10}
-                value={maxMembers}
-                onChange={(e) => setMaxMembers(parseInt(e.target.value) || 5)}
-                className="w-full px-4 py-2.5 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
+              <div className="relative">
+                <select
+                  value={selectedCompId}
+                  onChange={(e) => setSelectedCompId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-surface-overlay border border-surface-border rounded-lg text-text-primary focus:outline-none focus:border-brand-cyan text-sm transition"
+                >
+                  {competitions.map((comp) => (
+                    <option key={comp.id} value={comp.id} className="bg-surface-raised text-text-primary">
+                      {comp.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Tên đội thi / Liên minh <span className="text-semantic-danger">*</span>
+              </label>
+              <Input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="VD: Cybernetic Innovators"
+                leftIcon={<Users className="size-4" />}
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-slate-350 mb-1.5">
-                TRẠNG THÁI TUYỂN
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Mô tả đội hình & Mục tiêu
               </label>
-              <div className="flex items-center h-11">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isOpen}
-                    onChange={(e) => setIsOpen(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
-                  <span className="ml-3 text-xs font-bold tracking-widest text-slate-300 uppercase">
-                    {isOpen ? 'ĐANG MỞ' : 'ĐANG KHÓA'}
-                  </span>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder="Mô tả mục tiêu của đội hoặc các kỹ năng/vị trí đang tìm kiếm..."
+                className="w-full px-4 py-2.5 bg-surface-overlay border border-surface-border rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand-cyan text-sm transition resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Số lượng thành viên tối đa
                 </label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={10}
+                  value={maxMembers}
+                  onChange={(e) => setMaxMembers(parseInt(e.target.value) || 5)}
+                  leftIcon={<Users className="size-4" />}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Trạng thái tuyển quân
+                </label>
+                <div className="flex items-center h-10 px-3.5 bg-surface-overlay border border-surface-border rounded-lg justify-between">
+                  <span className="text-xs font-medium text-text-secondary">
+                    {isOpen ? 'Đang mở tuyển quân' : 'Tạm khóa tuyển quân'}
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isOpen}
+                      onChange={(e) => setIsOpen(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-surface-raised border border-surface-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-secondary after:border-surface-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-cyan peer-checked:after:bg-surface-base"></div>
+                  </label>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex gap-4 pt-2">
-            <button
-              type="submit"
-              disabled={submitLoading}
-              className="flex-1 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black border border-cyan-400/30 font-bold uppercase tracking-wider rounded-lg shadow-[0_0_15px_rgba(0,240,255,0.2)] disabled:opacity-50 transition duration-200 cursor-pointer text-sm font-orbitron"
-            >
-              {submitLoading ? '⏳ ĐANG XỬ LÝ...' : 'TẠO CHIẾN ĐỘI'}
-            </button>
-            <Link
-              href="/dashboard"
-              className="px-6 py-3.5 border border-[#1e2d5a] hover:bg-slate-900/60 text-slate-300 text-sm font-bold uppercase tracking-wider rounded-lg cursor-pointer transition text-center flex items-center justify-center font-orbitron"
-            >
-              HỦY LỆNH
-            </Link>
-          </div>
-        </form>
-      </div>
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-surface-border">
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                isLoading={submitLoading}
+                className="flex-1"
+              >
+                Thành lập đội thi
+              </Button>
+              <Link href="/dashboard" className="sm:w-auto">
+                <Button variant="ghost" size="lg" className="w-full">
+                  Hủy bỏ
+                </Button>
+              </Link>
+            </div>
+          </form>
+        </Card>
+      </motion.main>
     </div>
   )
 }
@@ -231,3 +280,4 @@ export default function CreateTeamPage() {
     </Suspense>
   )
 }
+

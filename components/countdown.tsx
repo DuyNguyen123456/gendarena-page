@@ -1,13 +1,54 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+
+const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
 interface CountdownProps {
   targetDate: string
   phaseTitle?: string
 }
 
-export default function Countdown({ targetDate, phaseTitle = 'VÒNG SƠ LOẠI' }: CountdownProps) {
+function AnimatedNumber({ value }: { value: number }) {
+  const prefersReducedMotion = useReducedMotion()
+
+  // Guard: undefined / NaN → show "00", never crash
+  const safe = typeof value === 'number' && !Number.isNaN(value) ? value : 0
+  const padded = String(safe).padStart(2, '0')
+
+  if (prefersReducedMotion) {
+    return (
+      <span className="inline-block font-mono text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold text-brand-cyan leading-none select-none tabular-nums">
+        {padded}
+      </span>
+    )
+  }
+
+  return (
+    // No overflow-hidden / fixed height — numbers flow naturally and are
+    // never clipped off-screen. AnimatePresence initial={false} ensures the
+    // first paint shows the number immediately without running the enter
+    // animation. mode="popLayout" lets exit + enter overlap so there is no
+    // empty gap between the two states.
+    <div className="relative inline-block">
+      <AnimatePresence initial={false} mode="popLayout">
+        <motion.span
+          key={padded}
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -20, opacity: 0 }}
+          transition={{ duration: 0.35, ease: EASE_OUT }}
+          className="inline-block font-mono text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold text-brand-cyan leading-none select-none tabular-nums"
+        >
+          {padded}
+        </motion.span>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+export default function Countdown({ targetDate, phaseTitle = 'Vòng Sơ Loại' }: CountdownProps) {
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -47,103 +88,55 @@ export default function Countdown({ targetDate, phaseTitle = 'VÒNG SƠ LOẠI' 
   }, [targetDate])
 
   if (!isMounted) {
-    // Return skeleton to prevent layout shift during hydration
     return (
-      <div className="w-full max-w-2xl mx-auto my-6 p-6 rounded-lg border border-[#1e2d5a] bg-slate-950/40 animate-pulse h-[140px]" />
+      <div className="w-full bg-surface-raised border border-surface-border rounded-xl p-4 sm:p-6 md:p-8 animate-pulse h-[150px] sm:h-[180px]" />
     )
   }
 
-  // Calculate percentage fills for visual feedback
-  const secondsPercent = (timeLeft.seconds / 60) * 100
-  const minutesPercent = (timeLeft.minutes / 60) * 100
-  const hoursPercent = (timeLeft.hours / 24) * 100
-  const daysPercent = Math.min((timeLeft.days / 90) * 100, 100) // normalized to 90 days max
-
   return (
-    <div className="w-full max-w-2xl mx-auto my-8 relative group">
-      {/* Cyberpunk Decorative Borders */}
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/30 via-blue-500/20 to-indigo-500/30 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 pointer-events-none" />
-      
-      {/* Cyber corners */}
-      <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-400 pointer-events-none z-20" />
-      <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyan-400 pointer-events-none z-20" />
-      <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-cyan-400 pointer-events-none z-20" />
-      <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyan-400 pointer-events-none z-20" />
-
-      {/* Main Container */}
-      <div className="relative tech-panel-glow bg-[#0b1124]/90 p-5 md:p-6 rounded-xl border border-cyan-500/30 overflow-hidden">
-        {/* Scanline overlay */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(18,24,48,0)_96%,rgba(0,240,255,0.06)_98%)] bg-[length:100%_4px] pointer-events-none" />
-        
-        {/* Cyber hud dot indicator */}
-        <div className="absolute top-2 left-6 right-6 flex justify-between items-center text-[9px] text-cyan-400/40 font-mono tracking-widest pointer-events-none select-none">
-          <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-            <span className="text-cyan-400/50 uppercase">{phaseTitle}</span>
+    <div className="w-full bg-surface-raised border border-surface-border rounded-xl p-4 sm:p-6 md:p-8 transition-colors duration-[250ms]">
+      {/* Header info */}
+      <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-surface-border">
+        <div className="flex items-center gap-2">
+          <span className="size-2 rounded-full bg-brand-cyan animate-pulse" />
+          <span className="text-[11px] sm:text-xs font-semibold text-text-tertiary uppercase tracking-wider font-display">
+            {phaseTitle}
           </span>
         </div>
-
-        {timeLeft.isExpired ? (
-          <div className="text-center py-6">
-            <h3 className="font-orbitron text-xl md:text-2xl font-bold tracking-wider text-cyan-400">
-              Đã mở đơn đăng ký chính thức!
-            </h3>
-            <p className="text-xs text-slate-400 font-sans mt-2">Hệ thống đang mở nhận hồ sơ đăng ký tham dự giải đấu.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-4 gap-3 md:gap-5 mt-4 text-center">
-            {/* Days Card */}
-            <div className="relative flex flex-col items-center p-3 bg-cyan-950/20 border border-cyan-900/30 rounded-lg overflow-hidden">
-              <span className="font-orbitron text-3xl md:text-5xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] select-none">
-                {String(timeLeft.days).padStart(2, '0')}
-              </span>
-              <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wider font-sans mt-1">
-                Ngày
-              </span>
-              {/* Progress bar ticker */}
-              <div className="absolute bottom-0 left-0 h-[2px] bg-cyan-400 transition-all duration-1000" style={{ width: `${daysPercent}%` }} />
-            </div>
-
-            {/* Hours Card */}
-            <div className="relative flex flex-col items-center p-3 bg-cyan-950/20 border border-cyan-900/30 rounded-lg overflow-hidden">
-              <span className="font-orbitron text-3xl md:text-5xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] select-none">
-                {String(timeLeft.hours).padStart(2, '0')}
-              </span>
-              <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wider font-sans mt-1">
-                Giờ
-              </span>
-              {/* Progress bar ticker */}
-              <div className="absolute bottom-0 left-0 h-[2px] bg-cyan-400 transition-all duration-1000" style={{ width: `${hoursPercent}%` }} />
-            </div>
-
-            {/* Minutes Card */}
-            <div className="relative flex flex-col items-center p-3 bg-cyan-950/20 border border-cyan-900/30 rounded-lg overflow-hidden">
-              <span className="font-orbitron text-3xl md:text-5xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] select-none">
-                {String(timeLeft.minutes).padStart(2, '0')}
-              </span>
-              <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wider font-sans mt-1">
-                Phút
-              </span>
-              {/* Progress bar ticker */}
-              <div className="absolute bottom-0 left-0 h-[2px] bg-cyan-400 transition-all duration-1000" style={{ width: `${minutesPercent}%` }} />
-            </div>
-
-            {/* Seconds Card */}
-            <div className="relative flex flex-col items-center p-3 bg-cyan-950/20 border border-cyan-900/30 rounded-lg overflow-hidden">
-              <span className="font-orbitron text-3xl md:text-5xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] select-none">
-                {String(timeLeft.seconds).padStart(2, '0')}
-              </span>
-              <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wider font-sans mt-1">
-                Giây
-              </span>
-              {/* Progress bar ticker */}
-              <div className="absolute bottom-0 left-0 h-[2px] bg-cyan-400 transition-all duration-500" style={{ width: `${secondsPercent}%` }} />
-            </div>
-          </div>
-        )}
-
-
+        <span className="text-[11px] sm:text-xs font-medium text-text-tertiary">
+          Đếm ngược mở đơn
+        </span>
       </div>
+
+      {timeLeft.isExpired ? (
+        <div className="text-center py-4 px-2 bg-surface-overlay border border-brand-cyan/20 rounded-lg">
+          <h3 className="font-display text-base sm:text-lg md:text-xl font-semibold text-brand-cyan">
+            Đã mở đơn đăng ký chính thức!
+          </h3>
+          <p className="text-xs text-text-secondary mt-1">
+            Hệ thống đang mở nhận hồ sơ tham dự giải đấu.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-3 md:gap-4 text-center">
+          {[
+            { value: timeLeft.days, label: 'Ngày' },
+            { value: timeLeft.hours, label: 'Giờ' },
+            { value: timeLeft.minutes, label: 'Phút' },
+            { value: timeLeft.seconds, label: 'Giây' },
+          ].map(({ value, label }) => (
+            <div
+              key={label}
+              className="flex flex-col items-center justify-center p-2 sm:p-3 md:p-4 bg-surface-overlay border border-surface-border rounded-lg"
+            >
+              <AnimatedNumber value={value} />
+              <span className="text-[10px] sm:text-[11px] md:text-xs font-medium text-text-tertiary uppercase tracking-wider mt-1.5 sm:mt-2 font-display">
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

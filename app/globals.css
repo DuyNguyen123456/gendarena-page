@@ -50,7 +50,6 @@
   --color-dark-bg: #050814;
   --color-dark-panel: #0b1124;
   --color-neon-border: rgba(0, 240, 255, 0.2);
-  --color-orbitron: var(--font-display);
 
   /* ─── Border Radius ─── */
   --radius-sm: 6px;
@@ -346,4 +345,48 @@
 @keyframes slide-in {
   from { opacity: 0; transform: translateX(24px) translateY(8px); }
   to   { opacity: 1; transform: translateX(0)    translateY(0); }
+}
+
+/* ─── U3.5 Micro-interactions ─── */
+.card-hover-glow {
+  transition: border-color 250ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-hover-glow:hover {
+  border-color: var(--color-brand-cyan);
+  box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.2),
+              0 8px 24px -8px rgba(0, 212, 255, 0.15);
+}
+.card-hover-glow:hover .card-icon {
+  transform: rotate(-3deg) scale(1.02);
+  color: var(--color-brand-cyan);
+}
+.card-icon {
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+              color 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-hover-glow,
+  .card-hover-glow:hover,
+  .card-hover-glow:hover .card-icon,
+  .card-icon {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* ─── U3.6 CTA Pulse ─── */
+@keyframes subtle-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.35); }
+  50%       { box-shadow: 0 0 0 8px rgba(0, 212, 255, 0); }
+}
+.animate-subtle-pulse {
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-subtle-pulse {
+    animation: none !important;
+  }
 }

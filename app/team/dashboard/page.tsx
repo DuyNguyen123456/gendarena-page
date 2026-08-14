@@ -4,7 +4,20 @@ import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion, useReducedMotion } from 'framer-motion'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import {
   ArrowLeft,
   Users,
@@ -13,16 +26,16 @@ import {
   AlertTriangle,
   ClipboardList,
   Mail,
-  Loader2,
   Clock,
   Inbox,
   MessageSquare,
   Shield,
-  X,
   Phone,
   Building2,
   ExternalLink,
   User as UserIcon,
+  Radio,
+  Trophy,
 } from 'lucide-react'
 
 type TeamMember = {
@@ -87,6 +100,7 @@ export default function TeamDashboardPage() {
   const [isLeader, setIsLeader] = useState(false)
   const [dupeMembers, setDupeMembers] = useState<MemberDuplicate[]>([])
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false)
 
   // Invite by UID form
   const [inviteUid, setInviteUid] = useState('')
@@ -99,6 +113,7 @@ export default function TeamDashboardPage() {
 
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
+  const prefersReducedMotion = useReducedMotion()
 
   const fetchJoinRequests = async (teamId: string) => {
     // Step 1: fetch pending join requests (no profile join to avoid FK cache issues)
@@ -131,7 +146,10 @@ export default function TeamDashboardPage() {
     }
 
     // Step 3: merge profiles into requests
-    const profileMap: Record<string, { full_name: string | null; email: string | null; phone: string | null }> = {}
+    const profileMap: Record<
+      string,
+      { full_name: string | null; email: string | null; phone: string | null }
+    > = {}
     profilesData?.forEach((p) => {
       profileMap[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone }
     })
@@ -153,7 +171,9 @@ export default function TeamDashboardPage() {
 
     if (membersError) {
       console.error('Fetch members error:', membersError)
-      setErrorMessage(`Lỗi tải danh sách thành viên: ${membersError.message} (code: ${membersError.code})`)
+      setErrorMessage(
+        `Lỗi tải danh sách thành viên: ${membersError.message} (code: ${membersError.code})`
+      )
       return
     }
 
@@ -174,9 +194,26 @@ export default function TeamDashboardPage() {
     }
 
     // Step 3: merge profiles into member records
-    const profileMap: Record<string, { full_name: string | null; email: string | null; phone: string | null; organization: string | null; avatar_url: string | null; facebook_url: string | null }> = {}
+    const profileMap: Record<
+      string,
+      {
+        full_name: string | null
+        email: string | null
+        phone: string | null
+        organization: string | null
+        avatar_url: string | null
+        facebook_url: string | null
+      }
+    > = {}
     profilesData?.forEach((p) => {
-      profileMap[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone, organization: p.organization, avatar_url: (p as Record<string, unknown>).avatar_url as string | null ?? null, facebook_url: (p as Record<string, unknown>).facebook_url as string | null ?? null }
+      profileMap[p.id] = {
+        full_name: p.full_name,
+        email: p.email,
+        phone: p.phone,
+        organization: p.organization,
+        avatar_url: ((p as Record<string, unknown>).avatar_url as string | null) ?? null,
+        facebook_url: ((p as Record<string, unknown>).facebook_url as string | null) ?? null,
+      }
     })
 
     const merged = membersData.map((m) => ({
@@ -188,7 +225,7 @@ export default function TeamDashboardPage() {
 
     // Check for duplicate memberships among roster members
     if (merged.length > 0) {
-      const userIds = merged.map(m => m.user_id)
+      const userIds = merged.map((m) => m.user_id)
       const { data: dupCheck } = await supabase
         .from('team_members')
         .select('user_id')
@@ -196,13 +233,16 @@ export default function TeamDashboardPage() {
 
       // Group by user_id and find any appearing more than once
       const countMap: Record<string, number> = {}
-      dupCheck?.forEach(r => { countMap[r.user_id] = (countMap[r.user_id] ?? 0) + 1 })
-      const dupeIds = Object.keys(countMap).filter(uid => countMap[uid] > 1)
+      dupCheck?.forEach((r) => {
+        countMap[r.user_id] = (countMap[r.user_id] ?? 0) + 1
+      })
+      const dupeIds = Object.keys(countMap).filter((uid) => countMap[uid] > 1)
 
       if (dupeIds.length > 0) {
-        setDupeMembers(merged
-          .filter(m => dupeIds.includes(m.user_id))
-          .map(m => ({ user_id: m.user_id, full_name: m.profiles?.full_name ?? null }))
+        setDupeMembers(
+          merged
+            .filter((m) => dupeIds.includes(m.user_id))
+            .map((m) => ({ user_id: m.user_id, full_name: m.profiles?.full_name ?? null }))
         )
       } else {
         setDupeMembers([])
@@ -212,7 +252,9 @@ export default function TeamDashboardPage() {
 
   const loadTeamData = async () => {
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       router.push('/login')
       return
@@ -237,7 +279,9 @@ export default function TeamDashboardPage() {
     // Fetch team details
     const { data: teamData, error: teamError } = await supabase
       .from('teams')
-      .select('id, name, description, max_members, is_open, leader_id, competition_id, competitions(title)')
+      .select(
+        'id, name, description, max_members, is_open, leader_id, competition_id, competitions(title)'
+      )
       .eq('id', memberRecord.team_id)
       .single()
 
@@ -249,7 +293,7 @@ export default function TeamDashboardPage() {
 
     setTeam(teamData as unknown as Team)
 
-    // Fetch all members (uses fetchMembers helper — consistent with handleRequestAction)
+    // Fetch all members
     await fetchMembers(memberRecord.team_id)
 
     // If leader, fetch requests & invites
@@ -340,14 +384,12 @@ export default function TeamDashboardPage() {
     }
 
     // 3. Send invite
-    const { error: inviteError } = await supabase
-      .from('team_invites')
-      .insert({
-        team_id: team.id,
-        invited_uid: formattedUid,
-        invited_by: user.id,
-        status: 'pending'
-      })
+    const { error: inviteError } = await supabase.from('team_invites').insert({
+      team_id: team.id,
+      invited_uid: formattedUid,
+      invited_by: user.id,
+      status: 'pending',
+    })
 
     if (inviteError) {
       console.error('Invite error:', inviteError)
@@ -370,7 +412,11 @@ export default function TeamDashboardPage() {
   }
 
   // Handle join request actions
-  const handleRequestAction = async (requestId: string, requesterId: string, action: 'accept' | 'reject') => {
+  const handleRequestAction = async (
+    requestId: string,
+    requesterId: string,
+    action: 'accept' | 'reject'
+  ) => {
     if (!team || !user) return
     setActionLoading(requestId)
     setErrorMessage('')
@@ -384,13 +430,11 @@ export default function TeamDashboardPage() {
       }
 
       // Add to team_members
-      const { error: memberError } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: team.id,
-          user_id: requesterId,
-          role: 'member'
-        })
+      const { error: memberError } = await supabase.from('team_members').insert({
+        team_id: team.id,
+        user_id: requesterId,
+        role: 'member',
+      })
 
       if (memberError) {
         console.error('Accept add member error:', memberError)
@@ -402,7 +446,11 @@ export default function TeamDashboardPage() {
       // Update request status to accepted
       const { error: acceptErr } = await supabase
         .from('team_join_requests')
-        .update({ status: 'accepted', responded_at: new Date().toISOString(), responded_by: user.id })
+        .update({
+          status: 'accepted',
+          responded_at: new Date().toISOString(),
+          responded_by: user.id,
+        })
         .eq('id', requestId)
 
       if (acceptErr) {
@@ -412,7 +460,11 @@ export default function TeamDashboardPage() {
       // Reject — update status
       const { error: rejectErr } = await supabase
         .from('team_join_requests')
-        .update({ status: 'rejected', responded_at: new Date().toISOString(), responded_by: user.id })
+        .update({
+          status: 'rejected',
+          responded_at: new Date().toISOString(),
+          responded_by: user.id,
+        })
         .eq('id', requestId)
 
       if (rejectErr) {
@@ -420,12 +472,8 @@ export default function TeamDashboardPage() {
       }
     }
 
-    // Targeted re-fetch: only refresh members list and pending join requests
-    // (avoids full page re-init which can silently fail on FK join errors)
-    await Promise.all([
-      fetchMembers(team.id),
-      fetchJoinRequests(team.id),
-    ])
+    // Targeted re-fetch
+    await Promise.all([fetchMembers(team.id), fetchJoinRequests(team.id)])
     setActionLoading(null)
   }
 
@@ -433,12 +481,11 @@ export default function TeamDashboardPage() {
   const handleLeaveTeam = async () => {
     if (!team || !user) return
     if (isLeader) {
-      setErrorMessage('Chỉ huy (Leader) không thể rời đội. Vui lòng chuyển quyền hoặc giải tán đội trước (ở bản cập nhật sau).')
+      setErrorMessage(
+        'Chỉ huy (Leader) không thể rời đội. Vui lòng giải tán đội hoặc chuyển quyền trước.'
+      )
       return
     }
-
-    const confirmLeave = confirm('Bạn có chắc chắn muốn rời khỏi liên minh này?')
-    if (!confirmLeave) return
 
     setLoading(true)
     const { error } = await supabase
@@ -457,219 +504,286 @@ export default function TeamDashboardPage() {
     }
   }
 
-  if (loading) return <Loading text="Đang tải..." />
+  if (loading) return <Loading text="Đang tải dữ liệu đội thi..." />
   if (!team) return null
 
   return (
-    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
-      {/* Decorative Glows */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
-
-      <div className="max-w-5xl mx-auto relative z-10">
-        
-        {/* Navigation back */}
-        <Link 
-          href="/dashboard" 
-          className="inline-flex items-center gap-1.5 text-xs font-orbitron font-bold tracking-wider text-cyan-400 hover:text-cyan-300 transition-colors uppercase mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Quay lại Dashboard</span>
-        </Link>
-
-        {/* Dashboard Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-[#1e2d5a] pb-6 gap-4">
-          <div>
-            <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase flex items-center gap-2">
-              <Users className="w-6 h-6 text-cyan-400" />
-              <span>Quản lý đội: <span className="text-cyan-400 drop-shadow-[0_0_15px_rgba(0,240,255,0.2)]">{team.name}</span></span>
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/submissions"
-              className="tech-btn-accent px-5 py-2 rounded-lg text-xs font-bold tracking-wider font-orbitron text-black flex items-center gap-1.5"
-            >
-              <ClipboardPen className="w-4 h-4" />
-              <span>Nộp bài dự thi</span>
-            </Link>
-            {!isLeader && (
-              <button
-                onClick={handleLeaveTeam}
-                className="px-4 py-2 border border-red-500/30 bg-red-950/20 hover:bg-red-500 hover:text-white text-red-400 text-xs font-semibold tracking-wider rounded-lg cursor-pointer transition flex items-center gap-1.5"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Rời đội</span>
-              </button>
-            )}
-          </div>
+    <div className="min-h-screen bg-surface-base text-text-primary">
+      {/* Hero Header với Subtle Background */}
+      <div className="relative overflow-hidden border-b border-surface-border bg-surface-raised/40">
+        <DotGridBackground />
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <motion.div
+            className="absolute -top-20 left-1/2 -translate-x-1/2 size-[450px] rounded-full bg-brand-cyan/8 blur-3xl"
+            animate={prefersReducedMotion ? {} : { x: ['-3%', '3%', '-3%'] }}
+            transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
+          />
         </div>
 
+        <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-12">
+          {/* Back link */}
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs text-brand-cyan hover:text-brand-cyan-bright font-medium transition mb-4 group"
+          >
+            <ArrowLeft className="size-4 transition group-hover:-translate-x-0.5" />
+            <span>Quay lại Bảng điều khiển</span>
+          </Link>
+
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <div className="flex items-center gap-2.5 mb-2">
+                <Badge variant="brand" size="sm">
+                  {team.competitions?.title || 'GenD Arena 2026'}
+                </Badge>
+                <Badge variant={team.is_open ? 'success' : 'default'} size="sm">
+                  {team.is_open ? 'Đang mở tuyển' : 'Đã đóng tuyển'}
+                </Badge>
+              </div>
+              <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
+                Đội thi: <span className="text-brand-cyan">{team.name}</span>
+              </h1>
+              <p className="text-sm text-text-secondary mt-1">
+                Không gian quản lý thành viên, xét duyệt đơn gia nhập và điều hướng nộp đề án
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <Link href="/submissions">
+                <Button variant="primary" size="md" leftIcon={<ClipboardPen className="size-4" />}>
+                  Nộp bài dự thi
+                </Button>
+              </Link>
+              {!isLeader && (
+                <Button
+                  variant="ghost"
+                  size="md"
+                  onClick={() => setShowLeaveDialog(true)}
+                  leftIcon={<LogOut className="size-4" />}
+                  className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger"
+                >
+                  Rời đội
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <motion.main
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-12 space-y-6"
+      >
         {errorMessage && (
-          <div className="bg-red-950/30 border border-red-500/40 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm font-medium flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
+          <div className="p-4 rounded-lg bg-semantic-danger/10 border border-semantic-danger/30 text-sm text-semantic-danger flex items-center gap-2.5">
+            <AlertTriangle className="size-4 shrink-0 text-semantic-danger" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {/* Duplicate Member Warning Banner (Leader only) */}
         {isLeader && dupeMembers.length > 0 && (
-          <div className="bg-amber-950/40 border border-amber-500/50 rounded-xl p-5 mb-6 shadow-[0_0_20px_rgba(234,179,8,0.15)]">
+          <Card className="bg-semantic-warning/10 border-semantic-warning/40 p-5 shadow-elevation-2">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <AlertTriangle className="size-5 text-semantic-warning shrink-0 mt-0.5" />
               <div>
-                <h2 className="font-orbitron text-sm font-bold text-amber-400 tracking-wider">Cảnh báo: Thành viên thuộc nhiều đội</h2>
-                <p className="text-slate-400 text-xs mt-1 mb-2">
-                  Các thành viên sau đang có trong nhiều đội cùng lúc. Hãy yêu cầu họ vào trang cá nhân để chọn đội giữ lại.
+                <h2 className="font-display text-base font-semibold text-semantic-warning">
+                  Cảnh báo: Thành viên thuộc nhiều đội
+                </h2>
+                <p className="text-text-secondary text-xs mt-1 mb-3 leading-relaxed">
+                  Các thành viên sau đang xuất hiện trong nhiều đội cùng lúc. Hãy yêu cầu họ vào trang cá nhân để chọn giữ lại 1 đội duy nhất:
                 </p>
                 <ul className="space-y-1">
-                  {dupeMembers.map(dm => (
-                    <li key={dm.user_id} className="text-xs text-amber-300 font-semibold">• {dm.full_name ?? dm.user_id}</li>
+                  {dupeMembers.map((dm) => (
+                    <li key={dm.user_id} className="text-xs text-semantic-warning font-medium">
+                      • {dm.full_name ?? dm.user_id}
+                    </li>
                   ))}
                 </ul>
               </div>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Main Dashboard Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Team Details & Members */}
-          <div className="lg:col-span-2 space-y-8">
-            
+          <div className="lg:col-span-8 space-y-6">
             {/* Team info */}
-            <div className="tech-panel p-6 border-cyan-500/15 relative">
-              <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
-                <ClipboardList className="w-4 h-4 text-cyan-400" />
-                <span>Thông tin đội</span>
-              </h2>
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-surface-border">
+                <ClipboardList className="size-4 text-brand-cyan" />
+                <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-text-tertiary">
+                  Thông tin chiến đội
+                </h2>
+              </div>
+
               <div className="space-y-4">
                 <div>
-                  <span className="text-slate-500 text-xs tracking-wider font-semibold block mb-1">Cuộc thi tham dự:</span>
-                  <span className="text-slate-200 font-bold">{team.competitions?.title || 'Đang cập nhật...'}</span>
+                  <span className="text-xs text-text-tertiary font-medium block mb-1">
+                    Đấu trường tham gia:
+                  </span>
+                  <span className="text-text-primary font-semibold text-sm">
+                    {team.competitions?.title || 'Đang cập nhật...'}
+                  </span>
                 </div>
+
                 <div>
-                  <span className="text-slate-500 text-xs tracking-wider font-semibold block mb-1">Mô tả đội hình:</span>
-                  <p className="text-slate-350 text-sm leading-relaxed">{team.description || 'Không có mô tả chi tiết cho đội này.'}</p>
+                  <span className="text-xs text-text-tertiary font-medium block mb-1">
+                    Mô tả liên minh:
+                  </span>
+                  <p className="text-text-secondary text-sm leading-relaxed">
+                    {team.description || 'Chưa có mô tả chi tiết cho đội hình này.'}
+                  </p>
                 </div>
-                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[#1e2d5a]/40">
+
+                <div className="grid grid-cols-2 gap-4 pt-3 border-t border-surface-border">
                   <div>
-                    <span className="text-slate-500 text-xs tracking-wider font-semibold block">Sức chứa tối đa:</span>
-                    <span className="text-slate-200 font-bold">{team.max_members} thành viên</span>
+                    <span className="text-xs text-text-tertiary font-medium block">
+                      Sức chứa tối đa:
+                    </span>
+                    <span className="text-text-primary font-semibold text-sm">
+                      {team.max_members} thành viên
+                    </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 text-xs tracking-wider font-semibold block">Trạng thái tuyển quân:</span>
-                    <span className={`font-bold ${team.is_open ? 'text-cyan-400' : 'text-red-400'}`}>
-                      {team.is_open ? 'Đang mở đăng ký' : 'Đã đóng tuyển'}
+                    <span className="text-xs text-text-tertiary font-medium block">
+                      Trạng thái tuyển:
+                    </span>
+                    <span
+                      className={`text-sm font-semibold ${
+                        team.is_open ? 'text-semantic-success' : 'text-semantic-danger'
+                      }`}
+                    >
+                      {team.is_open ? 'Đang mở tuyển quân' : 'Đã đóng tuyển'}
                     </span>
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
 
-              {/* Members List */}
-              <div className="tech-panel p-6 border-cyan-500/15 relative">
-                <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-cyan-400" />
-                  <span>Danh sách thành viên ({members.length} / {team.max_members})</span>
-                </h2>
-                <div className="space-y-3">
-                  {members.map((member) => (
-                    <button
-                      key={member.user_id}
-                      type="button"
-                      onClick={() => setSelectedMember(member)}
-                      className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-[#0a1128]/50 border border-[#1e2d5a]/50 rounded-xl gap-3 text-left hover:border-cyan-500/40 hover:bg-[#0a1128]/80 transition cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="shrink-0 w-9 h-9 rounded-full border border-cyan-500/20 bg-[#131e3d] overflow-hidden flex items-center justify-center">
-                          {member.profiles?.avatar_url ? (
-                            <img src={member.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <UserIcon className="w-4 h-4 text-slate-500" />
-                          )}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-white text-sm group-hover:text-cyan-300 transition">{member.profiles?.full_name || 'Vô danh'}</span>
-                            {member.role === 'leader' && (
-                              <span className="bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 px-2 py-0.5 rounded text-[10px] font-bold font-orbitron">
-                                Chỉ huy
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-slate-500 text-xs mt-0.5">{member.profiles?.organization || member.profiles?.email || ''}</div>
-                        </div>
-                      </div>
-                      <span className="text-[10px] text-slate-600 font-orbitron font-semibold shrink-0">
-                        {new Date(member.joined_at).toLocaleDateString('vi-VN')}
-                      </span>
-                    </button>
-                  ))}
+            {/* Members List */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-5 pb-3 border-b border-surface-border">
+                <div className="flex items-center gap-2">
+                  <Users className="size-4 text-brand-cyan" />
+                  <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-text-tertiary">
+                    Danh sách thành viên ({members.length} / {team.max_members})
+                  </h2>
                 </div>
+                <span className="text-xs text-text-tertiary">Click xem chi tiết</span>
               </div>
 
+              <div className="space-y-3">
+                {members.map((member) => (
+                  <button
+                    key={member.user_id}
+                    type="button"
+                    onClick={() => setSelectedMember(member)}
+                    className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 bg-surface-overlay border border-surface-border rounded-xl gap-3 text-left hover:border-brand-cyan/40 hover:bg-surface-raised transition cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="shrink-0 size-10 rounded-full border border-surface-border bg-surface-base overflow-hidden flex items-center justify-center">
+                        {member.profiles?.avatar_url ? (
+                          <img
+                            src={member.profiles.avatar_url}
+                            alt=""
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <UserIcon className="size-5 text-text-tertiary" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-text-primary text-sm group-hover:text-brand-cyan transition">
+                            {member.profiles?.full_name || 'Vô danh'}
+                          </span>
+                          <Badge
+                            variant={member.role === 'leader' ? 'brand' : 'default'}
+                            size="sm"
+                          >
+                            {member.role === 'leader' ? 'Chỉ huy' : 'Thành viên'}
+                          </Badge>
+                        </div>
+                        <div className="text-text-tertiary text-xs mt-0.5 truncate max-w-xs">
+                          {member.profiles?.organization || member.profiles?.email || ''}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs text-text-tertiary font-mono shrink-0">
+                      Gia nhập: {new Date(member.joined_at).toLocaleDateString('vi-VN')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </Card>
           </div>
 
           {/* Right Column: Leader Controls (Invites & Requests) */}
-          <div className="space-y-8">
-            
+          <div className="lg:col-span-4 space-y-6">
             {/* Invite by UID Form */}
             {isLeader && (
-              <div className="tech-panel p-6 border-cyan-500/15 relative">
-                <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-cyan-400" />
-                  <span>Mời thành viên bằng UID</span>
-                </h2>
-                
+              <Card className="p-6">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-surface-border">
+                  <Mail className="size-4 text-brand-cyan" />
+                  <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-text-tertiary">
+                    Mời thành viên bằng UID
+                  </h2>
+                </div>
+
                 {inviteMessage && (
-                  <div className="text-xs font-semibold p-2.5 rounded bg-[#131e3d] border border-cyan-500/30 text-cyan-400 mb-4">
+                  <div className="text-xs font-medium p-3 rounded-lg bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan mb-4">
                     {inviteMessage}
                   </div>
                 )}
 
                 <form onSubmit={handleSendInvite} className="space-y-3.5">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 uppercase mb-1.5">
-                      Mã UID (8 ký tự)
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-text-secondary">
+                      Mã UID đấu thủ (8 ký tự)
                     </label>
-                    <input
+                    <Input
                       type="text"
                       required
                       value={inviteUid}
                       onChange={(e) => setInviteUid(e.target.value)}
                       placeholder="VD: A1B2C3D4"
                       maxLength={8}
-                      className="w-full px-4 py-2 bg-slate-950/60 border border-[#1e2d5a] rounded-lg text-white placeholder-slate-650 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition font-mono uppercase text-sm"
+                      className="font-mono uppercase text-sm"
                     />
                   </div>
-                  <button
+                  <Button
                     type="submit"
-                    disabled={inviteLoading}
-                    className="w-full py-2 bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500 hover:text-black font-bold tracking-wider rounded-lg transition duration-200 cursor-pointer text-xs font-orbitron flex items-center justify-center gap-1.5"
+                    variant="primary"
+                    size="md"
+                    isLoading={inviteLoading}
+                    className="w-full"
                   >
-                    {inviteLoading ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Đang gửi...</span>
-                      </>
-                    ) : (
-                      'Gửi lời mời'
-                    )}
-                  </button>
+                    Gửi lời mời
+                  </Button>
                 </form>
 
                 {/* Active invites pending */}
                 {invites.length > 0 && (
-                  <div className="mt-6 pt-4 border-t border-[#1e2d5a]/45">
-                    <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase block mb-3">Lời mời đang chờ:</span>
+                  <div className="mt-6 pt-4 border-t border-surface-border">
+                    <span className="text-xs font-semibold text-text-tertiary uppercase tracking-wider block mb-3">
+                      Lời mời đang chờ:
+                    </span>
                     <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                       {invites.map((inv) => (
-                        <div key={inv.id} className="flex justify-between items-center bg-[#070c1e] border border-[#1e2d5a]/30 p-2.5 rounded-lg text-xs">
-                          <span className="font-mono text-cyan-400 uppercase">{inv.invited_uid}</span>
-                          <span className="text-slate-500 text-[10px] font-orbitron flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-slate-500" />
+                        <div
+                          key={inv.id}
+                          className="flex justify-between items-center bg-surface-overlay border border-surface-border p-2.5 rounded-lg text-xs"
+                        >
+                          <span className="font-mono text-brand-cyan uppercase font-semibold">
+                            {inv.invited_uid}
+                          </span>
+                          <span className="text-text-tertiary text-xs flex items-center gap-1">
+                            <Clock className="size-3 text-text-tertiary" />
                             <span>Đang chờ</span>
                           </span>
                         </div>
@@ -677,174 +791,204 @@ export default function TeamDashboardPage() {
                     </div>
                   </div>
                 )}
-              </div>
+              </Card>
             )}
 
             {/* Join Requests Pending */}
             {isLeader && (
-              <div className="tech-panel p-6 border-cyan-500/15 relative">
-                <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
-                  <Inbox className="w-4 h-4 text-cyan-400" />
-                  <span>Yêu cầu gia nhập</span>
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-surface-border">
+                  <div className="flex items-center gap-2">
+                    <Inbox className="size-4 text-brand-cyan" />
+                    <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-text-tertiary">
+                      Yêu cầu gia nhập
+                    </h2>
+                  </div>
                   {joinRequests.length > 0 && (
-                    <span className="relative flex h-2 w-2 ml-1">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
+                    <Badge variant="danger" size="sm">
+                      {joinRequests.length} đơn mới
+                    </Badge>
                   )}
-                  {joinRequests.length > 0 && (
-                    <span className="ml-1 bg-red-950/60 border border-red-500/40 text-red-400 px-1.5 py-0.5 rounded-full text-[10px] font-bold font-orbitron">
-                      {joinRequests.length}
-                    </span>
-                  )}
-                </h2>
-                
+                </div>
+
                 {joinRequests.length === 0 ? (
-                  <p className="text-slate-500 text-xs font-medium text-center py-4">Chưa có yêu cầu gia nhập nào.</p>
+                  <p className="text-text-tertiary text-xs text-center py-6">
+                    Chưa có yêu cầu gia nhập nào.
+                  </p>
                 ) : (
-                  <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+                  <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
                     {joinRequests.map((req) => (
-                      <div 
-                        key={req.id} 
-                        className="bg-[#0a1128]/40 border border-[#1e2d5a]/40 p-4 rounded-xl space-y-3"
+                      <div
+                        key={req.id}
+                        className="bg-surface-overlay border border-surface-border p-3.5 rounded-xl space-y-3"
                       >
                         <div>
-                          <div className="font-bold text-white text-xs">{req.profiles?.full_name || 'Vô danh'}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5">Email: {req.profiles?.email || 'N/A'}</div>
+                          <div className="font-semibold text-text-primary text-xs">
+                            {req.profiles?.full_name || 'Vô danh'}
+                          </div>
+                          <div className="text-[11px] text-text-tertiary mt-0.5">
+                            Email: {req.profiles?.email || 'N/A'}
+                          </div>
                           {req.message && (
-                            <p className="text-slate-350 text-[11px] leading-relaxed mt-2 bg-[#050814] p-2 rounded border border-[#1e2d5a]/30 flex items-start gap-1.5">
-                              <MessageSquare className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                            <p className="text-text-secondary text-xs leading-relaxed mt-2 bg-surface-base p-2 rounded border border-surface-border flex items-start gap-1.5">
+                              <MessageSquare className="size-3.5 text-brand-cyan shrink-0 mt-0.5" />
                               <span>{req.message}</span>
                             </p>
                           )}
                         </div>
                         <div className="flex gap-2 justify-end pt-1">
-                          <button
+                          <Button
+                            variant="primary"
+                            size="sm"
                             onClick={() => handleRequestAction(req.id, req.requester_id, 'accept')}
-                            disabled={actionLoading === req.id}
-                            className="px-3 py-1 bg-emerald-950/40 border border-emerald-500/40 hover:bg-emerald-500 hover:text-black text-emerald-400 text-[10px] font-bold rounded transition cursor-pointer"
+                            isLoading={actionLoading === req.id}
                           >
                             Duyệt
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             onClick={() => handleRequestAction(req.id, req.requester_id, 'reject')}
                             disabled={actionLoading === req.id}
-                            className="px-3 py-1 bg-red-950/20 border border-red-500/30 hover:bg-red-500 hover:text-white text-red-400 text-[10px] font-bold rounded transition cursor-pointer"
                           >
                             Từ chối
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
+              </Card>
             )}
 
             {/* Status overview for members */}
             {!isLeader && (
-              <div className="tech-panel p-6 border-cyan-500/15 relative">
-                <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-3 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-cyan-400" />
-                  <span>Quyền truy cập</span>
-                </h2>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Bạn đang ở vai trò Thành viên. Chỉ có Trưởng đội (Leader) mới có quyền gửi lời mời hoặc duyệt yêu cầu xin gia nhập đội.
+              <Card className="p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Shield className="size-4 text-brand-cyan" />
+                  <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-text-tertiary">
+                    Quyền hạn liên minh
+                  </h2>
+                </div>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Bạn đang ở vai trò <span className="text-text-primary font-semibold">Thành viên</span>. Chỉ có Trưởng đội (Leader) mới có quyền gửi lời mời hoặc duyệt đơn xin gia nhập liên minh.
                 </p>
-              </div>
+              </Card>
             )}
-
           </div>
         </div>
 
-        {/* Member Detail Modal */}
-        {selectedMember && (
-          <div
-            className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-            onClick={() => setSelectedMember(null)}
-          >
-            <div
-              className="tech-panel-glow max-w-sm w-full p-6 rounded-2xl space-y-5 border-cyan-500/30 shadow-[0_0_40px_rgba(0,240,255,0.08)] relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Close button */}
-              <button
-                type="button"
-                onClick={() => setSelectedMember(null)}
-                className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-900/60 border border-[#1e2d5a] text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                aria-label="Đóng"
-              >
-                <X className="w-4 h-4" />
-              </button>
+        {/* Member Detail Modal Dialog */}
+        <Dialog open={selectedMember !== null} onOpenChange={(open) => !open && setSelectedMember(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Thông tin thành viên</DialogTitle>
+              <DialogDescription>Hồ sơ công khai trong liên minh thi đấu</DialogDescription>
+            </DialogHeader>
 
-              {/* Avatar + name */}
-              <div className="flex items-center gap-4 pr-6">
-                <div className="shrink-0 w-16 h-16 rounded-full border-2 border-cyan-500/40 bg-[#131e3d] overflow-hidden flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.1)]">
-                  {selectedMember.profiles?.avatar_url ? (
-                    <img src={selectedMember.profiles.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <UserIcon className="w-8 h-8 text-slate-500" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-bold text-white text-base leading-tight">
-                    {selectedMember.profiles?.full_name || <span className="text-slate-500 italic">Vô danh</span>}
-                  </p>
-                  <span
-                    className={`inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded text-[10px] font-bold font-orbitron ${
-                      selectedMember.role === 'leader'
-                        ? 'bg-cyan-950/60 border border-cyan-500/30 text-cyan-400'
-                        : 'bg-slate-900/60 border border-slate-700/40 text-slate-400'
-                    }`}
-                  >
-                    {selectedMember.role === 'leader' ? 'Chỉ huy' : 'Thành viên'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Detail rows */}
-              <div className="space-y-3 border-t border-[#1e2d5a] pt-4">
-                {selectedMember.profiles?.organization && (
-                  <div className="flex items-start gap-3 text-sm">
-                    <Building2 className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-                    <span className="text-slate-300">{selectedMember.profiles.organization}</span>
+            {selectedMember && (
+              <div className="space-y-5 pt-2">
+                <div className="flex items-center gap-4">
+                  <div className="shrink-0 size-16 rounded-full border border-surface-border bg-surface-overlay overflow-hidden flex items-center justify-center shadow-elevation-1">
+                    {selectedMember.profiles?.avatar_url ? (
+                      <img
+                        src={selectedMember.profiles.avatar_url}
+                        alt="Avatar"
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <UserIcon className="size-8 text-text-tertiary" />
+                    )}
                   </div>
-                )}
-                {selectedMember.profiles?.email && (
-                  <div className="flex items-start gap-3 text-sm">
-                    <Mail className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-                    <span className="text-slate-300 break-all">{selectedMember.profiles.email}</span>
-                  </div>
-                )}
-                {selectedMember.profiles?.phone && (
-                  <div className="flex items-start gap-3 text-sm">
-                    <Phone className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-                    <span className="text-slate-300">{selectedMember.profiles.phone}</span>
-                  </div>
-                )}
-                {selectedMember.profiles?.facebook_url && (
-                  <div className="flex items-start gap-3 text-sm">
-                    <ExternalLink className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-                    <a
-                      href={selectedMember.profiles.facebook_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-cyan-400 hover:text-cyan-300 transition break-all"
+                  <div>
+                    <p className="font-display text-lg font-semibold text-text-primary">
+                      {selectedMember.profiles?.full_name || <span className="italic text-text-tertiary">Vô danh</span>}
+                    </p>
+                    <Badge
+                      variant={selectedMember.role === 'leader' ? 'brand' : 'default'}
+                      size="sm"
+                      className="mt-1"
                     >
-                      Facebook →
-                    </a>
+                      {selectedMember.role === 'leader' ? 'Chỉ huy (Leader)' : 'Thành viên (Member)'}
+                    </Badge>
                   </div>
-                )}
-                <div className="flex items-center gap-3 text-xs text-slate-500 pt-1 border-t border-[#1e2d5a]/40">
-                  <Clock className="w-3.5 h-3.5 shrink-0" />
-                  <span>Tham gia: {new Date(selectedMember.joined_at).toLocaleDateString('vi-VN')}</span>
+                </div>
+
+                <div className="space-y-3 border-t border-surface-border pt-4 text-sm">
+                  {selectedMember.profiles?.organization && (
+                    <div className="flex items-start gap-2.5 text-text-secondary">
+                      <Building2 className="size-4 text-text-tertiary shrink-0 mt-0.5" />
+                      <span>{selectedMember.profiles.organization}</span>
+                    </div>
+                  )}
+                  {selectedMember.profiles?.email && (
+                    <div className="flex items-start gap-2.5 text-text-secondary">
+                      <Mail className="size-4 text-text-tertiary shrink-0 mt-0.5" />
+                      <span className="break-all">{selectedMember.profiles.email}</span>
+                    </div>
+                  )}
+                  {selectedMember.profiles?.phone && (
+                    <div className="flex items-start gap-2.5 text-text-secondary">
+                      <Phone className="size-4 text-text-tertiary shrink-0 mt-0.5" />
+                      <span>{selectedMember.profiles.phone}</span>
+                    </div>
+                  )}
+                  {selectedMember.profiles?.facebook_url && (
+                    <div className="flex items-start gap-2.5">
+                      <ExternalLink className="size-4 text-text-tertiary shrink-0 mt-0.5" />
+                      <a
+                        href={selectedMember.profiles.facebook_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-brand-cyan hover:underline break-all text-xs"
+                      >
+                        Xem trang Facebook →
+                      </a>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-text-tertiary pt-2 border-t border-surface-border font-mono">
+                    <Clock className="size-3.5" />
+                    <span>Tham gia: {new Date(selectedMember.joined_at).toLocaleDateString('vi-VN')}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
+          </DialogContent>
+        </Dialog>
 
-      </div>
+        {/* Leave Team Confirm Dialog */}
+        <Dialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <div className="size-12 rounded-full bg-semantic-danger/10 border border-semantic-danger/30 flex items-center justify-center text-semantic-danger mb-3">
+                <AlertTriangle className="size-6" />
+              </div>
+              <DialogTitle>Xác nhận rời khỏi đội</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn rời khỏi liên minh <span className="font-semibold text-text-primary">{team.name}</span>? Bạn sẽ mất quyền truy cập vào các bài nộp chung của đội.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex gap-3 justify-end pt-4 border-t border-surface-border">
+              <Button variant="secondary" size="md" onClick={() => setShowLeaveDialog(false)}>
+                Hủy bỏ
+              </Button>
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={() => {
+                  setShowLeaveDialog(false)
+                  handleLeaveTeam()
+                }}
+                className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger"
+              >
+                Xác nhận rời đội
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </motion.main>
     </div>
   )
 }
+

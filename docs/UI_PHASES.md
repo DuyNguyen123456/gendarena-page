@@ -12,7 +12,7 @@
 | U0 | Design foundation (tokens, DESIGN.md, fonts, Tailwind @theme) | ✅ Done | `main` | - |
 | U1 | Atomic components (Button, Input, Card, Modal, Badge) | ✅ Done | `main` | - |
 | U2 | Shared layout (Navbar, Footer, Loading states) | ✅ Done | `main` | - |
-| U3 | Landing page redesign | ⏳ Pending | - | - |
+| U3 | Landing page redesign | ✅ Done | `main` | - |
 | U4 | Auth pages (login, register, reset-password) | ⏳ Pending | - | - |
 | U5 | Participant flow (dashboard, team, submissions, profile) | ⏳ Pending | - | - |
 | U6 | Judge dashboard + scoring UI | ⏳ Pending | - | - |

@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 type Speaker = {
   id: string
@@ -15,23 +18,24 @@ type Speaker = {
   display_order: number
 }
 
-const CATEGORY_LABELS: Record<Speaker['category'], { label: string; color: string; bg: string }> = {
-  speaker: { label: 'DIỄN GIẢ', color: 'text-cyan-400', bg: 'bg-cyan-950/40 border-cyan-500/30' },
-  judge:   { label: 'GIÁM KHẢO', color: 'text-amber-400', bg: 'bg-amber-950/40 border-amber-500/30' },
-  mentor:  { label: 'CỐ VẤN',    color: 'text-purple-400', bg: 'bg-purple-950/40 border-purple-500/30' },
+function getCategoryBadge(category: Speaker['category']) {
+  if (category === 'judge') {
+    return <Badge variant="brand" size="sm">Giám khảo</Badge>
+  }
+  if (category === 'mentor') {
+    return <Badge variant="warning" size="sm">Cố vấn</Badge>
+  }
+  return <Badge variant="info" size="sm">Diễn giả</Badge>
 }
 
 function SpeakerCard({ speaker }: { speaker: Speaker }) {
   const [imgError, setImgError] = useState(false)
-  const cat = CATEGORY_LABELS[speaker.category]
 
   return (
-    <div className="shrink-0 w-64 md:w-72 tech-panel-glow border-cyan-500/15 hover:border-cyan-400/40 p-6 rounded-2xl flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1 group snap-start">
+    <div className="shrink-0 w-[240px] sm:w-64 md:w-72 bg-surface-raised border border-surface-border hover:border-surface-border-strong hover:shadow-elevation-2 p-5 sm:p-6 rounded-xl flex flex-col gap-3.5 sm:gap-4 transition-all duration-[250ms] group snap-start">
       {/* Avatar */}
       <div className="relative flex items-center justify-center mx-auto">
-        <div
-          className="w-20 h-20 rounded-full border-2 border-cyan-500/30 group-hover:border-cyan-400/60 transition overflow-hidden bg-[#131e3d] flex items-center justify-center shadow-[0_0_20px_rgba(0,240,255,0.08)]"
-        >
+        <div className="size-16 sm:size-20 rounded-full border-2 border-surface-border group-hover:border-brand-cyan/50 transition-colors overflow-hidden bg-surface-overlay flex items-center justify-center">
           {speaker.avatar_url && !imgError ? (
             <img
               src={speaker.avatar_url}
@@ -40,38 +44,38 @@ function SpeakerCard({ speaker }: { speaker: Speaker }) {
               onError={() => setImgError(true)}
             />
           ) : (
-            <span className="font-orbitron text-2xl font-extrabold text-cyan-400 select-none">
+            <span className="font-display text-xl sm:text-2xl font-bold text-brand-cyan select-none">
               {speaker.name.charAt(0).toUpperCase()}
             </span>
           )}
         </div>
-        {/* Glow ring */}
-        <div className="absolute inset-0 rounded-full border border-cyan-400/10 group-hover:border-cyan-400/30 transition blur-[2px] pointer-events-none" />
       </div>
 
       {/* Category Badge */}
       <div className="flex justify-center">
-        <span className={`text-[10px] font-orbitron font-bold tracking-widest px-2.5 py-0.5 rounded border ${cat.bg} ${cat.color}`}>
-          {cat.label}
-        </span>
+        {getCategoryBadge(speaker.category)}
       </div>
 
       {/* Info */}
       <div className="text-center">
-        <h3 className="font-orbitron text-sm font-bold text-white tracking-wider group-hover:text-cyan-400 transition leading-snug">
+        <h3 className="font-display text-base font-semibold text-text-primary group-hover:text-brand-cyan transition-colors leading-snug">
           {speaker.name}
         </h3>
         {speaker.title && (
-          <p className="text-xs text-slate-400 mt-1 font-semibold leading-snug">{speaker.title}</p>
+          <p className="text-xs text-text-secondary mt-1 font-medium leading-snug">
+            {speaker.title}
+          </p>
         )}
         {speaker.organization && (
-          <p className="text-[11px] text-cyan-500/70 mt-0.5 font-orbitron tracking-wider">{speaker.organization}</p>
+          <p className="text-xs text-brand-cyan/80 mt-0.5 font-display font-medium tracking-wide">
+            {speaker.organization}
+          </p>
         )}
       </div>
 
       {/* Bio truncated */}
       {speaker.bio && (
-        <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-3 text-center">
+        <p className="text-xs text-text-tertiary leading-relaxed line-clamp-3 text-center">
           {speaker.bio}
         </p>
       )}
@@ -82,9 +86,9 @@ function SpeakerCard({ speaker }: { speaker: Speaker }) {
           href={speaker.linkedin_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-auto text-center text-[10px] font-bold font-orbitron tracking-widest text-cyan-400/70 hover:text-cyan-400 transition uppercase"
+          className="mt-auto text-center text-xs font-medium text-brand-cyan hover:text-brand-cyan-bright transition-colors"
         >
-          LinkedIn →
+          Hồ sơ LinkedIn →
         </a>
       )}
     </div>
@@ -119,51 +123,59 @@ export default function SpeakersSection() {
   if (!loading && speakers.length === 0) return null
 
   return (
-    <section className="relative py-20 px-6 overflow-hidden">
-      {/* Bg */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#060b1a]/80 to-transparent pointer-events-none" />
-
-      <div className="max-w-6xl mx-auto relative z-10">
+    <section className="relative py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-surface-border/60">
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-10 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-8 sm:mb-10 gap-4">
           <div className="text-center md:text-left">
-            <p className="text-xs font-orbitron tracking-[0.3em] text-cyan-500/70 uppercase mb-2">EXPERT PANEL</p>
-            <h2 className="font-orbitron text-3xl font-bold tracking-widest uppercase text-white">
-              DIỄN GIẢ & GIÁM KHẢO
+            <Badge variant="brand" size="md" className="mb-3">
+              HỘI ĐỒNG CHUYÊN GIA
+            </Badge>
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
+              Diễn Giả & Giám Khảo
             </h2>
-            <div className="h-[2px] w-24 bg-gradient-to-r from-transparent via-cyan-400 to-transparent mt-3 mx-auto md:mx-0" />
+            <p className="text-text-secondary text-sm md:text-base mt-2">
+              Đội ngũ cố vấn và chuyên gia hàng đầu từ các doanh nghiệp công nghệ & quỹ đầu tư.
+            </p>
           </div>
 
           {/* Scroll buttons */}
           <div className="flex gap-2 shrink-0">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={scrollLeft}
-              className="w-10 h-10 rounded-lg border border-[#1e2d5a] bg-[#0b1124] hover:border-cyan-500/50 hover:text-cyan-400 text-slate-400 flex items-center justify-center transition cursor-pointer"
               aria-label="Scroll left"
+              className="p-2"
             >
-              ←
-            </button>
-            <button
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={scrollRight}
-              className="w-10 h-10 rounded-lg border border-[#1e2d5a] bg-[#0b1124] hover:border-cyan-500/50 hover:text-cyan-400 text-slate-400 flex items-center justify-center transition cursor-pointer"
               aria-label="Scroll right"
+              className="p-2"
             >
-              →
-            </button>
+              <ChevronRight className="size-4" />
+            </Button>
           </div>
         </div>
 
         {/* Carousel */}
         {loading ? (
-          <div className="flex gap-5 overflow-hidden">
+          <div className="flex gap-4 sm:gap-5 overflow-hidden">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="shrink-0 w-64 md:w-72 h-72 bg-[#0b1124] border border-[#1e2d5a] rounded-2xl animate-pulse" />
+              <div
+                key={i}
+                className="shrink-0 w-[240px] sm:w-64 md:w-72 h-80 bg-surface-raised border border-surface-border rounded-xl animate-pulse"
+              />
             ))}
           </div>
         ) : (
           <div
             ref={scrollRef}
-            className="flex gap-5 overflow-x-auto pb-4 scroll-smooth snap-x snap-mandatory scrollbar-hide"
+            className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 scroll-smooth snap-x snap-mandatory scrollbar-hide px-1"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {speakers.map((speaker) => (

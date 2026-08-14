@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { Badge } from '@/components/ui/badge'
 
 type Sponsor = {
   id: string
@@ -12,11 +13,11 @@ type Sponsor = {
   display_order: number
 }
 
-const TIER_CONFIG: Record<Sponsor['tier'], { label: string; glow: string; border: string }> = {
-  platinum: { label: 'PLATINUM', glow: 'shadow-[0_0_15px_rgba(226,232,240,0.15)]', border: 'border-slate-400/40' },
-  gold:     { label: 'GOLD',     glow: 'shadow-[0_0_15px_rgba(251,191,36,0.12)]',  border: 'border-amber-400/40' },
-  silver:   { label: 'SILVER',   glow: 'shadow-[0_0_12px_rgba(148,163,184,0.10)]', border: 'border-slate-500/30' },
-  partner:  { label: 'PARTNER',  glow: '',                                           border: 'border-[#1e2d5a]' },
+const TIER_CONFIG: Record<Sponsor['tier'], { label: string; border: string }> = {
+  platinum: { label: 'PLATINUM', border: 'border-slate-300/40' },
+  gold:     { label: 'GOLD',     border: 'border-semantic-warning/40' },
+  silver:   { label: 'SILVER',   border: 'border-slate-500/30' },
+  partner:  { label: 'PARTNER',  border: 'border-surface-border' },
 }
 
 function SponsorLogo({ sponsor }: { sponsor: Sponsor }) {
@@ -25,18 +26,18 @@ function SponsorLogo({ sponsor }: { sponsor: Sponsor }) {
 
   const inner = (
     <div
-      className={`shrink-0 h-16 px-6 mr-6 bg-[#0a1025] border rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-105 hover:border-cyan-500/40 ${tier.border} ${tier.glow}`}
+      className={`shrink-0 h-14 sm:h-16 px-4 sm:px-6 mr-4 sm:mr-6 bg-surface-raised border rounded-xl flex items-center justify-center transition-colors duration-[250ms] hover:border-brand-cyan/40 ${tier.border}`}
       title={`${sponsor.name} (${tier.label})`}
     >
       {sponsor.logo_url && !imgError ? (
         <img
           src={sponsor.logo_url}
           alt={`Logo ${sponsor.name}`}
-          className="h-8 max-w-[120px] object-contain filter brightness-75 hover:brightness-110 transition"
+          className="h-6 sm:h-8 max-w-[110px] sm:max-w-[130px] object-contain opacity-80 hover:opacity-100 transition-opacity"
           onError={() => setImgError(true)}
         />
       ) : (
-        <span className="font-orbitron text-sm font-bold text-slate-400 tracking-wider whitespace-nowrap">
+        <span className="font-display text-xs sm:text-sm font-semibold text-text-secondary tracking-wide whitespace-nowrap">
           {sponsor.name}
         </span>
       )}
@@ -56,6 +57,7 @@ function SponsorLogo({ sponsor }: { sponsor: Sponsor }) {
 export default function SponsorsSection() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([])
   const [loading, setLoading] = useState(true)
+
   useEffect(() => {
     const supabase = createClient()
     supabase
@@ -71,27 +73,34 @@ export default function SponsorsSection() {
 
   if (!loading && sponsors.length === 0) return null
 
-  const duration = sponsors.length * 3
+  const duration = Math.max(sponsors.length * 3.5, 20)
 
   return (
-    <section className="relative py-16 px-6 overflow-hidden border-t border-b border-[#1e2d5a]/40">
+    <section className="relative py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-surface-border/60 overflow-hidden">
       {/* Faded edges */}
-      <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#050814] to-transparent z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#050814] to-transparent z-10 pointer-events-none" />
+      <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-20 md:w-32 bg-gradient-to-r from-surface-base to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-20 md:w-32 bg-gradient-to-l from-surface-base to-transparent z-10 pointer-events-none" />
 
-      <div className="max-w-6xl mx-auto mb-8 text-center relative z-10">
-        <p className="text-xs font-orbitron tracking-[0.3em] text-cyan-500/70 uppercase mb-2">SUPPORT NETWORK</p>
-        <h2 className="font-orbitron text-3xl font-bold tracking-widest uppercase text-white">
-          NHÀ TÀI TRỢ & ĐỐI TÁC
+      <div className="max-w-7xl mx-auto mb-8 sm:mb-10 text-center relative z-10">
+        <Badge variant="brand" size="md" className="mb-3">
+          ĐỐI TÁC ĐỒNG HÀNH
+        </Badge>
+        <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
+          Nhà Tài Trợ & Đối Tác
         </h2>
-        <div className="h-[2px] w-24 bg-gradient-to-r from-transparent via-cyan-400 to-transparent mt-3 mx-auto" />
+        <p className="text-text-secondary text-sm md:text-base mt-2 max-w-xl mx-auto">
+          Cảm ơn các doanh nghiệp và tổ chức công nghệ đã đồng hành cùng GenD Arena 2026.
+        </p>
       </div>
 
       {/* Marquee track */}
       {loading ? (
-        <div className="flex gap-6 justify-center">
+        <div className="flex gap-4 sm:gap-6 justify-center">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="shrink-0 h-16 w-32 bg-[#0b1124] border border-[#1e2d5a] rounded-xl animate-pulse" />
+            <div
+              key={i}
+              className="shrink-0 h-14 sm:h-16 w-28 sm:w-36 bg-surface-raised border border-surface-border rounded-xl animate-pulse"
+            />
           ))}
         </div>
       ) : (

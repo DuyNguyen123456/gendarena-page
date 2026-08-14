@@ -1,5 +1,6 @@
 import type { CompetitionPhase, PhaseStatus } from '@/types/phase'
 import { Book, Microscope, Trophy, Flag, Star, Circle, Calendar, Target, ClipboardList, PenTool } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 
 interface TimelineSectionProps {
   phases: CompetitionPhase[]
@@ -20,108 +21,112 @@ function formatDateRange(start: string | null, end: string | null): string {
 
 function StatusBadge({ status }: { status: PhaseStatus }) {
   if (status === 'active') {
-    return (
-      <span className="bg-emerald-950/50 border border-emerald-500/40 text-emerald-400 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest font-orbitron">
-        ● ĐANG MỞ
-      </span>
-    )
+    return <Badge variant="success" size="sm">Đang mở</Badge>
   }
   if (status === 'completed') {
-    return (
-      <span className="bg-blue-950/50 border border-blue-500/40 text-blue-400 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest font-orbitron">
-        ✓ ĐÃ KẾT THÚC
-      </span>
-    )
+    return <Badge variant="default" size="sm">Đã kết thúc</Badge>
   }
-  // upcoming
-  return (
-    <span className="bg-slate-800/60 border border-slate-600/40 text-slate-400 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest font-orbitron">
-      SẮP TỚI
-    </span>
-  )
+  return <Badge variant="warning" size="sm">Sắp tới</Badge>
 }
 
 function getIconComponent(iconName: string) {
   const name = iconName?.toLowerCase() || ''
-  if (name.includes('book')) return <Book className="w-3 h-3" />
-  if (name.includes('microscope')) return <Microscope className="w-3 h-3" />
-  if (name.includes('trophy')) return <Trophy className="w-3 h-3" />
-  if (name.includes('flag')) return <Flag className="w-3 h-3" />
-  if (name.includes('star')) return <Star className="w-3 h-3" />
-  if (name.includes('calendar')) return <Calendar className="w-3 h-3" />
-  if (name.includes('target')) return <Target className="w-3 h-3" />
-  if (name.includes('clipboard')) return <ClipboardList className="w-3 h-3" />
-  if (name.includes('pen')) return <PenTool className="w-3 h-3" />
-  return <Circle className="w-3 h-3" />
+  if (name.includes('book')) return <Book className="size-3.5" />
+  if (name.includes('microscope')) return <Microscope className="size-3.5" />
+  if (name.includes('trophy')) return <Trophy className="size-3.5" />
+  if (name.includes('flag')) return <Flag className="size-3.5" />
+  if (name.includes('star')) return <Star className="size-3.5" />
+  if (name.includes('calendar')) return <Calendar className="size-3.5" />
+  if (name.includes('target')) return <Target className="size-3.5" />
+  if (name.includes('clipboard')) return <ClipboardList className="size-3.5" />
+  if (name.includes('pen')) return <PenTool className="size-3.5" />
+  return <Circle className="size-3.5" />
 }
 
 export default function TimelineSection({ phases }: TimelineSectionProps) {
   return (
-    <section className="relative py-20 px-6 overflow-hidden">
-      {/* Section background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#070c1e]/80 to-transparent pointer-events-none" />
-      <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-[600px] bg-[#112E81]/5 blur-[80px] pointer-events-none" />
-
+    <section className="relative py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-surface-border/60">
       <div className="max-w-4xl mx-auto relative z-10">
-        <div className="flex flex-col items-center mb-14">
-          <p className="text-xs font-orbitron tracking-[0.3em] text-cyan-500/70 uppercase mb-3">MISSION TIMELINE</p>
-          <h2 className="font-orbitron text-3xl font-bold tracking-widest uppercase mb-3">
-            LỊCH TRÌNH ĐẤU TRƯỜNG
+        {/* Header */}
+        <div className="flex flex-col items-center text-center mb-10 sm:mb-12 md:mb-16">
+          <Badge variant="brand" size="md" className="mb-3">
+            LỘ TRÌNH
+          </Badge>
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-text-primary mb-3">
+            Lịch Trình Đấu Trường
           </h2>
-          <div className="h-[2px] w-24 bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+          <p className="text-text-secondary text-sm md:text-base max-w-xl">
+            Các cột mốc quan trọng từ vòng sơ loại, đào tạo đến chung kết toàn quốc.
+          </p>
         </div>
 
         {(!phases || phases.length === 0) ? (
-          <div className="tech-panel p-12 text-center border-cyan-500/10">
-            <p className="text-slate-500 text-sm font-semibold tracking-wide">
+          <div className="bg-surface-raised border border-surface-border rounded-xl p-8 sm:p-12 text-center">
+            <p className="text-text-secondary text-sm font-medium">
               Lịch trình đang được cập nhật. Vui lòng quay lại sau.
             </p>
           </div>
         ) : (
           <div className="relative">
             {/* Vertical connector line */}
-            <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-cyan-500/60 via-blue-500/30 to-transparent md:-translate-x-1/2 pointer-events-none" />
+            <div className="absolute left-4 sm:left-6 md:left-1/2 top-4 bottom-4 w-px bg-surface-border md:-translate-x-1/2 pointer-events-none" />
 
-            <div className="space-y-10">
+            <div className="space-y-6 sm:space-y-8 md:space-y-10">
               {phases.map((phase, idx) => {
                 const isLeft = idx % 2 === 0
                 const isActive = phase.status === 'active'
                 return (
                   <div
                     key={phase.id}
-                    className={`relative flex items-start gap-6 md:gap-0 ${isLeft ? 'md:flex-row' : 'md:flex-row-reverse'}`}
+                    className={`relative flex items-start gap-4 md:gap-0 ${
+                      isLeft ? 'md:flex-row' : 'md:flex-row-reverse'
+                    }`}
                   >
                     {/* Content box */}
-                    <div className={`flex-1 ${isLeft ? 'md:pr-12 md:text-right' : 'md:pl-12'} pl-16 md:pl-0`}>
-                      <div className={`tech-panel-glow p-5 hover:border-cyan-400/40 transition-all duration-300 hover:-translate-y-1 ${isActive ? 'border-cyan-400/30 shadow-[0_0_20px_rgba(0,240,255,0.08)]' : ''}`}>
-                        <div className={`flex items-center gap-2 mb-2 ${isLeft ? 'md:flex-row-reverse md:justify-start' : ''}`}>
-                          <span className="font-orbitron text-xs text-cyan-500/60 tracking-widest">
-                            PHASE {String(phase.phase_number).padStart(2, '0')}
+                    <div className={`flex-1 ${isLeft ? 'md:pr-12 md:text-right' : 'md:pl-12'} pl-9 sm:pl-12 md:pl-0`}>
+                      <div
+                        className={`bg-surface-raised p-4 sm:p-5 md:p-6 rounded-xl border transition-all duration-[250ms] ${
+                          isActive
+                            ? 'border-brand-cyan/40 shadow-elevation-2'
+                            : 'border-surface-border hover:border-surface-border-strong'
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center gap-2 mb-2 flex-wrap ${
+                            isLeft ? 'md:flex-row-reverse md:justify-start' : ''
+                          }`}
+                        >
+                          <span className="font-display text-xs font-semibold text-brand-cyan tracking-wider uppercase">
+                            Giai đoạn {String(phase.phase_number).padStart(2, '0')}
                           </span>
                           <StatusBadge status={phase.status} />
                         </div>
-                        <h3 className="font-orbitron text-base font-bold text-white tracking-wide uppercase mb-1">
+                        <h3 className="font-display text-base md:text-lg font-semibold text-text-primary mb-1">
                           {phase.title}
                         </h3>
-                        <div className="text-xs font-bold text-cyan-400 font-orbitron mb-2 tracking-wider">
+                        <div className="font-mono text-xs font-medium text-brand-cyan/90 mb-2.5">
                           {formatDateRange(phase.start_date, phase.end_date)}
                         </div>
-                        <p className="text-slate-400 text-sm leading-relaxed">{phase.description}</p>
+                        <p className="text-text-secondary text-sm leading-relaxed">
+                          {phase.description}
+                        </p>
                       </div>
                     </div>
 
                     {/* Center node */}
-                    <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 top-5 flex items-center justify-center">
-                      <div className={`timeline-node w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 ${
-                        isActive
-                          ? 'border-cyan-400 bg-cyan-950 text-cyan-400'
-                          : 'border-[#1e2d5a] bg-[#0b1124] text-slate-400'
-                      }`}>
+                    <div className="absolute left-1 sm:left-3 md:left-1/2 md:-translate-x-1/2 top-4 sm:top-5 flex items-center justify-center">
+                      <div
+                        className={`size-6 rounded-full border flex items-center justify-center z-10 transition-colors ${
+                          isActive
+                            ? 'border-brand-cyan bg-brand-cyan/20 text-brand-cyan'
+                            : 'border-surface-border bg-surface-overlay text-text-tertiary'
+                        }`}
+                      >
                         {getIconComponent(phase.icon)}
                       </div>
                     </div>
 
-                    {/* Empty spacer for alternating layout on md+ */}
+                    {/* Spacer for alternating layout */}
                     <div className="hidden md:block flex-1" />
                   </div>
                 )

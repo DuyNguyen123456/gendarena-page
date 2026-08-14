@@ -4,7 +4,22 @@ import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion, useReducedMotion } from 'framer-motion'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  ArrowLeft,
+  Search,
+  Users,
+  User as UserIcon,
+  Radio,
+  Plus,
+  Trophy,
+} from 'lucide-react'
 
 type Team = {
   id: string
@@ -25,11 +40,6 @@ type Team = {
   }[]
 }
 
-type JoinRequest = {
-  team_id: string
-  status: string
-}
-
 export default function BrowseTeamsPage() {
   const [teams, setTeams] = useState<Team[]>([])
   const [myRequests, setMyRequests] = useState<Record<string, string>>({}) // team_id -> status
@@ -37,14 +47,18 @@ export default function BrowseTeamsPage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null) // teamId currently requesting
   const [message, setMessage] = useState('')
-  const [user, setUser] = useState<any>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [user, setUser] = useState<{ id: string } | null>(null)
 
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
+  const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
     async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
         return
@@ -70,7 +84,7 @@ export default function BrowseTeamsPage() {
 
       if (requests) {
         const reqMap: Record<string, string> = {}
-        requests.forEach(r => {
+        requests.forEach((r) => {
           reqMap[r.team_id] = r.status
         })
         setMyRequests(reqMap)
@@ -91,7 +105,7 @@ export default function BrowseTeamsPage() {
         console.error('Fetch teams error:', teamsError)
       } else if (teamsData) {
         // Filter out teams that are already full on client side
-        const availableTeams = (teamsData as unknown as Team[]).filter(t => {
+        const availableTeams = (teamsData as unknown as Team[]).filter((t) => {
           const count = t.team_members?.length || 0
           return count < t.max_members
         })
@@ -104,173 +118,233 @@ export default function BrowseTeamsPage() {
   }, [router, supabase])
 
   const handleJoinRequest = async (teamId: string) => {
+    if (!user) return
     if (userHasTeam) {
-      setMessage('❌ Bạn đã là thành viên của một đội thi khác.')
+      setMessage('Bạn đã là thành viên của một đội thi khác.')
       return
     }
 
     setActionLoading(teamId)
     setMessage('')
 
-    const { error } = await supabase
-      .from('team_join_requests')
-      .insert({
-        team_id: teamId,
-        requester_id: user.id,
-        status: 'pending'
-      })
+    const { error } = await supabase.from('team_join_requests').insert({
+      team_id: teamId,
+      requester_id: user.id,
+      status: 'pending',
+    })
 
     if (error) {
       console.error('Gửi yêu cầu thất bại:', error)
-      setMessage(`❌ Lỗi: ${error.message}`)
+      setMessage(`Lỗi: ${error.message}`)
       setActionLoading(null)
       return
     }
 
     // Success
-    setMyRequests(prev => ({ ...prev, [teamId]: 'pending' }))
-    setMessage('✅ Gửi yêu cầu gia nhập liên minh thành công! Đang chờ leader duyệt.')
+    setMyRequests((prev) => ({ ...prev, [teamId]: 'pending' }))
+    setMessage('Gửi yêu cầu gia nhập đội thành công! Đang chờ trưởng đội phê duyệt.')
     setActionLoading(null)
   }
 
-  if (loading) return <Loading text="Đang tải dữ liệu..." />
+  const filteredTeams = useMemo(() => {
+    if (!searchQuery.trim()) return teams
+    const q = searchQuery.toLowerCase()
+    return teams.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        (t.description && t.description.toLowerCase().includes(q)) ||
+        (t.competitions?.title && t.competitions.title.toLowerCase().includes(q))
+    )
+  }, [teams, searchQuery])
+
+  if (loading) return <Loading text="Đang tải danh sách đội thi..." />
 
   return (
-    <div className="min-h-screen bg-[#050814] text-white py-12 px-4 relative scanline-container">
-      {/* Decorative Glows */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-[#112E81]/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
-
-      <div className="max-w-5xl mx-auto relative z-10">
-        
-        {/* Navigation back */}
-        <Link 
-          href="/dashboard" 
-          className="inline-flex items-center gap-1 text-xs font-orbitron font-bold tracking-widest text-cyan-400 hover:text-cyan-300 transition-colors uppercase mb-8"
-        >
-          ← QUAY LẠI PILOT CONSOLE
-        </Link>
-
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-[#1e2d5a] pb-6 gap-4">
-          <div>
-            <h1 className="font-orbitron text-2xl md:text-3xl font-extrabold tracking-wider text-white uppercase flex items-center gap-2">
-              <span>🌐</span> LIÊN MINH ĐANG TUYỂN MỘ
-            </h1>
-          </div>
-          {userHasTeam && (
-            <div className="flex items-center gap-2 text-xs font-orbitron bg-emerald-950/30 border border-emerald-500/30 px-4 py-2 rounded-lg text-emerald-450 shadow-[0_0_10px_rgba(16,185,129,0.05)]">
-              ✓ BẠN ĐÃ CÓ ĐỘI THI
-            </div>
-          )}
+    <div className="min-h-screen bg-surface-base text-text-primary">
+      {/* Hero Header với Subtle Background */}
+      <div className="relative overflow-hidden border-b border-surface-border bg-surface-raised/40">
+        <DotGridBackground />
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <motion.div
+            className="absolute -top-20 left-1/2 -translate-x-1/2 size-[450px] rounded-full bg-brand-cyan/8 blur-3xl"
+            animate={prefersReducedMotion ? {} : { x: ['-3%', '3%', '-3%'] }}
+            transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
+          />
         </div>
 
+        <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-12">
+          {/* Back link */}
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs text-brand-cyan hover:text-brand-cyan-bright font-medium transition mb-4 group"
+          >
+            <ArrowLeft className="size-4 transition group-hover:-translate-x-0.5" />
+            <span>Quay lại Bảng điều khiển</span>
+          </Link>
+
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <div className="flex items-center gap-2.5 mb-2">
+                <Badge variant="brand" size="sm">
+                  GenD Arena 2026
+                </Badge>
+                <Badge variant={userHasTeam ? 'success' : 'info'} size="sm">
+                  {userHasTeam ? 'Đã có đội thi' : 'Đang tìm đội'}
+                </Badge>
+              </div>
+              <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
+                Tìm kiếm & Gia nhập đội thi
+              </h1>
+              <p className="text-sm text-text-secondary mt-1">
+                Khám phá các liên minh đang mở tuyển quân và tham gia đề án
+              </p>
+            </div>
+
+            <Link href="/team/create">
+              <Button variant="primary" size="md" leftIcon={<Plus className="size-4" />}>
+                Tạo đội mới
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <motion.main
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-12 space-y-6"
+      >
+        {/* Search Bar & Stats Filter */}
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+          <div className="w-full sm:max-w-md">
+            <Input
+              type="text"
+              placeholder="Tìm theo tên đội, cuộc thi hoặc mô tả..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              leftIcon={<Search className="size-4" />}
+            />
+          </div>
+
+          <div className="text-xs text-text-tertiary font-medium self-end sm:self-center">
+            Hiển thị <span className="text-text-primary font-semibold">{filteredTeams.length}</span> đội đang mở tuyển
+          </div>
+        </div>
+
+        {/* Global Message Banner */}
         {message && (
-          <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-8 text-sm font-semibold tracking-wide flex items-center gap-2">
-            <span>📡</span> {message}
+          <div className="p-4 rounded-lg bg-brand-cyan/10 border border-brand-cyan/30 text-sm text-brand-cyan flex items-center gap-2.5">
+            <Radio className="size-4 shrink-0 text-brand-cyan" />
+            <span>{message}</span>
           </div>
         )}
 
-        {/* Teams List */}
-        {teams.length === 0 ? (
-          <div className="tech-panel p-12 text-center border-cyan-500/10">
-            <p className="text-slate-500 text-sm font-semibold tracking-wide">
-              Hiện tại không có liên minh nào đang mở tuyển thành viên.
+        {/* Teams Grid */}
+        {filteredTeams.length === 0 ? (
+          <Card className="text-center py-16">
+            <Users className="size-12 text-text-tertiary mx-auto mb-3 opacity-60" />
+            <h3 className="text-base font-semibold text-text-primary">
+              {searchQuery ? 'Không tìm thấy đội thi phù hợp' : 'Hiện chưa có đội nào đang mở tuyển'}
+            </h3>
+            <p className="text-xs text-text-secondary mt-1 max-w-sm mx-auto leading-relaxed">
+              {searchQuery
+                ? 'Hãy thử tìm kiếm với từ khóa khác hoặc tự tạo liên minh mới của riêng bạn.'
+                : 'Bạn có thể tự khởi tạo một liên minh thi đấu và mời các thí sinh khác tham gia.'}
             </p>
             <div className="mt-6">
-              <Link
-                href="/team/create"
-                className="tech-btn-accent px-6 py-2.5 rounded-lg text-xs font-bold tracking-widest font-orbitron uppercase text-black"
-              >
-                ➕ TỰ TẠO LIÊN MINH MỚI
+              <Link href="/team/create">
+                <Button variant="primary" size="md" leftIcon={<Plus className="size-4" />}>
+                  Tạo đội mới ngay
+                </Button>
               </Link>
             </div>
-          </div>
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {teams.map((team) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTeams.map((team) => {
               const currentMembers = team.team_members?.length || 0
               const requestStatus = myRequests[team.id]
 
               return (
-                <div 
-                  key={team.id} 
-                  className="tech-panel-glow border-cyan-500/15 hover:border-cyan-400/40 p-6 rounded-xl flex flex-col justify-between transition-all duration-200"
+                <Card
+                  key={team.id}
+                  interactive
+                  className="p-6 flex flex-col justify-between card-hover-glow space-y-5"
                 >
                   <div className="space-y-4">
                     {/* Header */}
-                    <div className="flex justify-between items-start gap-4">
-                      <div>
-                        <span className="text-[10px] font-orbitron font-bold text-cyan-500/60 uppercase tracking-widest block mb-1">
-                          {team.competitions?.title || 'ĐẤU TRƯỜNG ARENA'}
-                        </span>
-                        <h3 className="font-orbitron text-lg font-bold text-white tracking-wider uppercase">
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="min-w-0">
+                        <Badge variant="brand" size="sm" className="mb-2">
+                          <Trophy className="size-3 mr-1" />
+                          {team.competitions?.title || 'Đấu trường'}
+                        </Badge>
+                        <h3 className="font-display text-lg font-semibold text-text-primary tracking-tight truncate">
                           {team.name}
                         </h3>
                       </div>
-                      <span className="text-xs font-orbitron font-bold bg-[#131e3d] border border-[#1e2d5a] px-2.5 py-1 rounded-md text-cyan-400 shrink-0">
-                        👥 {currentMembers} / {team.max_members}
-                      </span>
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-overlay border border-surface-border text-xs font-mono text-brand-cyan shrink-0">
+                        <Users className="size-3.5" />
+                        <span>
+                          {currentMembers}/{team.max_members}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Description */}
-                    <p className="text-slate-400 text-xs leading-relaxed line-clamp-3 min-h-[48px]">
-                      {team.description || 'Không có mô tả chi tiết cho đội hình này.'}
+                    <p className="text-text-secondary text-xs leading-relaxed line-clamp-3 min-h-[48px]">
+                      {team.description || 'Chưa có mô tả chi tiết cho đội hình này.'}
                     </p>
 
                     {/* Leader info */}
-                    <div className="border-t border-[#1e2d5a]/60 pt-3 flex items-center justify-between text-xs">
-                      <span className="text-slate-500 font-medium">Chỉ huy (Leader):</span>
-                      <span className="text-slate-200 font-bold">{team.leader?.full_name || 'Vô danh'}</span>
+                    <div className="border-t border-surface-border pt-3 flex items-center justify-between text-xs">
+                      <span className="text-text-tertiary">Trưởng đội:</span>
+                      <span className="text-text-primary font-semibold flex items-center gap-1.5">
+                        <UserIcon className="size-3.5 text-brand-cyan" />
+                        {team.leader?.full_name || 'Vô danh'}
+                      </span>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="mt-6 pt-3 border-t border-[#1e2d5a]/40 flex justify-end">
+                  <div className="pt-3 border-t border-surface-border">
                     {userHasTeam ? (
-                      <button
-                        disabled
-                        className="px-4 py-2 border border-slate-700 bg-slate-900/40 text-slate-500 text-xs font-bold uppercase tracking-wider rounded-lg cursor-not-allowed font-orbitron"
-                      >
-                        ĐÃ CÓ ĐỘI THI
-                      </button>
+                      <Button variant="secondary" size="sm" disabled className="w-full cursor-not-allowed">
+                        Đã có đội thi
+                      </Button>
                     ) : requestStatus === 'pending' ? (
-                      <button
-                        disabled
-                        className="px-4 py-2 border border-cyan-800/40 bg-cyan-950/20 text-cyan-500/60 text-xs font-bold uppercase tracking-wider rounded-lg cursor-not-allowed font-orbitron animate-pulse"
-                      >
-                        ⌛ ĐANG CHỜ DUYỆT...
-                      </button>
+                      <Button variant="secondary" size="sm" disabled className="w-full opacity-80 cursor-not-allowed">
+                        Đang chờ duyệt...
+                      </Button>
                     ) : requestStatus === 'accepted' ? (
-                      <button
-                        disabled
-                        className="px-4 py-2 border border-emerald-550/40 bg-emerald-950/20 text-emerald-450 text-xs font-bold uppercase tracking-wider rounded-lg cursor-not-allowed font-orbitron"
-                      >
-                        ✓ ĐÃ GIA NHẬP
-                      </button>
+                      <Button variant="primary" size="sm" disabled className="w-full">
+                        Đã gia nhập
+                      </Button>
                     ) : requestStatus === 'rejected' ? (
-                      <button
-                        disabled
-                        className="px-4 py-2 border border-red-500/30 bg-red-950/20 text-red-400 text-xs font-bold uppercase tracking-wider rounded-lg cursor-not-allowed font-orbitron"
-                      >
-                        ❌ BỊ TỪ CHỐI
-                      </button>
+                      <Button variant="ghost" size="sm" disabled className="w-full text-semantic-danger">
+                        Bị từ chối
+                      </Button>
                     ) : (
-                      <button
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => handleJoinRequest(team.id)}
-                        disabled={actionLoading === team.id}
-                        className="tech-btn-primary px-4 py-2 rounded-lg text-xs font-bold tracking-widest font-orbitron uppercase transition whitespace-nowrap cursor-pointer text-white hover:scale-105 active:scale-95"
+                        isLoading={actionLoading === team.id}
+                        className="w-full"
                       >
-                        {actionLoading === team.id ? '⏳ ĐANG GỬI...' : '⚡ XIN GIA NHẬP'}
-                      </button>
+                        Xin gia nhập
+                      </Button>
                     )}
                   </div>
-                </div>
+                </Card>
               )
             })}
           </div>
         )}
-      </div>
+      </motion.main>
     </div>
   )
 }
+
