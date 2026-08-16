@@ -245,7 +245,7 @@ export default function ProfilePage() {
     )
   }
 
-  if (loading) return <Loading text="Đang tải hồ sơ cá nhân..." />
+  if (loading) return <Loading variant="profile" text="Đang tải hồ sơ cá nhân..." />
 
   const isJudge = profile?.role === 'judge'
   const displayAvatar = avatarPreview ?? profile?.avatar_url

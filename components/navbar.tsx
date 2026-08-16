@@ -76,7 +76,7 @@ export default function Navbar() {
     setUser(null)
     setProfile(null)
     await supabase.auth.signOut()
-    router.push('/login')
+    router.replace('/')
   }
 
   const isAdmin = profile?.role === 'admin'

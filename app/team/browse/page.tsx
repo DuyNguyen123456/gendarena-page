@@ -160,7 +160,7 @@ export default function BrowseTeamsPage() {
     )
   }, [teams, searchQuery])
 
-  if (loading) return <Loading text="Đang tải danh sách đội thi..." />
+  if (loading) return <Loading variant="browse" text="Đang tải danh sách đội thi..." />
 
   return (
     <div className="min-h-screen bg-surface-base text-text-primary">
@@ -199,7 +199,7 @@ export default function BrowseTeamsPage() {
                 Tìm kiếm & Gia nhập đội thi
               </h1>
               <p className="text-sm text-text-secondary mt-1">
-                Khám phá các liên minh đang mở tuyển quân và tham gia đề án
+                Khám phá các đội thi đang mở tuyển quân và tham gia đề án
               </p>
             </div>
 
@@ -261,8 +261,8 @@ export default function BrowseTeamsPage() {
             </h3>
             <p className="text-xs text-text-secondary mt-1 max-w-sm mx-auto leading-relaxed">
               {searchQuery
-                ? 'Hãy thử tìm kiếm với từ khóa khác hoặc tự tạo liên minh mới của riêng bạn.'
-                : 'Bạn có thể tự khởi tạo một liên minh thi đấu và mời các thí sinh khác tham gia.'}
+                ? 'Hãy thử tìm kiếm với từ khóa khác hoặc tự tạo đội thi mới của riêng bạn.'
+                : 'Bạn có thể tự khởi tạo một đội thi và mời các thí sinh khác tham gia.'}
             </p>
             <div className="mt-6">
               <Link href="/team/create">

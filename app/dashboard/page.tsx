@@ -29,19 +29,16 @@ import {
   Pencil,
   AlertTriangle,
   Radio,
-  ArrowRight,
   Users,
   ClipboardPen,
   LogOut,
   Mail,
   Clock,
-  MessageSquare,
   Shield,
   Phone,
   Building2,
   ExternalLink,
   CheckCircle2,
-  XCircle,
   Share2,
 } from 'lucide-react'
 
@@ -140,6 +137,7 @@ function DashboardContent() {
   const [renameLoading, setRenameLoading] = useState(false)
   const [renameError, setRenameError] = useState('')
 
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
   const [showLeaveDialog, setShowLeaveDialog] = useState(false)
   const [showDisbandDialog, setShowDisbandDialog] = useState(false)
   const [kickTarget, setKickTarget] = useState<TeamMember | null>(null)
@@ -378,6 +376,32 @@ function DashboardContent() {
     loadDashboardData()
   }, [loadDashboardData])
 
+  // Profile Update Handler with instant UI sync
+  const handleProfileUpdated = (updated: ProfileData) => {
+    setProfile(updated)
+    if (user) {
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.user_id === user.id
+            ? {
+                ...m,
+                profiles: {
+                  ...m.profiles,
+                  full_name: updated.full_name,
+                  phone: updated.phone,
+                  organization: updated.organization,
+                  facebook_url: updated.facebook_url,
+                  avatar_url: updated.avatar_url,
+                  email: updated.email ?? m.profiles?.email ?? null,
+                },
+              }
+            : m
+        )
+      )
+    }
+    setGlobalMessage({ text: 'Đã lưu thay đổi hồ sơ cá nhân.', type: 'success' })
+  }
+
   // Resolve Duplicate Memberships
   const handleKeepTeam = async (keepTeamId: string) => {
     if (!user) return
@@ -463,7 +487,7 @@ function DashboardContent() {
     e.preventDefault()
     if (!user) return
     if (!createName.trim()) {
-      setCreateError('Vui lòng nhập tên đội thi / liên minh.')
+      setCreateError('Vui lòng nhập tên đội thi.')
       return
     }
     if (!createCompId) {
@@ -496,18 +520,20 @@ function DashboardContent() {
     await loadDashboardData()
   }
 
-  // Leader Only: Rename Team
+  // Leader Only: Rename Team (Persists after refresh and updates immediately)
   const handleRenameTeam = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!myTeam || !isLeader || !renameValue.trim()) return
 
+    const newName = renameValue.trim()
     setRenameLoading(true)
     setRenameError('')
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('teams')
-      .update({ name: renameValue.trim() })
+      .update({ name: newName })
       .eq('id', myTeam.id)
+      .select()
 
     if (error) {
       setRenameError(`Lỗi đổi tên: ${error.message}`)
@@ -515,7 +541,14 @@ function DashboardContent() {
       return
     }
 
-    setMyTeam((prev) => (prev ? { ...prev, name: renameValue.trim() } : null))
+    if (!data || data.length === 0) {
+      setRenameError('Không thể cập nhật tên đội (không tìm thấy hoặc không có quyền).')
+      setRenameLoading(false)
+      return
+    }
+
+    setMyTeam((prev) => (prev ? { ...prev, name: newName } : null))
+    setRenameValue(newName)
     setShowRenameDialog(false)
     setRenameLoading(false)
     setGlobalMessage({ text: 'Đổi tên đội thi thành công!', type: 'success' })
@@ -576,7 +609,7 @@ function DashboardContent() {
       .maybeSingle()
 
     if (memberCheck) {
-      setInviteMessage('Đấu thủ này đã tham gia một liên minh khác.')
+      setInviteMessage('Đấu thủ này đã tham gia một đội thi khác.')
       setInviteLoading(false)
       return
     }
@@ -673,7 +706,10 @@ function DashboardContent() {
     if (!error) {
       setMembers((prev) => prev.filter((m) => m.user_id !== kickTarget.user_id))
       setKickTarget(null)
-      setGlobalMessage({ text: 'Đã gỡ thành viên khỏi đội.', type: 'success' })
+      if (selectedMember?.user_id === kickTarget.user_id) {
+        setSelectedMember(null)
+      }
+      setGlobalMessage({ text: 'Đã gỡ thành viên khỏi đội thi.', type: 'success' })
     }
   }
 
@@ -705,7 +741,7 @@ function DashboardContent() {
     }
   }
 
-  if (loading) return <Loading text="Đang tải dữ liệu bảng điều khiển..." />
+  if (loading) return <Loading variant="dashboard" text="Đang tải dữ liệu bảng điều khiển..." />
 
   return (
     <div className="min-h-screen bg-surface-base text-text-primary">
@@ -788,7 +824,7 @@ function DashboardContent() {
               <p className="text-sm text-text-secondary">
                 {myTeam
                   ? 'Không gian quản lý thành viên, xét duyệt đơn gia nhập và điều hướng nộp đề án dự thi'
-                  : 'Cập nhật hồ sơ cá nhân và khởi tạo hoặc tham gia liên minh thi đấu để sẵn sàng bước vào đấu trường'}
+                  : 'Cập nhật hồ sơ cá nhân và khởi tạo hoặc tham gia đội thi để sẵn sàng bước vào đấu trường'}
               </p>
             </div>
 
@@ -848,7 +884,7 @@ function DashboardContent() {
             </div>
             <button
               onClick={() => setGlobalMessage(null)}
-              className="text-xs font-bold opacity-70 hover:opacity-100"
+              className="text-xs font-bold opacity-70 hover:opacity-100 cursor-pointer"
             >
               ✕
             </button>
@@ -870,11 +906,11 @@ function DashboardContent() {
               <AlertTriangle className="size-6 text-semantic-warning shrink-0 mt-0.5" />
               <div className="space-y-1 flex-1">
                 <h3 className="font-display text-base font-semibold text-text-primary">
-                  Phát hiện tài khoản thuộc nhiều liên minh
+                  Phát hiện tài khoản thuộc nhiều đội thi
                 </h3>
                 <p className="text-xs text-text-secondary leading-relaxed">
-                  Theo quy chế GenD Arena 2026, mỗi thí sinh chỉ được tham gia duy nhất 1 liên minh thi đấu.
-                  Vui lòng chọn liên minh bạn muốn giữ lại:
+                  Theo quy chế GenD Arena 2026, mỗi thí sinh chỉ được tham gia duy nhất 1 đội thi.
+                  Vui lòng chọn đội thi bạn muốn giữ lại:
                 </p>
               </div>
             </div>
@@ -914,7 +950,7 @@ function DashboardContent() {
                 <div className="flex items-center gap-2">
                   <Inbox className="size-5 text-brand-cyan" />
                   <h3 className="font-display font-semibold text-text-primary text-base">
-                    Lời mời gia nhập liên minh ({receivedInvites.length})
+                    Lời mời gia nhập đội thi ({receivedInvites.length})
                   </h3>
                 </div>
 
@@ -926,7 +962,7 @@ function DashboardContent() {
                     >
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-text-primary">
-                          Liên minh: <span className="text-brand-cyan">{invite.teams?.name || 'Chưa đặt tên'}</span>
+                          Đội thi: <span className="text-brand-cyan">{invite.teams?.name || 'Chưa đặt tên'}</span>
                         </p>
                         <p className="text-xs text-text-tertiary">
                           Người mời: {invite.inviter?.full_name || 'Đội trưởng'} · Nhận lúc: {new Date(invite.created_at).toLocaleString('vi-VN')}
@@ -965,10 +1001,7 @@ function DashboardContent() {
                 {profile ? (
                   <ProfileEditor
                     profile={profile}
-                    onProfileUpdated={(updated) => {
-                      setProfile(updated)
-                      setGlobalMessage({ text: 'Đã cập nhật hồ sơ cá nhân.', type: 'success' })
-                    }}
+                    onProfileUpdated={handleProfileUpdated}
                   />
                 ) : (
                   <Card className="p-8 text-center text-text-tertiary">
@@ -985,7 +1018,7 @@ function DashboardContent() {
                       Bước tiếp theo
                     </Badge>
                     <h3 className="font-display text-lg font-semibold text-text-primary">
-                      Khởi tạo liên minh thi đấu
+                      Khởi tạo đội thi mới
                     </h3>
                     <p className="text-xs text-text-secondary mt-0.5">
                       Thành lập đội mới để nhận mã UID chiêu mộ đồng đội hoặc tìm đội có sẵn
@@ -1021,7 +1054,7 @@ function DashboardContent() {
                     {/* Team name */}
                     <div className="space-y-1.5">
                       <label className="block text-xs font-semibold text-text-secondary">
-                        Tên đội thi / Liên minh <span className="text-semantic-danger">*</span>
+                        Tên đội thi <span className="text-semantic-danger">*</span>
                       </label>
                       <Input
                         type="text"
@@ -1042,7 +1075,7 @@ function DashboardContent() {
                         rows={2}
                         value={createDescription}
                         onChange={(e) => setCreateDescription(e.target.value)}
-                        placeholder="Mục tiêu hoặc chuyên môn thế mạnh của liên minh..."
+                        placeholder="Mục tiêu hoặc chuyên môn thế mạnh của đội..."
                         className="w-full px-4 py-2.5 bg-surface-overlay border border-surface-border rounded-lg text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-brand-cyan text-sm transition resize-none"
                       />
                     </div>
@@ -1102,7 +1135,7 @@ function DashboardContent() {
                   {/* Divider & Browse Link */}
                   <div className="pt-4 border-t border-surface-border text-center space-y-3">
                     <p className="text-xs text-text-tertiary">
-                      Hoặc bạn muốn tìm liên minh đang mở tuyển thành viên?
+                      Hoặc bạn muốn tìm đội thi đang mở tuyển thành viên?
                     </p>
                     <Link href="/team/browse" className="inline-block">
                       <Button variant="secondary" size="sm" leftIcon={<Search className="size-3.5" />}>
@@ -1126,7 +1159,7 @@ function DashboardContent() {
                   <Users className="size-5" />
                 </div>
                 <div>
-                  <p className="text-xs text-text-tertiary">Quân số liên minh</p>
+                  <p className="text-xs text-text-tertiary">Quân số đội thi</p>
                   <p className="font-display text-lg font-semibold text-text-primary">
                     {members.length} / {myTeam.max_members}
                   </p>
@@ -1202,6 +1235,7 @@ function DashboardContent() {
                       <Users className="size-4 text-brand-cyan" />
                       <span>Danh sách thành viên ({members.length})</span>
                     </h3>
+                    <span className="text-[11px] text-text-tertiary">Nhấp vào thẻ để xem chi tiết</span>
                   </div>
 
                   <div className="space-y-3">
@@ -1211,11 +1245,21 @@ function DashboardContent() {
                       return (
                         <div
                           key={member.user_id}
-                          className="p-4 bg-surface-raised border border-surface-border rounded-xl flex items-center justify-between gap-3"
+                          onClick={() => setSelectedMember(member)}
+                          className="p-4 bg-surface-raised border border-surface-border rounded-xl flex items-center justify-between gap-3 cursor-pointer hover:border-brand-cyan/40 hover:bg-surface-overlay/60 transition group"
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              setSelectedMember(member)
+                            }
+                          }}
+                          aria-label={`Xem chi tiết thành viên ${member.profiles?.full_name || 'chưa đặt tên'}`}
                         >
                           <div className="flex items-center gap-3.5 min-w-0">
                             {/* Avatar */}
-                            <div className="size-10 rounded-full border border-surface-border overflow-hidden bg-surface-overlay flex items-center justify-center shrink-0">
+                            <div className="size-10 rounded-full border border-surface-border group-hover:border-brand-cyan/40 transition overflow-hidden bg-surface-overlay flex items-center justify-center shrink-0">
                               {member.profiles?.avatar_url ? (
                                 <img
                                   src={member.profiles.avatar_url}
@@ -1231,7 +1275,7 @@ function DashboardContent() {
 
                             <div className="min-w-0 space-y-0.5">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-semibold text-sm text-text-primary truncate">
+                                <p className="font-semibold text-sm text-text-primary group-hover:text-brand-cyan transition truncate">
                                   {member.profiles?.full_name || 'Thành viên chưa đặt tên'}
                                 </p>
                                 {isMemberLeader && (
@@ -1262,7 +1306,10 @@ function DashboardContent() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setKickTarget(member)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setKickTarget(member)
+                              }}
                               className="text-semantic-danger hover:bg-semantic-danger/10 text-xs shrink-0"
                             >
                               Gỡ
@@ -1339,7 +1386,7 @@ function DashboardContent() {
                                 <button
                                   type="button"
                                   onClick={() => handleCancelInvite(inv.id)}
-                                  className="text-text-tertiary hover:text-semantic-danger text-[11px]"
+                                  className="text-text-tertiary hover:text-semantic-danger text-[11px] cursor-pointer"
                                 >
                                   Thu hồi
                                 </button>
@@ -1416,7 +1463,7 @@ function DashboardContent() {
                       Quyền hạn thành viên
                     </h3>
                     <p className="text-xs text-text-secondary leading-relaxed">
-                      Bạn đang là thành viên chính thức của liên minh. Trưởng nhóm sẽ quản lý việc chiêu mộ và điều phối bài nộp đề án dự thi.
+                      Bạn đang là thành viên chính thức của đội thi. Trưởng nhóm sẽ quản lý việc chiêu mộ và điều phối bài nộp đề án dự thi.
                     </p>
                     <div className="pt-2">
                       <Link href="/submissions">
@@ -1449,9 +1496,8 @@ function DashboardContent() {
                 isCompact
                 onCancel={() => setShowProfileModal(false)}
                 onProfileUpdated={(updated) => {
-                  setProfile(updated)
+                  handleProfileUpdated(updated)
                   setShowProfileModal(false)
-                  setGlobalMessage({ text: 'Đã lưu thay đổi hồ sơ cá nhân.', type: 'success' })
                 }}
               />
             </div>
@@ -1463,7 +1509,7 @@ function DashboardContent() {
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Đổi tên liên minh thi đấu</DialogTitle>
+            <DialogTitle>Đổi tên đội thi</DialogTitle>
             <DialogDescription>
               Tên mới sẽ cập nhật trên toàn hệ thống giải đấu và danh sách bảng xếp hạng
             </DialogDescription>
@@ -1514,13 +1560,155 @@ function DashboardContent() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG 3: KICK MEMBER CONFIRMATION */}
+      {/* DIALOG 3: MEMBER DETAIL MODAL (RESTORED) */}
+      <Dialog open={!!selectedMember} onOpenChange={(open) => !open && setSelectedMember(null)}>
+        <DialogContent className="max-w-md p-6 sm:p-7">
+          <DialogHeader>
+            <DialogTitle>Chi tiết thành viên</DialogTitle>
+            <DialogDescription>
+              Thông tin định danh và phương thức liên hệ của thành viên trong đội thi
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedMember && (
+            <div className="space-y-5 pt-2">
+              {/* Avatar + Full Name + Role */}
+              <div className="flex items-center gap-4">
+                <div className="size-16 rounded-full border-2 border-brand-cyan/40 bg-surface-overlay overflow-hidden flex items-center justify-center shrink-0">
+                  {selectedMember.profiles?.avatar_url ? (
+                    <img
+                      src={selectedMember.profiles.avatar_url}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="font-display text-xl font-bold text-brand-cyan select-none">
+                      {(selectedMember.profiles?.full_name || selectedMember.profiles?.email || 'U')
+                        .charAt(0)
+                        .toUpperCase()}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1 min-w-0 flex-1">
+                  <p className="font-display font-semibold text-base sm:text-lg text-text-primary truncate">
+                    {selectedMember.profiles?.full_name || 'Thành viên chưa đặt tên'}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={selectedMember.role === 'leader' ? 'brand' : 'default'}
+                      size="sm"
+                    >
+                      {selectedMember.role === 'leader' ? (
+                        <>
+                          <Shield className="size-3 mr-1" />
+                          Trưởng nhóm
+                        </>
+                      ) : (
+                        'Thành viên'
+                      )}
+                    </Badge>
+                    {selectedMember.user_id === user?.id && (
+                      <span className="text-[10px] bg-surface-base border border-surface-border text-text-tertiary px-1.5 py-0.5 rounded font-mono">
+                        Tôi
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed Info Fields */}
+              <div className="space-y-3 pt-3 border-t border-surface-border text-sm">
+                {/* Organization */}
+                <div className="flex items-start gap-3">
+                  <Building2 className="size-4 text-brand-cyan shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] text-text-tertiary">Đơn vị / Trường học</p>
+                    <p className="text-text-primary text-xs font-medium">
+                      {selectedMember.profiles?.organization || (
+                        <span className="text-text-disabled italic">Chưa cập nhật</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div className="flex items-start gap-3">
+                  <Mail className="size-4 text-brand-cyan shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] text-text-tertiary">Email liên hệ</p>
+                    <p className="text-text-primary text-xs font-medium truncate">
+                      {selectedMember.profiles?.email || (
+                        <span className="text-text-disabled italic">Ẩn</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="flex items-start gap-3">
+                  <Phone className="size-4 text-brand-cyan shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] text-text-tertiary">Số điện thoại</p>
+                    <p className="text-text-primary text-xs font-medium">
+                      {selectedMember.profiles?.phone || (
+                        <span className="text-text-disabled italic">Chưa cập nhật</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Facebook URL */}
+                <div className="flex items-start gap-3">
+                  <ExternalLink className="size-4 text-brand-cyan shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] text-text-tertiary">Trang Facebook cá nhân</p>
+                    {selectedMember.profiles?.facebook_url ? (
+                      <a
+                        href={selectedMember.profiles.facebook_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-brand-cyan hover:text-brand-cyan-bright transition underline truncate block"
+                      >
+                        {selectedMember.profiles.facebook_url}
+                      </a>
+                    ) : (
+                      <p className="text-xs text-text-disabled italic">Chưa cập nhật</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Joined date */}
+                <div className="flex items-center gap-3 pt-2 border-t border-surface-border/60 text-xs text-text-tertiary">
+                  <Clock className="size-3.5 text-text-disabled shrink-0" />
+                  <span>
+                    Tham gia đội: {new Date(selectedMember.joined_at).toLocaleDateString('vi-VN')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Close button */}
+              <div className="flex justify-end pt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setSelectedMember(null)}
+                >
+                  Đóng
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG 4: KICK MEMBER CONFIRMATION */}
       <Dialog open={!!kickTarget} onOpenChange={(open) => !open && setKickTarget(null)}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle>Xác nhận gỡ thành viên</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn gỡ {kickTarget?.profiles?.full_name || 'thành viên này'} khỏi liên minh?
+              Bạn có chắc chắn muốn gỡ {kickTarget?.profiles?.full_name || 'thành viên này'} khỏi đội thi?
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 mt-6">
@@ -1539,11 +1727,11 @@ function DashboardContent() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG 4: LEAVE TEAM CONFIRMATION (MEMBER) */}
+      {/* DIALOG 5: LEAVE TEAM CONFIRMATION (MEMBER) */}
       <Dialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Xác nhận rời liên minh</DialogTitle>
+            <DialogTitle>Xác nhận rời đội thi</DialogTitle>
             <DialogDescription>
               Bạn có chắc chắn muốn rời khỏi đội thi "{myTeam?.name}"?
             </DialogDescription>
@@ -1564,11 +1752,11 @@ function DashboardContent() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG 5: DISBAND TEAM CONFIRMATION (LEADER) */}
+      {/* DIALOG 6: DISBAND TEAM CONFIRMATION (LEADER) */}
       <Dialog open={showDisbandDialog} onOpenChange={setShowDisbandDialog}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle>Xác nhận giải tán liên minh</DialogTitle>
+            <DialogTitle>Xác nhận giải tán đội thi</DialogTitle>
             <DialogDescription>
               Hành động này sẽ xóa đội thi "{myTeam?.name}" và toàn bộ thành viên sẽ trở thành thí sinh tự do.
             </DialogDescription>
@@ -1594,7 +1782,7 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<Loading text="Đang tải dữ liệu bảng điều khiển..." />}>
+    <Suspense fallback={<Loading variant="dashboard" text="Đang tải dữ liệu bảng điều khiển..." />}>
       <DashboardContent />
     </Suspense>
   )

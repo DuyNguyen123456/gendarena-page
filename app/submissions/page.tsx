@@ -1170,7 +1170,7 @@ export default function SubmissionsPage() {
     }
   }, [router, supabase])
 
-  if (loading) return <Loading text="Đang tải danh sách bài nộp..." />
+  if (loading) return <Loading variant="submissions" text="Đang tải danh sách bài nộp..." />
 
   return (
     <div className="min-h-screen bg-surface-base text-text-primary">
@@ -1224,7 +1224,7 @@ export default function SubmissionsPage() {
               Chưa tham gia đội thi nào
             </h3>
             <p className="text-text-secondary text-sm mb-6 max-w-md mx-auto leading-relaxed">
-              Bạn cần thành lập hoặc gia nhập một liên minh thi đấu trước khi có thể nộp đề án dự thi.
+              Bạn cần thành lập hoặc gia nhập một đội thi trước khi có thể nộp đề án dự thi.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Link href="/team/browse">
@@ -1255,7 +1255,7 @@ export default function SubmissionsPage() {
                     <h2 className="font-display font-semibold text-text-primary text-lg">
                       Đội: {team.name}
                     </h2>
-                    <span className="text-xs text-text-tertiary">Liên minh thi đấu</span>
+                    <span className="text-xs text-text-tertiary">Đội thi</span>
                   </div>
                 </div>
 

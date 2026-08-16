@@ -80,12 +80,16 @@ export async function updateProfile(
   }
 
   const supabase = createClient()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .update(fields as never)
     .eq('id', userId)
+    .select()
 
   if (error) return { ok: false, error: error.message }
+  if (!data || data.length === 0) {
+    return { ok: false, error: 'Không thể cập nhật hồ sơ (không tìm thấy hoặc không có quyền cập nhật).' }
+  }
   return { ok: true }
 }
 
