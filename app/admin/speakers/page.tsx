@@ -28,7 +28,7 @@ type Speaker = {
   avatar_url: string | null
   linkedin_url: string | null
   display_order: number
-  category: 'speaker' | 'judge' | 'mentor'
+  category: 'speaker' | 'judge' | 'mentor' | 'ambassador'
   is_featured: boolean
 }
 
@@ -44,11 +44,12 @@ const EMPTY_FORM: Omit<Speaker, 'id'> = {
   is_featured: true,
 }
 
-const CATEGORIES: Speaker['category'][] = ['speaker', 'judge', 'mentor']
+const CATEGORIES: Speaker['category'][] = ['speaker', 'judge', 'mentor', 'ambassador']
 const CATEGORY_CONFIG: Record<Speaker['category'], { label: string; variant: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'brand' }> = {
   speaker: { label: 'Diễn giả', variant: 'info' },
   judge: { label: 'Giám khảo', variant: 'warning' },
   mentor: { label: 'Cố vấn', variant: 'brand' },
+  ambassador: { label: 'Đại sứ truyền thông', variant: 'success' },
 }
 
 export default function AdminSpeakersPage() {

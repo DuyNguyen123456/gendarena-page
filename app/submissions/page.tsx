@@ -754,6 +754,49 @@ function HistoryItem({ item }: { item: SubmissionHistory }) {
   )
 }
 
+// ─── Expired Unsubmitted Phase Card ───────────────────────────────────────────
+
+function ExpiredPhaseCard({ phase }: { phase: CompetitionPhase }) {
+  return (
+    <Card className="overflow-hidden border-surface-border bg-surface-overlay/40 opacity-90">
+      <div className="p-5 sm:p-6 flex flex-col sm:flex-row items-start justify-between gap-4">
+        <div className="flex items-start gap-3.5 flex-1 min-w-0">
+          <div className="size-9 rounded-lg bg-surface-raised border border-surface-border flex items-center justify-center font-display font-semibold text-text-tertiary shrink-0 text-sm">
+            {phase.phase_number}
+          </div>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-display text-base font-semibold text-text-secondary tracking-tight">
+                {phase.title}
+              </h3>
+              <Badge variant="default" size="sm" className="text-text-tertiary bg-surface-raised border border-surface-border">
+                Đã hết hạn
+              </Badge>
+            </div>
+            {phase.description && (
+              <p className="text-xs text-text-tertiary leading-relaxed line-clamp-2">
+                {phase.description}
+              </p>
+            )}
+            {phase.submission_closes_at && (
+              <p className="text-xs text-semantic-danger flex items-center gap-1 pt-1">
+                <Ban className="size-3.5" />
+                <span>Hạn nộp đã kết thúc vào lúc: {formatDate(phase.submission_closes_at)}</span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="shrink-0 self-end sm:self-center">
+          <span className="text-xs font-medium text-text-disabled bg-surface-raised px-3 py-1.5 rounded-lg border border-surface-border">
+            Chưa nộp bài
+          </span>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 // ─── Phase Submission Section ─────────────────────────────────────────────────
 
 function PhaseSubmissionSection({
@@ -761,18 +804,23 @@ function PhaseSubmissionSection({
   teamId,
   userId,
   refreshKey,
+  initialSubmission,
+  onSubmissionChange,
 }: {
   phase: CompetitionPhase
   teamId: string
   userId: string
   refreshKey: number
+  initialSubmission?: Submission | null
+  onSubmissionChange?: () => void
 }) {
-  const [current, setCurrent] = useState<Submission | null>(null)
+  const [current, setCurrent] = useState<Submission | null>(initialSubmission ?? null)
   const [history, setHistory] = useState<SubmissionHistory[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
   const gate = getSubmissionGate(phase)
+  const isOpen = gate === 'open'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -792,6 +840,7 @@ function PhaseSubmissionSection({
   function handleSuccess() {
     setShowForm(false)
     load()
+    onSubmissionChange?.()
   }
 
   const statusConfig: Record<
@@ -805,13 +854,29 @@ function PhaseSubmissionSection({
   const sc = statusConfig[phase.status] ?? statusConfig.upcoming
 
   return (
-    <Card className="overflow-hidden border-surface-border">
+    <Card
+      className={`overflow-hidden transition-all duration-200 ${
+        isOpen
+          ? 'border-brand-cyan/40 bg-surface-overlay/80 shadow-elevation-1'
+          : 'border-surface-border bg-surface-overlay/30'
+      }`}
+    >
       {/* Phase Header Card */}
-      <div className="p-5 sm:p-6 border-b border-surface-border bg-surface-overlay/30">
+      <div
+        className={`p-5 sm:p-6 border-b border-surface-border ${
+          isOpen ? 'bg-brand-cyan/5' : 'bg-surface-overlay/30'
+        }`}
+      >
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div className="flex items-start gap-3.5 flex-1 min-w-0">
             {/* Phase number badge */}
-            <div className="size-9 rounded-lg bg-surface-overlay border border-surface-border flex items-center justify-center font-display font-semibold text-brand-cyan shrink-0 text-sm">
+            <div
+              className={`size-9 rounded-lg border flex items-center justify-center font-display font-semibold shrink-0 text-sm ${
+                isOpen
+                  ? 'bg-brand-cyan/15 border-brand-cyan/40 text-brand-cyan shadow-sm'
+                  : 'bg-surface-overlay border-surface-border text-text-secondary'
+              }`}
+            >
               {phase.phase_number}
             </div>
             <div className="min-w-0 flex-1 space-y-1">
@@ -819,10 +884,10 @@ function PhaseSubmissionSection({
                 <h3 className="font-display text-base font-semibold text-text-primary tracking-tight">
                   {phase.title}
                 </h3>
-                <Badge variant={sc.variant} size="sm">
-                  {sc.label}
+                <Badge variant={isOpen ? 'brand' : sc.variant} size="sm">
+                  {isOpen ? 'Đang mở nộp bài' : sc.label}
                 </Badge>
-                {gate === 'open' && (
+                {isOpen && (
                   <span className="text-xs text-text-tertiary">
                     · {phase.submission_type === 'file' ? 'PDF' : phase.submission_type === 'link' ? 'LINK' : 'PDF / LINK'}
                   </span>
@@ -861,7 +926,7 @@ function PhaseSubmissionSection({
           </div>
 
           {/* Quick submit button if open and no form showing */}
-          {gate === 'open' && !showForm && (
+          {isOpen && !showForm && (
             <Button
               onClick={() => setShowForm(true)}
               variant="primary"
@@ -877,7 +942,7 @@ function PhaseSubmissionSection({
 
       {/* Phase Body */}
       <div className="p-5 sm:p-6 space-y-4">
-        {gate !== 'open' && <GateBanner phase={phase} />}
+        {!isOpen && <GateBanner phase={phase} />}
 
         {loading ? (
           <div className="h-16 flex items-center justify-center">
@@ -886,7 +951,7 @@ function PhaseSubmissionSection({
         ) : (
           <>
             {/* Submit form inline */}
-            {showForm && gate === 'open' && (
+            {showForm && isOpen && (
               <div className="p-5 rounded-xl border border-brand-cyan/30 bg-surface-overlay space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-surface-border">
                   <Upload className="size-4 text-brand-cyan" />
@@ -911,7 +976,7 @@ function PhaseSubmissionSection({
                 phase={phase}
                 onResubmit={() => setShowForm(true)}
               />
-            ) : gate === 'open' && !showForm ? (
+            ) : isOpen && !showForm ? (
               <div className="p-8 border border-dashed border-surface-border rounded-xl text-center">
                 <p className="text-text-tertiary text-sm font-medium">Chưa có bài nộp cho vòng thi này</p>
                 <Button
@@ -924,10 +989,10 @@ function PhaseSubmissionSection({
                   Nộp bài ngay
                 </Button>
               </div>
-            ) : gate !== 'open' && !current ? (
+            ) : !isOpen && !current ? (
               <div className="p-4 border border-dashed border-surface-border/60 rounded-xl text-center">
                 <p className="text-text-tertiary text-xs">
-                  {phase.status === 'upcoming' ? 'Vòng thi chưa mở cổng nộp.' : 'Vòng thi đã kết thúc.'}
+                  Vòng thi đã kết thúc thời gian nộp bài.
                 </p>
               </div>
             ) : null}
@@ -953,6 +1018,113 @@ function PhaseSubmissionSection({
         )}
       </div>
     </Card>
+  )
+}
+
+// ─── Team Phases Section (R3 Filter Enforced) ──────────────────────────────────
+
+function TeamPhasesSection({
+  team,
+  phases,
+  userId,
+  refreshKey,
+}: {
+  team: TeamRecord
+  phases: CompetitionPhase[]
+  userId: string
+  refreshKey: number
+}) {
+  const [submissionsMap, setSubmissionsMap] = useState<Record<string, Submission | null>>({})
+  const [loading, setLoading] = useState(true)
+
+  const loadSubmissions = useCallback(async () => {
+    setLoading(true)
+    const results = await Promise.all(
+      phases.map(async (p) => {
+        const sub = await getCurrentSubmission(team.id, p.id)
+        return { phaseId: p.id, sub }
+      })
+    )
+    const map: Record<string, Submission | null> = {}
+    results.forEach(({ phaseId, sub }) => {
+      map[phaseId] = sub
+    })
+    setSubmissionsMap(map)
+    setLoading(false)
+  }, [team.id, phases])
+
+  useEffect(() => {
+    loadSubmissions()
+  }, [loadSubmissions, refreshKey])
+
+  if (loading) {
+    return (
+      <div className="py-8 flex items-center justify-center">
+        <span className="size-6 border-2 border-brand-cyan/30 border-t-brand-cyan rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // R3 Visibility Rules:
+  // 1. Phase đang mở nộp bài -> Hiện đầy đủ
+  // 2. Phase đã đóng nhưng team đã từng nộp bài -> Vẫn hiện (read-only)
+  // 3. Phase đã đóng/hết hạn nhưng chưa nộp -> Vẫn hiện với trạng thái "Đã hết hạn"
+  // 4. Mọi phase chưa mở -> ẨN HOÀN TOÀN
+  const visiblePhases = phases.filter((phase) => {
+    const sub = submissionsMap[phase.id]
+    const hasSubmitted = !!sub
+    const gate = getSubmissionGate(phase)
+
+    // Rule 1: Phase đang mở
+    if (gate === 'open') return true
+
+    // Rule 2: Phase đã đóng nhưng team đã từng nộp
+    if (hasSubmitted) return true
+
+    // Rule 3: Phase đã đóng / hết hạn nhưng chưa nộp
+    const isClosedOrExpired = gate === 'expired' || (gate === 'closed' && phase.status === 'completed')
+    if (isClosedOrExpired && !hasSubmitted) return true
+
+    // Rule 4: Phase chưa mở (gate === 'not_yet' hoặc gate === 'closed' && phase.status === 'upcoming') => Ẩn hoàn toàn!
+    return false
+  })
+
+  if (visiblePhases.length === 0) {
+    return (
+      <Card className="text-center py-10">
+        <ClipboardPen className="size-10 text-text-tertiary mx-auto mb-2 opacity-60" />
+        <p className="text-text-secondary text-sm">
+          Hiện tại chưa có vòng thi nào đang mở nộp bài hoặc đã diễn ra.
+        </p>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {visiblePhases.map((phase) => {
+        const sub = submissionsMap[phase.id]
+        const hasSubmitted = !!sub
+        const gate = getSubmissionGate(phase)
+        const isClosedOrExpired = gate === 'expired' || (gate === 'closed' && phase.status === 'completed')
+
+        if (!hasSubmitted && isClosedOrExpired) {
+          return <ExpiredPhaseCard key={`${team.id}-${phase.id}`} phase={phase} />
+        }
+
+        return (
+          <PhaseSubmissionSection
+            key={`${team.id}-${phase.id}`}
+            phase={phase}
+            teamId={team.id}
+            userId={userId}
+            refreshKey={refreshKey}
+            initialSubmission={sub}
+            onSubmissionChange={loadSubmissions}
+          />
+        )
+      })}
+    </div>
   )
 }
 
@@ -1092,17 +1264,12 @@ export default function SubmissionsPage() {
                     </p>
                   </Card>
                 ) : (
-                  <div className="space-y-6">
-                    {phases.map((phase) => (
-                      <PhaseSubmissionSection
-                        key={`${team.id}-${phase.id}`}
-                        phase={phase}
-                        teamId={team.id}
-                        userId={user?.id ?? ''}
-                        refreshKey={refreshKey}
-                      />
-                    ))}
-                  </div>
+                  <TeamPhasesSection
+                    team={team}
+                    phases={phases}
+                    userId={user?.id ?? ''}
+                    refreshKey={refreshKey}
+                  />
                 )}
               </div>
             ))}

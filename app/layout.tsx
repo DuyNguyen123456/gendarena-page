@@ -1,4 +1,3 @@
-import FaqWidgetWrapper from "@/components/faq/FaqWidgetWrapper"
 import AuthStateListener from "@/components/AuthStateListener"
 import type { Metadata } from "next"
 import Navbar from "@/components/navbar"
@@ -77,7 +76,6 @@ export default function RootLayout({
         <AuthStateListener />
         <Navbar />
         {children}
-        <FaqWidgetWrapper />
         <Analytics />
         <GoogleAnalytics />
       </body>

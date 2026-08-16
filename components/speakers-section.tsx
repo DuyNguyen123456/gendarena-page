@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Users, Filter } from 'lucide-react'
 
 type Speaker = {
   id: string
@@ -14,9 +14,16 @@ type Speaker = {
   bio: string | null
   avatar_url: string | null
   linkedin_url: string | null
-  category: 'speaker' | 'judge' | 'mentor'
+  category: 'speaker' | 'judge' | 'mentor' | 'ambassador'
   display_order: number
 }
+
+const TABS: { key: Speaker['category']; label: string }[] = [
+  { key: 'judge', label: 'Giám khảo' },
+  { key: 'speaker', label: 'Diễn giả' },
+  { key: 'mentor', label: 'Cố vấn' },
+  { key: 'ambassador', label: 'Đại sứ' },
+]
 
 function getCategoryBadge(category: Speaker['category']) {
   if (category === 'judge') {
@@ -24,6 +31,9 @@ function getCategoryBadge(category: Speaker['category']) {
   }
   if (category === 'mentor') {
     return <Badge variant="warning" size="sm">Cố vấn</Badge>
+  }
+  if (category === 'ambassador') {
+    return <Badge variant="success" size="sm">Đại sứ truyền thông</Badge>
   }
   return <Badge variant="info" size="sm">Diễn giả</Badge>
 }
@@ -98,6 +108,7 @@ function SpeakerCard({ speaker }: { speaker: Speaker }) {
 export default function SpeakersSection() {
   const [speakers, setSpeakers] = useState<Speaker[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeCategory, setActiveCategory] = useState<Speaker['category']>('judge')
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -122,67 +133,122 @@ export default function SpeakersSection() {
 
   if (!loading && speakers.length === 0) return null
 
+  const filteredSpeakers = speakers.filter((s) => s.category === activeCategory)
+
   return (
     <section className="relative py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-surface-border/60">
-      <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-8 sm:mb-10 gap-4">
-          <div className="text-center md:text-left">
-            <Badge variant="brand" size="md" className="mb-3">
-              HỘI ĐỒNG CHUYÊN GIA
-            </Badge>
-            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
-              Diễn Giả & Giám Khảo
-            </h2>
-            <p className="text-text-secondary text-sm md:text-base mt-2">
-              Đội ngũ cố vấn và chuyên gia hàng đầu từ các doanh nghiệp công nghệ & quỹ đầu tư.
-            </p>
+      <div className="max-w-7xl mx-auto relative z-10 space-y-8 sm:space-y-10">
+        {/* Centered Header */}
+        <div className="text-center max-w-2xl mx-auto space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-cyan/10 border border-brand-cyan/30 text-xs font-semibold text-brand-cyan uppercase tracking-wider">
+            <Users className="size-3.5" />
+            Hội đồng chuyên gia
           </div>
-
-          {/* Scroll buttons */}
-          <div className="flex gap-2 shrink-0">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={scrollLeft}
-              aria-label="Scroll left"
-              className="p-2"
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={scrollRight}
-              aria-label="Scroll right"
-              className="p-2"
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
+            Diễn Giả &amp; Giám Khảo
+          </h2>
+          <p className="text-text-secondary text-sm md:text-base leading-relaxed">
+            Đội ngũ cố vấn và chuyên gia hàng đầu từ các doanh nghiệp công nghệ &amp; quỹ đầu tư.
+          </p>
         </div>
 
-        {/* Carousel */}
-        {loading ? (
-          <div className="flex gap-4 sm:gap-5 overflow-hidden">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="shrink-0 w-[240px] sm:w-64 md:w-72 h-80 bg-surface-raised border border-surface-border rounded-xl animate-pulse"
-              />
-            ))}
-          </div>
-        ) : (
+        {/* Refined Filter Controls & Scroll Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          {/* Subtle Segmented Pill Filter */}
           <div
-            ref={scrollRef}
-            className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 scroll-smooth snap-x snap-mandatory scrollbar-hide px-1"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            role="tablist"
+            aria-label="Phân loại hội đồng chuyên gia"
+            className="inline-flex items-center gap-1 p-1 rounded-xl bg-surface-raised border border-surface-border"
           >
-            {speakers.map((speaker) => (
-              <SpeakerCard key={speaker.id} speaker={speaker} />
-            ))}
+            <span className="pl-2 pr-1 text-text-disabled text-xs hidden xs:inline-flex items-center gap-1" aria-hidden="true">
+              <Filter className="size-3 text-text-tertiary" />
+            </span>
+            {TABS.map((tab) => {
+              const count = speakers.filter((s) => s.category === tab.key).length
+              const isActive = activeCategory === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  id={`speaker-tab-${tab.key}`}
+                  aria-controls="speaker-tab-panel"
+                  aria-selected={isActive}
+                  onClick={() => setActiveCategory(tab.key)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
+                    isActive
+                      ? 'bg-brand-cyan/15 border border-brand-cyan/40 text-brand-cyan font-semibold shadow-sm'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-surface-overlay/60 border border-transparent'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  {count > 0 && (
+                    <span
+                      className={`text-[10px] font-mono font-bold px-1 rounded ${
+                        isActive ? 'bg-brand-cyan/20 text-brand-cyan' : 'text-text-tertiary'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
-        )}
+
+          {/* Carousel Buttons */}
+          {filteredSpeakers.length > 0 && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={scrollLeft}
+                aria-label="Cuộn sang trái"
+                className="size-8 p-0 flex items-center justify-center rounded-lg"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={scrollRight}
+                aria-label="Cuộn sang phải"
+                className="size-8 p-0 flex items-center justify-center rounded-lg"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Carousel / List View */}
+        <div id="speaker-tab-panel" role="tabpanel" aria-labelledby={`speaker-tab-${activeCategory}`}>
+          {loading ? (
+            <div className="flex gap-4 sm:gap-5 overflow-hidden">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="shrink-0 w-[240px] sm:w-64 md:w-72 h-80 bg-surface-raised border border-surface-border rounded-xl animate-pulse"
+                />
+              ))}
+            </div>
+          ) : filteredSpeakers.length === 0 ? (
+            <div className="rounded-xl border border-surface-border bg-surface-overlay/60 p-8 text-center text-text-tertiary space-y-1">
+              <p className="text-sm font-medium text-text-secondary">Chưa có thông tin trong danh mục này.</p>
+              <p className="text-xs text-text-tertiary">Thông tin sẽ được ban tổ chức cập nhật sớm.</p>
+            </div>
+          ) : (
+            <div
+              ref={scrollRef}
+              className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 scroll-smooth snap-x snap-mandatory scrollbar-hide px-1"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {filteredSpeakers.map((speaker) => (
+                <SpeakerCard key={speaker.id} speaker={speaker} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )

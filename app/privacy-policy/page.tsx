@@ -124,9 +124,6 @@ export default function PrivacyPolicyPage() {
                 <strong className="text-brand-cyan font-medium">Supabase:</strong> Quản lý cơ sở dữ liệu và hệ thống xác thực người dùng (Auth & Database Cloud) tuân thủ tiêu chuẩn an toàn dữ liệu quốc tế.
               </div>
               <div className="p-3.5 bg-surface-raised rounded-lg border border-surface-border">
-                <strong className="text-brand-cyan font-medium">Google Gemini:</strong> Cung cấp năng lực trợ lý hỏi đáp tự động (FAQ Chatbot). Hệ thống không gửi hay lưu trữ lịch sử dữ liệu cá nhân nhạy cảm của người dùng lên các mô hình AI bên ngoài.
-              </div>
-              <div className="p-3.5 bg-surface-raised rounded-lg border border-surface-border">
                 <strong className="text-brand-cyan font-medium">Google Analytics:</strong> Thu thập các chỉ số thống kê truy cập vô danh để phân tích hiệu năng và cải thiện trải nghiệm giao diện người dùng.
               </div>
               <div className="p-3.5 bg-surface-raised rounded-lg border border-surface-border">
