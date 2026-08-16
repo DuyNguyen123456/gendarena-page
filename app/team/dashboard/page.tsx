@@ -24,6 +24,7 @@ import {
   ClipboardPen,
   LogOut,
   AlertTriangle,
+  AlertCircle,
   ClipboardList,
   Mail,
   Clock,
@@ -505,7 +506,25 @@ export default function TeamDashboardPage() {
   }
 
   if (loading) return <Loading text="Đang tải dữ liệu đội thi..." />
-  if (!team) return null
+  if (!team) {
+    return (
+      <div className="min-h-screen bg-surface-base text-text-primary flex items-center justify-center p-4">
+        <div className="max-w-md w-full p-6 rounded-xl bg-semantic-danger/10 border border-semantic-danger/30 text-semantic-danger text-center space-y-4 shadow-elevation-2">
+          <div className="flex justify-center">
+            <AlertCircle className="size-10 text-semantic-danger" />
+          </div>
+          <p className="text-sm font-medium">Không thể tải thông tin đội. Vui lòng thử lại.</p>
+          <div className="pt-2">
+            <Link href="/dashboard">
+              <Button variant="secondary" size="md">
+                Quay lại Bảng điều khiển
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-surface-base text-text-primary">

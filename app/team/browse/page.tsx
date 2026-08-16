@@ -19,6 +19,7 @@ import {
   Radio,
   Plus,
   Trophy,
+  AlertCircle,
 } from 'lucide-react'
 
 type Team = {
@@ -45,6 +46,7 @@ export default function BrowseTeamsPage() {
   const [myRequests, setMyRequests] = useState<Record<string, string>>({}) // team_id -> status
   const [userHasTeam, setUserHasTeam] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null) // teamId currently requesting
   const [message, setMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -103,6 +105,7 @@ export default function BrowseTeamsPage() {
 
       if (teamsError) {
         console.error('Fetch teams error:', teamsError)
+        setFetchError('Không thể tải danh sách đội thi. Vui lòng thử lại sau.')
       } else if (teamsData) {
         // Filter out teams that are already full on client side
         const availableTeams = (teamsData as unknown as Team[]).filter((t) => {
@@ -232,6 +235,14 @@ export default function BrowseTeamsPage() {
             Hiển thị <span className="text-text-primary font-semibold">{filteredTeams.length}</span> đội đang mở tuyển
           </div>
         </div>
+
+        {/* Fetch Error Banner */}
+        {fetchError && (
+          <div className="p-4 rounded-lg bg-semantic-danger/10 border border-semantic-danger/30 text-sm text-semantic-danger flex items-center gap-2.5">
+            <AlertCircle className="size-4 shrink-0 text-semantic-danger" />
+            <span>{fetchError}</span>
+          </div>
+        )}
 
         {/* Global Message Banner */}
         {message && (

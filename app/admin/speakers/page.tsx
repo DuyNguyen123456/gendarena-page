@@ -10,6 +10,14 @@ import DotGridBackground from '@/components/dot-grid-background'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 type Speaker = {
   id: string
@@ -47,6 +55,7 @@ export default function AdminSpeakersPage() {
   const [speakers, setSpeakers] = useState<Speaker[]>([])
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [form, setForm] = useState<Omit<Speaker, 'id'>>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -105,8 +114,7 @@ export default function AdminSpeakersPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Xóa thông tin diễn giả "${name}"?`)) return
+  const handleDelete = async (id: string) => {
     await supabase.from('speakers').delete().eq('id', id)
     await loadSpeakers()
   }
@@ -346,8 +354,9 @@ export default function AdminSpeakersPage() {
 
           {speakers.length === 0 ? (
             <Card className="p-12 text-center text-text-tertiary">
-              <Mic className="size-10 text-text-disabled mx-auto mb-2" />
-              <p className="text-sm">Chưa có diễn giả nào được thêm vào hệ thống.</p>
+              <Mic className="size-10 text-text-disabled mx-auto mb-3" />
+              <p className="text-sm font-medium text-text-secondary">Chưa có chuyên gia nào</p>
+              <p className="text-xs text-text-tertiary mt-1">Nhấn &quot;Thêm diễn giả mới&quot; để thiết lập hồ sơ chuyên gia.</p>
             </Card>
           ) : (
             speakers.map((s) => {
@@ -398,7 +407,7 @@ export default function AdminSpeakersPage() {
                         variant="ghost"
                         size="sm"
                         leftIcon={<Trash2 className="size-3.5" />}
-                        onClick={() => handleDelete(s.id, s.name)}
+                        onClick={() => setDeleteTarget({ id: s.id, name: s.name })}
                         className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger"
                       >
                         Xoá
@@ -411,6 +420,40 @@ export default function AdminSpeakersPage() {
           )}
         </div>
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xoá chuyên gia</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xoá thông tin chuyên gia &quot;{deleteTarget?.name}&quot;? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => setDeleteTarget(null)}
+            >
+              Huỷ
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              className="bg-semantic-danger text-white hover:bg-semantic-danger/90 active:bg-semantic-danger/80"
+              onClick={() => {
+                if (deleteTarget) {
+                  handleDelete(deleteTarget.id)
+                  setDeleteTarget(null)
+                }
+              }}
+            >
+              Xác nhận xoá
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

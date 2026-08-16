@@ -499,7 +499,11 @@ export default function AdminScoringPage() {
                   Danh sách tiêu chí của vòng: <span className="text-text-primary">{selectedRound.title}</span>
                 </h3>
                 {selectedRound.criteria.length === 0 ? (
-                  <p className="text-sm text-text-tertiary italic">Chưa có tiêu chí nào được thiết lập cho vòng này.</p>
+                  <div className="flex flex-col items-center justify-center p-8 border border-dashed border-surface-border rounded-xl text-center text-text-tertiary">
+                    <Scale className="size-8 text-text-disabled mb-2" />
+                    <p className="text-sm font-medium text-text-secondary">Chưa có tiêu chí nào</p>
+                    <p className="text-xs text-text-tertiary mt-0.5">Thêm tiêu chí chấm điểm và thiết lập trọng số ở khung bên cạnh.</p>
+                  </div>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {selectedRound.criteria.map((criterion) => (

@@ -4,12 +4,20 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Handshake, Plus, Pencil, Trash2, AlertCircle, ExternalLink, EyeOff } from 'lucide-react'
+import { ArrowLeft, Handshake, Building2, Plus, Pencil, Trash2, AlertCircle, ExternalLink, EyeOff } from 'lucide-react'
 import Loading from '@/components/loading'
 import DotGridBackground from '@/components/dot-grid-background'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 type Sponsor = {
   id: string
@@ -42,6 +50,7 @@ export default function AdminSponsorsPage() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([])
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [form, setForm] = useState<Omit<Sponsor, 'id'>>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -101,8 +110,7 @@ export default function AdminSponsorsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Xóa nhà tài trợ "${name}"?`)) return
+  const handleDelete = async (id: string) => {
     await supabase.from('sponsors').delete().eq('id', id)
     await loadSponsors()
   }
@@ -303,8 +311,9 @@ export default function AdminSponsorsPage() {
 
           {sponsors.length === 0 ? (
             <Card className="p-12 text-center text-text-tertiary">
-              <Handshake className="size-10 text-text-disabled mx-auto mb-2" />
-              <p className="text-sm">Chưa có nhà tài trợ nào được thêm vào hệ thống.</p>
+              <Building2 className="size-10 text-text-disabled mx-auto mb-3" />
+              <p className="text-sm font-medium text-text-secondary">Chưa có nhà tài trợ nào</p>
+              <p className="text-xs text-text-tertiary mt-1">Nhấn &quot;Thêm nhà tài trợ&quot; để thiết lập thông tin đối tác.</p>
             </Card>
           ) : (
             sponsors.map((s) => {
@@ -367,7 +376,7 @@ export default function AdminSponsorsPage() {
                         variant="ghost"
                         size="sm"
                         leftIcon={<Trash2 className="size-3.5" />}
-                        onClick={() => handleDelete(s.id, s.name)}
+                        onClick={() => setDeleteTarget({ id: s.id, name: s.name })}
                         className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger"
                       >
                         Xoá
@@ -380,6 +389,40 @@ export default function AdminSponsorsPage() {
           )}
         </div>
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xoá nhà tài trợ</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xoá nhà tài trợ &quot;{deleteTarget?.name}&quot;? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => setDeleteTarget(null)}
+            >
+              Huỷ
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              className="bg-semantic-danger text-white hover:bg-semantic-danger/90 active:bg-semantic-danger/80"
+              onClick={() => {
+                if (deleteTarget) {
+                  handleDelete(deleteTarget.id)
+                  setDeleteTarget(null)
+                }
+              }}
+            >
+              Xác nhận xoá
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

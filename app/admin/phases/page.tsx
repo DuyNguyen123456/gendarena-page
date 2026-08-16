@@ -12,6 +12,14 @@ import DotGridBackground from '@/components/dot-grid-background'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,9 +114,11 @@ function formatDisplayDateTime(iso: string | null) {
 export default function AdminPhasesPage() {
   const [phases, setPhases] = useState<CompetitionPhase[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [togglingScoringId, setTogglingScoringId] = useState<string | null>(null)
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null)
@@ -120,10 +130,12 @@ export default function AdminPhasesPage() {
 
   const loadData = async () => {
     try {
+      setError(null)
       const data = await getPhases()
       setPhases(data)
     } catch (e) {
       console.error('Failed to load phases:', e)
+      setError('Không thể tải dữ liệu lịch trình. Vui lòng thử lại.')
     }
   }
 
@@ -182,7 +194,6 @@ export default function AdminPhasesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xoá giai đoạn này không?')) return
     try {
       const { error } = await deletePhase(id)
       if (error) throw new Error(error)
@@ -319,6 +330,27 @@ export default function AdminPhasesPage() {
       </header>
 
       <main className="relative z-10 mx-auto max-w-5xl px-4 py-8 space-y-6">
+        {/* Error Fallback Alert */}
+        {error && (
+          <div
+            role="alert"
+            className="flex items-center justify-between gap-3 rounded-lg border border-semantic-danger/30 bg-semantic-danger/10 px-4 py-3 text-sm text-semantic-danger"
+          >
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="size-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => loadData()}
+              className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger shrink-0"
+            >
+              Thử lại
+            </Button>
+          </div>
+        )}
+
         {/* Status Message */}
         {message && (
           <div
@@ -342,8 +374,9 @@ export default function AdminPhasesPage() {
 
           {phases.length === 0 ? (
             <Card className="p-12 text-center text-text-tertiary">
-              <Calendar className="size-10 text-text-disabled mx-auto mb-2" />
-              <p className="text-sm">Chưa có giai đoạn nào được tạo. Nhấn &quot;Thêm giai đoạn mới&quot; để thiết lập.</p>
+              <Calendar className="size-10 text-text-disabled mx-auto mb-3" />
+              <p className="text-sm font-medium text-text-secondary">Chưa có giai đoạn nào</p>
+              <p className="text-xs text-text-tertiary mt-1">Nhấn &quot;Thêm giai đoạn mới&quot; để thiết lập lịch trình.</p>
             </Card>
           ) : (
             phases.map((phase) => (
@@ -453,7 +486,7 @@ export default function AdminPhasesPage() {
                       variant="ghost"
                       size="sm"
                       leftIcon={<Trash2 className="size-3.5" />}
-                      onClick={() => handleDelete(phase.id)}
+                      onClick={() => setDeleteTarget({ id: phase.id, name: phase.title })}
                       className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger"
                     >
                       Xoá
@@ -465,6 +498,40 @@ export default function AdminPhasesPage() {
           )}
         </div>
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xoá giai đoạn</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xoá giai đoạn &quot;{deleteTarget?.name}&quot; không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => setDeleteTarget(null)}
+            >
+              Huỷ
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              className="bg-semantic-danger text-white hover:bg-semantic-danger/90 active:bg-semantic-danger/80"
+              onClick={() => {
+                if (deleteTarget) {
+                  handleDelete(deleteTarget.id)
+                  setDeleteTarget(null)
+                }
+              }}
+            >
+              Xác nhận xoá
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Modal Form ────────────────────────────────────────────────────────── */}
       {showModal && (

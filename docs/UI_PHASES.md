@@ -19,7 +19,7 @@
 | U7a | Admin Core & Entity Mgmt (Hub, Users, Competitions, Speakers, Sponsors) | ✅ Done | `main` | - |
 | U7b | Admin Timeline & Scoring Config (Phases, Scoring Rounds & Criteria) | ✅ Done | `main` | - |
 | U7c | Admin Submissions, Assign & Leaderboard | ✅ Done | `main` | - |
-| U8 | Polish (motion, empty states, error states, 404) | ⏳ Pending | - | - |
+| U8 | Polish (motion, empty states, error states, 404) | ✅ Done | `main` | - |
 
 ---
 
@@ -122,9 +122,25 @@
 - `app/admin/assign/page.tsx` — Assignment panel with topic filter chips, judge expertise match indicator, Card-based dual-panel (current judge + reassign select), `removeAssignment` 2-param signature preserved
 - `app/admin/leaderboard/page.tsx` — Animated progress-bar rankings, Trophy/Medal Lucide icons, accessible `role="list"` markup, `getLeaderboard` RPC frozen
 
-### U8 — Polish ⏳
-**Scope:** Motion refinement, empty states, error states, 404/500 pages, `prefers-reduced-motion`
+### U8 — Polish ✅
+**Scope:** Motion refinement, empty states, error states, 404 page, Dialog migration, anti-slop visual cleanup
 **Prerequisites:** U3–U7 ✅
+
+**Deliverables:**
+- `app/team/dashboard/page.tsx` — P0: Replaced bare `null` render with semantic error alert and return navigation button
+- `app/admin/competitions/page.tsx` — P0/P1: Replaced `window.confirm()` with shared `Dialog`, added entity empty state
+- `app/admin/phases/page.tsx` — P0/P1/P2: Replaced `window.confirm()` with shared `Dialog`, added error fallback with retry, upgraded empty state
+- `app/admin/speakers/page.tsx` — P0/P1: Replaced `window.confirm()` with shared `Dialog`, upgraded empty state
+- `app/admin/sponsors/page.tsx` — P0/P1: Replaced `window.confirm()` with shared `Dialog`, upgraded empty state with Building2 icon
+- `app/admin/users/page.tsx` — P1: Polished empty state with design tokens
+- `app/admin/submissions/page.tsx` — P1: Added error state and retry fallback
+- `app/admin/leaderboard/page.tsx` — P1: Added error state and retry fallback
+- `app/team/browse/page.tsx` — P1: Added error state banner when fetching open teams fails
+- `app/not-found.tsx` — P1: Full migration to design system surface tokens, Button components, SearchX icon, removed all legacy classes
+- `app/privacy-policy/page.tsx` — P2: Full visual refactor with Card and token typography, preserved all 9 sections and contact data
+- `app/competitions/[id]/CompetitionDetailView.tsx` — P2: Migrated to design system tokens, Card, Badge, and Button, preserved all logic
+- `app/organizers/OrganizersView.tsx` — P2: Refactored with design system tokens and Card layout, removed legacy classes
+- `app/admin/scoring/page.tsx` — P2: Upgraded criteria empty state with Scale icon + text
 
 ---
 

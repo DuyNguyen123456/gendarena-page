@@ -80,35 +80,43 @@ export default function AdminSubmissions() {
   const [submissions, setSubmissions] = useState<AdminSubmissionRow[]>([])
   const [phases, setPhases] = useState<Phase[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabKey>('all')
   const [userRole, setUserRole] = useState<string>('')
+  const [currentUid, setCurrentUid] = useState<string>('')
   const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set())
 
   const router = useRouter()
   const supabase = createClient()
 
   const loadData = useCallback(async (role: string, uid: string) => {
-    let data: AdminSubmissionRow[] = await getAllSubmissionsForAdmin()
+    try {
+      setError(null)
+      let data: AdminSubmissionRow[] = await getAllSubmissionsForAdmin()
 
-    // Judges only see their assigned submissions
-    if (role === 'judge') {
-      const { data: assignments } = await supabase
-        .from('judge_assignments')
-        .select('submission_id')
-        .eq('judge_id', uid)
-      const ids = (assignments ?? []).map((a: { submission_id: string }) => a.submission_id)
-      setAssignedIds(new Set(ids))
-      data = data.filter(sub => ids.includes(sub.id))
+      // Judges only see their assigned submissions
+      if (role === 'judge') {
+        const { data: assignments } = await supabase
+          .from('judge_assignments')
+          .select('submission_id')
+          .eq('judge_id', uid)
+        const ids = (assignments ?? []).map((a: { submission_id: string }) => a.submission_id)
+        setAssignedIds(new Set(ids))
+        data = data.filter(sub => ids.includes(sub.id))
+      }
+
+      setSubmissions(data)
+
+      // Load phases for tab filter
+      const { data: phaseData } = await supabase
+        .from('competition_phases')
+        .select('id, title')
+        .order('display_order', { ascending: true })
+      setPhases((phaseData as Phase[]) || [])
+    } catch (err) {
+      console.error('Failed to load submissions:', err)
+      setError('Không thể tải dữ liệu. Vui lòng thử lại.')
     }
-
-    setSubmissions(data)
-
-    // Load phases for tab filter
-    const { data: phaseData } = await supabase
-      .from('competition_phases')
-      .select('id, title')
-      .order('display_order', { ascending: true })
-    setPhases((phaseData as Phase[]) || [])
   }, [supabase])
 
   useEffect(() => {
@@ -128,6 +136,7 @@ export default function AdminSubmissions() {
       }
 
       setUserRole(profile.role)
+      setCurrentUid(user.id)
       await loadData(profile.role, user.id)
       setLoading(false)
     }
@@ -207,6 +216,27 @@ export default function AdminSubmissions() {
       </header>
 
       <main className="relative z-10 mx-auto max-w-5xl px-4 py-8 space-y-6">
+        {/* Error State Banner */}
+        {error && (
+          <div
+            role="alert"
+            className="flex items-center justify-between gap-3 rounded-lg border border-semantic-danger/30 bg-semantic-danger/10 px-4 py-3 text-sm text-semantic-danger"
+          >
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="size-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => loadData(userRole, currentUid)}
+              className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger shrink-0"
+            >
+              Thử lại
+            </Button>
+          </div>
+        )}
+
         {/* Tab Bar */}
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Lọc bài nộp">
           {tabs.map((tab) => (

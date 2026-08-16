@@ -8,12 +8,14 @@ import LoadingScreen from '@/components/loading-screen'
 import DotGridBackground from '@/components/dot-grid-background'
 import { getLeaderboard, type LeaderboardRow } from '@/services/scoring'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   ArrowLeft,
   Trophy,
   Medal,
   Star,
   Users,
+  AlertCircle,
 } from 'lucide-react'
 
 // ─── Rank Visual ──────────────────────────────────────────────────────────────
@@ -54,12 +56,29 @@ function barGlow(idx: number) {
 export default function Leaderboard() {
   const [rankings, setRankings] = useState<LeaderboardRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [barsVisible, setBarsVisible] = useState(false)
   const router = useRouter()
 
+  const loadData = async () => {
+    try {
+      setError(null)
+      const ranked = await getLeaderboard()
+      const sorted = [...ranked].sort((a, b) => Number(b.avg_score || 0) - Number(a.avg_score || 0))
+      setRankings(sorted)
+      setTimeout(() => {
+        setBarsVisible(true)
+      }, 200)
+    } catch (err) {
+      console.error('Failed to load leaderboard:', err)
+      setError('Không thể tải dữ liệu. Vui lòng thử lại.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     let isMounted = true
-    let timeoutId: NodeJS.Timeout | null = null
 
     async function init() {
       const supabase = createClient()
@@ -76,21 +95,12 @@ export default function Leaderboard() {
       if (!isMounted) return
       if (profile?.role !== 'admin') { router.push('/dashboard'); return }
 
-      const ranked = await getLeaderboard()
-      if (!isMounted) return
-
-      const sorted = [...ranked].sort((a, b) => Number(b.avg_score || 0) - Number(a.avg_score || 0))
-      setRankings(sorted)
-      setLoading(false)
-      timeoutId = setTimeout(() => {
-        if (isMounted) setBarsVisible(true)
-      }, 200)
+      await loadData()
     }
     init()
 
     return () => {
       isMounted = false
-      if (timeoutId) clearTimeout(timeoutId)
     }
   }, [router])
 
@@ -144,7 +154,31 @@ export default function Leaderboard() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-4xl px-4 py-8">
+      <main className="relative z-10 mx-auto max-w-4xl px-4 py-8 space-y-6">
+        {/* Error Fallback Banner */}
+        {error && (
+          <div
+            role="alert"
+            className="flex items-center justify-between gap-3 rounded-lg border border-semantic-danger/30 bg-semantic-danger/10 px-4 py-3 text-sm text-semantic-danger"
+          >
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="size-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setLoading(true)
+                loadData()
+              }}
+              className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger shrink-0"
+            >
+              Thử lại
+            </Button>
+          </div>
+        )}
+
         {rankings.length === 0 ? (
           <div className="rounded-xl border border-surface-border bg-surface-overlay p-12 text-center">
             <Trophy className="size-12 text-text-disabled mx-auto mb-3" />

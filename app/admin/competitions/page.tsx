@@ -10,6 +10,14 @@ import DotGridBackground from '@/components/dot-grid-background'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 type Competition = {
   id: string
@@ -39,6 +47,7 @@ export default function AdminCompetitions() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [submitLoading, setSubmitLoading] = useState(false)
   const router = useRouter()
@@ -109,8 +118,7 @@ export default function AdminCompetitions() {
     setSubmitLoading(false)
   }
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Xoá cuộc thi "${title}"? Hành động này không thể hoàn tác.`)) return
+  const handleDelete = async (id: string) => {
     const { error } = await supabase.from('competitions').delete().eq('id', id)
     if (error) {
       setMessage({ type: 'error', text: 'Lỗi xoá cuộc thi: ' + error.message })
@@ -400,8 +408,9 @@ export default function AdminCompetitions() {
 
           {competitions.length === 0 ? (
             <Card className="p-12 text-center text-text-tertiary">
-              <Trophy className="size-10 text-text-disabled mx-auto mb-2" />
-              <p className="text-sm">Chưa có cuộc thi nào được thiết lập.</p>
+              <Trophy className="size-10 text-text-disabled mx-auto mb-3" />
+              <p className="text-sm font-medium text-text-secondary">Chưa có cuộc thi nào</p>
+              <p className="text-xs text-text-tertiary mt-1">Nhấn &quot;Thiết lập cuộc thi mới&quot; để tạo phân khu đầu tiên.</p>
             </Card>
           ) : (
             competitions.map((comp) => {
@@ -448,7 +457,7 @@ export default function AdminCompetitions() {
                         variant="ghost"
                         size="sm"
                         leftIcon={<Trash2 className="size-3.5" />}
-                        onClick={() => handleDelete(comp.id, comp.title)}
+                        onClick={() => setDeleteTarget({ id: comp.id, name: comp.title })}
                         className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger"
                       >
                         Xoá
@@ -461,6 +470,40 @@ export default function AdminCompetitions() {
           )}
         </div>
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xoá cuộc thi</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xoá cuộc thi &quot;{deleteTarget?.name}&quot;? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => setDeleteTarget(null)}
+            >
+              Huỷ
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              className="bg-semantic-danger text-white hover:bg-semantic-danger/90 active:bg-semantic-danger/80"
+              onClick={() => {
+                if (deleteTarget) {
+                  handleDelete(deleteTarget.id)
+                  setDeleteTarget(null)
+                }
+              }}
+            >
+              Xác nhận xoá
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

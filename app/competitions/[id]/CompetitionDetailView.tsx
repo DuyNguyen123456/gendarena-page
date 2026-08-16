@@ -5,8 +5,12 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/loading'
+import DotGridBackground from '@/components/dot-grid-background'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
-  AlertTriangle,
+  AlertCircle,
   ArrowLeft,
   ScrollText,
   Trophy,
@@ -30,6 +34,14 @@ type Competition = {
 
 type User = {
   id: string
+}
+
+const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'brand' }> = {
+  upcoming: { label: 'Sắp diễn ra', variant: 'default' },
+  registration: { label: 'Đang mở đăng ký thi', variant: 'info' },
+  submission: { label: 'Đang nộp bài', variant: 'brand' },
+  judging: { label: 'Đang chấm điểm', variant: 'warning' },
+  completed: { label: 'Đã kết thúc', variant: 'success' },
 }
 
 export default function CompetitionDetailView({ id }: { id: string }) {
@@ -63,103 +75,115 @@ export default function CompetitionDetailView({ id }: { id: string }) {
     }
   }, [id, router, supabase])
 
-  if (loading) return <Loading text="Đang tải dữ liệu..." />
+  if (loading) return <Loading text="Đang tải dữ liệu cuộc thi..." />
 
   if (!competition) return (
-    <div className="min-h-screen bg-[#050814] text-white flex flex-col items-center justify-center gap-4">
-      <p className="font-orbitron text-base text-red-400 tracking-wider uppercase flex items-center gap-2">
-        <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
-        <span>Không tìm thấy cuộc thi</span>
-      </p>
-      <Link href="/dashboard" className="tech-btn-primary px-6 py-2.5 rounded-lg text-xs font-bold tracking-wider font-orbitron flex items-center gap-1.5">
-        <ArrowLeft className="w-4 h-4" />
-        <span>Quay lại Dashboard</span>
-      </Link>
+    <div className="min-h-screen bg-surface-base text-text-primary flex flex-col items-center justify-center p-4">
+      <div className="max-w-md w-full p-6 rounded-xl bg-semantic-danger/10 border border-semantic-danger/30 text-semantic-danger text-center space-y-4 shadow-elevation-2">
+        <div className="flex justify-center">
+          <AlertCircle className="size-10 text-semantic-danger" />
+        </div>
+        <p className="text-sm font-medium">Không tìm thấy thông tin cuộc thi</p>
+        <div className="pt-2">
+          <Link href="/dashboard">
+            <Button variant="secondary" size="md">
+              Quay lại Dashboard
+            </Button>
+          </Link>
+        </div>
+      </div>
     </div>
   )
 
-  return (
-    <div className="min-h-screen bg-dark-bg text-white py-12 px-4 relative scanline-container">
-      {/* Decorative Glows */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-brand-blue/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+  const statusConfig = STATUS_MAP[competition.status] ?? {
+    label: competition.status?.toUpperCase() || 'CUỘC THI',
+    variant: 'default' as const,
+  }
 
-      <div className="max-w-4xl mx-auto relative z-10">
-        
+  return (
+    <div className="min-h-screen bg-surface-base text-text-primary py-12 px-4 sm:px-6 relative overflow-hidden font-body">
+      {/* Decorative Glows */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <DotGridBackground />
+        <div className="absolute top-10 left-10 w-80 h-80 bg-brand-cyan/5 rounded-full blur-[100px]" />
+        <div className="absolute bottom-10 right-10 w-80 h-80 bg-brand-blue/10 rounded-full blur-[100px]" />
+      </div>
+
+      <div className="max-w-4xl mx-auto relative z-10 space-y-6">
         {/* Back navigation */}
-        <Link 
-          href="/dashboard" 
-          className="inline-flex items-center gap-1.5 text-xs font-orbitron font-bold tracking-wider text-cyan-400 hover:text-cyan-300 transition-colors uppercase mb-8"
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-wider text-brand-cyan hover:text-brand-cyan-bright transition-colors uppercase"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="size-4" />
           <span>Quay lại Dashboard</span>
         </Link>
 
         {/* Quest Briefing Header */}
-        <div className="tech-panel-glow p-8 mb-8 relative cyber-corners border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
-          
-          <div className="inline-flex items-center gap-1.5 bg-cyan-950/40 border border-cyan-500/30 px-3 py-1 rounded-full text-xs font-bold text-cyan-400 tracking-wider mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-            {competition.status === 'registration' ? 'ĐANG MỞ ĐĂNG KÝ THI' : competition.status?.toUpperCase()}
+        <Card className="p-6 sm:p-8 bg-surface-overlay border-surface-border shadow-elevation-2">
+          <div className="mb-4">
+            <Badge variant={statusConfig.variant} size="md">
+              {statusConfig.label}
+            </Badge>
           </div>
 
-          <h1 className="font-orbitron text-2xl md:text-3.5xl font-extrabold text-white tracking-wider uppercase mb-3 leading-snug">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mb-3">
             {competition.title}
           </h1>
-          <p className="text-slate-350 text-sm leading-relaxed max-w-3xl">
+          <p className="text-text-secondary text-sm leading-relaxed max-w-3xl">
             {competition.description}
           </p>
-        </div>
+        </Card>
 
         {/* Details Grid (Rules & Prizes) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="tech-panel p-6 border-cyan-500/15 relative">
-            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
-              <ScrollText className="w-4 h-4 text-cyan-400 shrink-0" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="p-6 bg-surface-overlay border-surface-border">
+            <h2 className="font-display text-sm font-semibold tracking-wider text-brand-cyan uppercase mb-4 flex items-center gap-2">
+              <ScrollText className="size-4 text-brand-cyan shrink-0" />
               <span>Thể lệ thi đấu</span>
             </h2>
-            <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+            <p className="text-text-secondary text-sm leading-relaxed whitespace-pre-line">
               {competition.rules || 'Nội dung thể lệ đang được cập nhật bởi ban tổ chức...'}
             </p>
-          </div>
+          </Card>
 
-          <div className="tech-panel p-6 border-cyan-500/15 relative">
-            <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-4 flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-cyan-400 shrink-0" />
+          <Card className="p-6 bg-surface-overlay border-surface-border">
+            <h2 className="font-display text-sm font-semibold tracking-wider text-brand-cyan uppercase mb-4 flex items-center gap-2">
+              <Trophy className="size-4 text-brand-cyan shrink-0" />
               <span>Cơ cấu giải thưởng</span>
             </h2>
-            <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+            <p className="text-text-secondary text-sm leading-relaxed whitespace-pre-line">
               {competition.prizes || 'Thông tin giải thưởng chi tiết đang được cập nhật...'}
             </p>
-          </div>
+          </Card>
         </div>
 
         {/* Timeline */}
-        <div className="tech-panel p-6 mb-8 border-cyan-500/15 relative">
-          <h2 className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase mb-5 flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-cyan-400 shrink-0" />
+        <Card className="p-6 bg-surface-overlay border-surface-border">
+          <h2 className="font-display text-sm font-semibold tracking-wider text-brand-cyan uppercase mb-5 flex items-center gap-2">
+            <Calendar className="size-4 text-brand-cyan shrink-0" />
             <span>Lộ trình cuộc thi</span>
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Mở đăng ký', value: competition.registration_start, bg: 'bg-cyan-950/30 border-cyan-500/30 text-cyan-450' },
-              { label: 'Hết đăng ký', value: competition.registration_end, bg: 'bg-cyan-950/30 border-cyan-500/30 text-cyan-450' },
-              { label: 'Bắt đầu nộp', value: competition.submission_start, bg: 'bg-amber-950/20 border-amber-500/30 text-amber-450' },
-              { label: 'Hạn nộp bài', value: competition.submission_end, bg: 'bg-red-950/20 border-red-500/30 text-red-400' },
+              { label: 'Mở đăng ký', value: competition.registration_start, variant: 'text-brand-cyan' },
+              { label: 'Hết đăng ký', value: competition.registration_end, variant: 'text-brand-cyan' },
+              { label: 'Bắt đầu nộp', value: competition.submission_start, variant: 'text-semantic-warning' },
+              { label: 'Hạn nộp bài', value: competition.submission_end, variant: 'text-semantic-danger' },
             ].map((item) => (
-              <div key={item.label} className={`border p-4 rounded-lg flex flex-col justify-between h-20 ${item.bg}`}>
-                <span className="text-xs font-bold uppercase tracking-wider opacity-85">{item.label}</span>
-                <span className="font-orbitron text-xs font-semibold tracking-wider">
+              <div key={item.label} className="p-4 rounded-lg bg-surface-raised border border-surface-border flex flex-col justify-between h-20">
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">{item.label}</span>
+                <span className={`text-xs font-mono font-medium ${item.variant}`}>
                   {item.value ? new Date(item.value).toLocaleDateString('vi-VN') : 'Chưa công bố'}
                 </span>
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
         {message && (
-          <div className="bg-[#131e3d] border border-cyan-500/40 text-cyan-400 p-4 rounded-lg mb-8 text-sm font-semibold tracking-wide flex items-center gap-2">
-            <Radio className="w-4 h-4 text-cyan-400 shrink-0" />
+          <div className="p-4 rounded-lg bg-brand-cyan/10 border border-brand-cyan/30 text-sm text-brand-cyan flex items-center gap-2">
+            <Radio className="size-4 text-brand-cyan shrink-0" />
             <span>{message}</span>
           </div>
         )}
@@ -167,12 +191,17 @@ export default function CompetitionDetailView({ id }: { id: string }) {
         {/* Register Alliance Section */}
         <Link
           href={`/team/create?competitionId=${competition.id}`}
-          className="w-full tech-btn-accent py-4 rounded-lg font-orbitron font-extrabold text-sm md:text-base tracking-wider uppercase cursor-pointer text-center flex items-center justify-center gap-2 text-black hover:scale-[1.01] transition-transform duration-200"
+          className="block"
         >
-          <Users className="w-5 h-5 shrink-0" />
-          <span>Tạo đội thi mới & Đăng ký</span>
+          <Button
+            variant="primary"
+            size="lg"
+            leftIcon={<Users className="size-5" />}
+            className="w-full h-12 text-base font-semibold"
+          >
+            Tạo đội thi mới & Đăng ký
+          </Button>
         </Link>
-
       </div>
     </div>
   )

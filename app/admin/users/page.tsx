@@ -362,9 +362,10 @@ export default function AdminUsers() {
           </div>
 
           {filteredUsers.length === 0 && (
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center text-text-tertiary text-sm">
-              <Users className="size-8 text-text-disabled mb-2" aria-hidden="true" />
-              <p>Không tìm thấy người dùng nào phù hợp với từ khóa tìm kiếm.</p>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center text-text-tertiary">
+              <Users className="size-10 text-text-disabled mx-auto mb-3" aria-hidden="true" />
+              <p className="text-sm font-medium text-text-secondary">Không tìm thấy người dùng</p>
+              <p className="text-xs text-text-tertiary mt-1">Không có kết quả nào phù hợp với từ khóa tìm kiếm.</p>
             </CardContent>
           )}
         </Card>
