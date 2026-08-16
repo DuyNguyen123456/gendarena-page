@@ -7,7 +7,20 @@ import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { siteConfig } from '@/config/site'
 import Image from 'next/image'
-import { Settings, Scale, Calendar, Crown, User as UserIcon, Menu, X, LogOut } from 'lucide-react'
+import {
+  Home,
+  Users,
+  LayoutDashboard,
+  Upload,
+  Settings,
+  Calendar,
+  Scale,
+  User as UserIcon,
+  Menu,
+  X,
+  LogOut,
+  Award,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
@@ -23,7 +36,9 @@ export default function Navbar() {
 
   useEffect(() => {
     async function loadUser() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       setUser(user)
 
       if (user) {
@@ -66,54 +81,56 @@ export default function Navbar() {
 
   const isAdmin = profile?.role === 'admin'
   const isJudge = profile?.role === 'judge'
+  const isParticipant = user && !isAdmin && !isJudge
 
-  const getLinkClass = (path: string) => {
-    const isActive = (path !== '/' && pathname.startsWith(path)) || pathname === path
-    return `px-3.5 py-2 rounded-md text-sm font-medium transition-colors duration-[150ms] ${
+  // Desktop Icon-First link styling
+  const getIconLinkClass = (path: string, color: 'cyan' | 'warning' | 'purple' = 'cyan') => {
+    const isActive = path === '/' ? pathname === '/' : pathname.startsWith(path)
+
+    if (color === 'warning') {
+      return `size-9 rounded-lg flex items-center justify-center transition-all duration-150 relative ${
+        isActive
+          ? 'text-semantic-warning bg-semantic-warning/15 border border-semantic-warning/40 shadow-sm'
+          : 'text-text-secondary hover:text-semantic-warning hover:bg-surface-raised border border-transparent'
+      }`
+    }
+
+    if (color === 'purple') {
+      return `size-9 rounded-lg flex items-center justify-center transition-all duration-150 relative ${
+        isActive
+          ? 'text-accent-violet bg-accent-violet/15 border border-accent-violet/40 shadow-sm'
+          : 'text-text-secondary hover:text-accent-violet hover:bg-surface-raised border border-transparent'
+      }`
+    }
+
+    return `size-9 rounded-lg flex items-center justify-center transition-all duration-150 relative ${
       isActive
-        ? 'text-brand-cyan bg-brand-cyan/10 font-semibold'
-        : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
+        ? 'text-brand-cyan bg-brand-cyan/15 border border-brand-cyan/40 shadow-sm'
+        : 'text-text-secondary hover:text-brand-cyan hover:bg-surface-raised border border-transparent'
     }`
   }
 
+  // Mobile menu link styling (vertical with full Vietnamese text)
   const getMobileLinkClass = (path: string) => {
-    const isActive = (path !== '/' && pathname.startsWith(path)) || pathname === path
-    return `block w-full px-4 py-2.5 rounded-md text-sm font-medium transition-colors duration-[150ms] ${
+    const isActive = path === '/' ? pathname === '/' : pathname.startsWith(path)
+    return `flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
       isActive
         ? 'text-brand-cyan bg-brand-cyan/10 font-semibold'
         : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
     }`
-  }
-
-  const getRoleLinkClass = (path: string, activeColor: 'cyan' | 'warning' | 'purple' = 'cyan') => {
-    const isActive = (path !== '/' && pathname.startsWith(path)) || pathname === path
-    if (activeColor === 'warning') {
-      return `px-3.5 py-2 rounded-md text-sm font-medium transition-colors duration-[150ms] ${
-        isActive
-          ? 'text-semantic-warning bg-semantic-warning/10 font-semibold'
-          : 'text-text-secondary hover:text-semantic-warning hover:bg-surface-raised'
-      }`
-    }
-    if (activeColor === 'purple') {
-      return `px-3.5 py-2 rounded-md text-sm font-medium transition-colors duration-[150ms] ${
-        isActive
-          ? 'text-accent-violet bg-accent-violet/10 font-semibold'
-          : 'text-text-secondary hover:text-accent-violet hover:bg-surface-raised'
-      }`
-    }
-    return getLinkClass(path)
   }
 
   return (
     <nav
       ref={menuRef}
-      className="sticky top-0 z-sticky bg-surface-base/80 backdrop-blur-md border-b border-surface-border transition-colors duration-[250ms]"
+      className="sticky top-0 z-sticky bg-surface-base/85 backdrop-blur-md border-b border-surface-border transition-colors duration-[250ms]"
     >
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Logo */}
+        {/* Brand / Logo (Mobile: Logo only; Desktop: Logo + Brand Name) */}
         <Link
           href="/"
-          className="flex items-center gap-2.5 group transition-opacity hover:opacity-85"
+          className="flex items-center gap-2.5 group transition-opacity hover:opacity-85 shrink-0"
+          aria-label="Về trang chủ GenD Arena 2026"
         >
           <Image
             src="/logo/gendarena-logo.png"
@@ -121,94 +138,166 @@ export default function Navbar() {
             width={32}
             height={32}
             className="object-contain shrink-0"
+            priority
           />
-          <span className="font-display text-base md:text-lg font-bold tracking-wider text-text-primary">
+          <span className="hidden sm:inline-block font-display text-base md:text-lg font-bold tracking-wider text-text-primary">
             {siteConfig.name.toUpperCase()}
           </span>
         </Link>
 
-        {/* Desktop Nav */}
+        {/* Desktop Navigation (Icon-First + Distinct CTA) */}
         <div className="hidden md:flex items-center gap-1.5 lg:gap-2">
-          {siteConfig.navItems.map((item) => (
-            <Link key={item.href} href={item.href} className={getLinkClass(item.href)}>
-              {item.label}
-            </Link>
-          ))}
+          {/* Main Navigation Icons */}
+          <Link
+            href="/"
+            className={getIconLinkClass('/')}
+            title="Trang chủ"
+            aria-label="Trang chủ"
+          >
+            <Home className="size-4" />
+          </Link>
 
-          {user && !isAdmin && !isJudge && (
-            <>
-              {siteConfig.authNavItems.map((item) => (
-                <Link key={item.href} href={item.href} className={getLinkClass(item.href)}>
-                  {item.label}
-                </Link>
-              ))}
-            </>
+          <Link
+            href="/organizers"
+            className={getIconLinkClass('/organizers')}
+            title="Ban tổ chức"
+            aria-label="Ban tổ chức"
+          >
+            <Award className="size-4" />
+          </Link>
+
+          {/* Participant Hub Icon */}
+          {isParticipant && (
+            <Link
+              href="/dashboard"
+              className={getIconLinkClass('/dashboard')}
+              title="Bảng điều khiển & Đội thi"
+              aria-label="Bảng điều khiển & Đội thi"
+            >
+              <LayoutDashboard className="size-4" />
+            </Link>
           )}
 
+          {/* Admin Icons */}
           {isAdmin && (
             <>
-              <Link href="/admin" className={`${getRoleLinkClass('/admin', 'warning')} flex items-center gap-1.5`}>
+              <Link
+                href="/admin"
+                className={getIconLinkClass('/admin', 'warning')}
+                title="Quản trị hệ thống"
+                aria-label="Quản trị hệ thống"
+              >
                 <Settings className="size-4" />
-                <span>Quản lý</span>
               </Link>
-              <Link href="/admin/phases" className={`${getRoleLinkClass('/admin/phases', 'warning')} flex items-center gap-1.5`}>
+              <Link
+                href="/admin/phases"
+                className={getIconLinkClass('/admin/phases', 'warning')}
+                title="Timeline & Vòng thi"
+                aria-label="Timeline & Vòng thi"
+              >
                 <Calendar className="size-4" />
-                <span>Timeline</span>
+              </Link>
+              <Link
+                href="/profile"
+                className={getIconLinkClass('/profile', 'warning')}
+                title="Hồ sơ quản trị"
+                aria-label="Hồ sơ quản trị"
+              >
+                <UserIcon className="size-4" />
               </Link>
             </>
           )}
 
+          {/* Judge Icons */}
           {isJudge && (
             <>
-              <Link href="/judge" className={`${getRoleLinkClass('/judge', 'purple')} flex items-center gap-1.5`}>
+              <Link
+                href="/judge"
+                className={getIconLinkClass('/judge', 'purple')}
+                title="Không gian chấm thi"
+                aria-label="Không gian chấm thi"
+              >
                 <Scale className="size-4" />
-                <span>Giám khảo</span>
               </Link>
-              <Link href="/profile" className={getLinkClass('/profile')}>
-                Hồ sơ
+              <Link
+                href="/profile"
+                className={getIconLinkClass('/profile', 'purple')}
+                title="Hồ sơ & Chuyên môn"
+                aria-label="Hồ sơ & Chuyên môn"
+              >
+                <UserIcon className="size-4" />
               </Link>
             </>
+          )}
+
+          {/* Exception: "Nộp bài" CTA Button for Participants & Logged-in Users */}
+          {isParticipant && (
+            <Link href="/submissions" className="ml-1">
+              <Button
+                variant={pathname.startsWith('/submissions') ? 'primary' : 'secondary'}
+                size="sm"
+                leftIcon={<Upload className="size-3.5" />}
+                className="font-semibold text-xs px-3 h-8 shadow-sm"
+              >
+                Nộp bài
+              </Button>
+            </Link>
           )}
 
           <div className="w-px h-5 bg-surface-border mx-2" />
 
+          {/* User Auth Section */}
           {loading ? (
             <div className="w-24 h-9 bg-surface-elevated animate-pulse rounded-md" />
           ) : user ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-surface-raised border border-surface-border px-3 py-1 rounded-full">
+            <div className="flex items-center gap-2.5">
+              {/* Shortened Role Badge + Full Name */}
+              <div
+                className="flex items-center gap-1.5 bg-surface-raised border border-surface-border px-2.5 py-1 rounded-full text-xs"
+                title={`Đã đăng nhập: ${profile?.full_name || 'Đấu thủ'} (${
+                  isAdmin ? 'Ban Tổ Chức' : isJudge ? 'Ban Giám Khảo' : 'Thí sinh'
+                })`}
+              >
                 <span className="size-1.5 rounded-full bg-semantic-success animate-pulse" />
                 {isAdmin ? (
-                  <Badge variant="warning" size="sm">BTC</Badge>
+                  <Badge variant="warning" size="sm" className="px-1 py-0 text-[10px] font-bold">
+                    BTC
+                  </Badge>
                 ) : isJudge ? (
-                  <Badge variant="brand" size="sm">BGK</Badge>
+                  <Badge variant="brand" size="sm" className="px-1 py-0 text-[10px] font-bold">
+                    BGK
+                  </Badge>
                 ) : (
-                  <Badge variant="info" size="sm">Thí sinh</Badge>
+                  <Badge variant="info" size="sm" className="px-1 py-0 text-[10px] font-bold">
+                    TS
+                  </Badge>
                 )}
-                <span className="text-xs font-medium text-text-primary max-w-[120px] truncate">
+                <span className="font-medium text-text-primary max-w-[100px] lg:max-w-[130px] truncate">
                   {profile?.full_name || 'Đấu thủ'}
                 </span>
               </div>
+
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="text-text-tertiary hover:text-semantic-danger hover:bg-semantic-danger/10"
-                rightIcon={<LogOut className="size-3.5" />}
+                title="Đăng xuất"
+                aria-label="Đăng xuất"
+                className="text-text-tertiary hover:text-semantic-danger hover:bg-semantic-danger/10 size-8 p-0 flex items-center justify-center rounded-lg"
               >
-                Đăng xuất
+                <LogOut className="size-3.5" />
               </Button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <Link href="/login">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="text-xs">
                   Đăng nhập
                 </Button>
               </Link>
               <Link href="/register">
-                <Button variant="primary" size="sm">
-                  Đăng ký ngay
+                <Button variant="primary" size="sm" className="text-xs">
+                  Đăng ký
                 </Button>
               </Link>
             </div>
@@ -222,31 +311,45 @@ export default function Navbar() {
             size="sm"
             id="mobile-menu-btn"
             onClick={() => setMenuOpen((o) => !o)}
-            aria-label="Toggle menu"
+            aria-label="Mở menu điều hướng"
             aria-expanded={menuOpen}
-            className="p-2"
+            className="size-9 p-0 flex items-center justify-center rounded-lg"
           >
             {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </Button>
         </div>
       </div>
 
-      {/* Mobile Dropdown Menu */}
+      {/* Mobile Dropdown Menu (Vertical with Full Text) */}
       {menuOpen && (
-        <div className="md:hidden bg-surface-overlay border-b border-surface-border px-4 py-4 space-y-1 animate-in fade-in-0 duration-200">
-          {siteConfig.navItems.map((item) => (
-            <Link key={item.href} href={item.href} className={getMobileLinkClass(item.href)}>
-              {item.label}
-            </Link>
-          ))}
+        <div className="md:hidden bg-surface-overlay/95 backdrop-blur-xl border-b border-surface-border px-4 py-4 space-y-1.5 animate-in fade-in-0 duration-200 shadow-elevation-3">
+          <Link href="/" className={getMobileLinkClass('/')}>
+            <Home className="size-4 text-brand-cyan" />
+            <span>Trang chủ</span>
+          </Link>
 
-          {user && !isAdmin && !isJudge && (
+          <Link href="/organizers" className={getMobileLinkClass('/organizers')}>
+            <Award className="size-4 text-brand-cyan" />
+            <span>Ban tổ chức</span>
+          </Link>
+
+          {isParticipant && (
             <>
-              {siteConfig.authNavItems.map((item) => (
-                <Link key={item.href} href={item.href} className={getMobileLinkClass(item.href)}>
-                  {item.label}
-                </Link>
-              ))}
+              <Link href="/dashboard" className={getMobileLinkClass('/dashboard')}>
+                <LayoutDashboard className="size-4 text-brand-cyan" />
+                <span>Bảng điều khiển &amp; Đội thi</span>
+              </Link>
+              <Link
+                href="/submissions"
+                className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                  pathname.startsWith('/submissions')
+                    ? 'text-brand-cyan bg-brand-cyan/15 border border-brand-cyan/30'
+                    : 'text-text-primary bg-brand-cyan/10 hover:bg-brand-cyan/15'
+                }`}
+              >
+                <Upload className="size-4 text-brand-cyan" />
+                <span>Nộp bài dự thi</span>
+              </Link>
             </>
           )}
 
@@ -254,25 +357,32 @@ export default function Navbar() {
             <>
               <Link
                 href="/admin"
-                className={`flex items-center gap-2 w-full px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   pathname === '/admin'
                     ? 'text-semantic-warning bg-semantic-warning/10 font-semibold'
                     : 'text-text-secondary hover:text-semantic-warning hover:bg-surface-raised'
                 }`}
               >
                 <Settings className="size-4" />
-                <span>Quản lý</span>
+                <span>Quản trị hệ thống</span>
               </Link>
               <Link
                 href="/admin/phases"
-                className={`flex items-center gap-2 w-full px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   pathname === '/admin/phases'
                     ? 'text-semantic-warning bg-semantic-warning/10 font-semibold'
                     : 'text-text-secondary hover:text-semantic-warning hover:bg-surface-raised'
                 }`}
               >
                 <Calendar className="size-4" />
-                <span>Timeline</span>
+                <span>Timeline &amp; Vòng thi</span>
+              </Link>
+              <Link
+                href="/profile"
+                className={getMobileLinkClass('/profile')}
+              >
+                <UserIcon className="size-4" />
+                <span>Hồ sơ quản trị</span>
               </Link>
             </>
           )}
@@ -281,37 +391,48 @@ export default function Navbar() {
             <>
               <Link
                 href="/judge"
-                className={`flex items-center gap-2 w-full px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   pathname.startsWith('/judge')
                     ? 'text-accent-violet bg-accent-violet/10 font-semibold'
                     : 'text-text-secondary hover:text-accent-violet hover:bg-surface-raised'
                 }`}
               >
                 <Scale className="size-4" />
-                <span>Giám khảo</span>
+                <span>Không gian chấm thi</span>
               </Link>
-              <Link href="/profile" className={getMobileLinkClass('/profile')}>
-                Hồ sơ
+              <Link
+                href="/profile"
+                className={getMobileLinkClass('/profile')}
+              >
+                <UserIcon className="size-4" />
+                <span>Hồ sơ &amp; Chuyên môn</span>
               </Link>
             </>
           )}
 
-          <div className="pt-3 border-t border-surface-border mt-3">
+          {/* User Auth Footer on Mobile */}
+          <div className="pt-3 border-t border-surface-border mt-3 space-y-2.5">
             {loading ? (
-              <div className="w-full h-10 bg-surface-elevated animate-pulse rounded-md" />
+              <div className="w-full h-10 bg-surface-elevated animate-pulse rounded-lg" />
             ) : user ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between px-2 py-1 bg-surface-raised rounded-lg border border-surface-border">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between px-3 py-2 bg-surface-raised rounded-xl border border-surface-border">
                   <div className="flex items-center gap-2">
                     <span className="size-1.5 rounded-full bg-semantic-success animate-pulse" />
                     {isAdmin ? (
-                      <Badge variant="warning" size="sm">BTC</Badge>
+                      <Badge variant="warning" size="sm" className="px-1 py-0 text-[10px] font-bold">
+                        BTC
+                      </Badge>
                     ) : isJudge ? (
-                      <Badge variant="brand" size="sm">BGK</Badge>
+                      <Badge variant="brand" size="sm" className="px-1 py-0 text-[10px] font-bold">
+                        BGK
+                      </Badge>
                     ) : (
-                      <Badge variant="info" size="sm">Thí sinh</Badge>
+                      <Badge variant="info" size="sm" className="px-1 py-0 text-[10px] font-bold">
+                        TS
+                      </Badge>
                     )}
-                    <span className="text-xs font-medium text-text-primary">
+                    <span className="text-xs font-medium text-text-primary truncate">
                       {profile?.full_name || 'Đấu thủ'}
                     </span>
                   </div>

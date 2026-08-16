@@ -602,7 +602,7 @@ function SubmitForm({
         {uploading && <UploadProgress progress={uploadProgress} />}
 
         {/* Actions */}
-        <div className="flex gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-2">
           <Button
             id={`submit-btn-${phase.id}`}
             type="submit"
@@ -611,6 +611,7 @@ function SubmitForm({
             isLoading={uploading}
             leftIcon={<Upload className="size-4" />}
             disabled={uploading || (activeTab === 'file' ? !!fileError : !!linkError)}
+            className="w-full sm:w-auto justify-center"
           >
             Nộp bài
           </Button>
@@ -619,6 +620,7 @@ function SubmitForm({
             variant="ghost"
             size="md"
             onClick={onCancel}
+            className="w-full sm:w-auto justify-center"
           >
             Hủy bỏ
           </Button>
@@ -687,7 +689,7 @@ function CurrentSubmissionCard({
         </Badge>
       </div>
 
-      <div className="flex flex-wrap gap-3 pt-2 border-t border-surface-border">
+      <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-2 border-t border-surface-border">
         {isFile && submission.file_path && (
           <Button
             id={`download-btn-${submission.id}`}
@@ -696,13 +698,14 @@ function CurrentSubmissionCard({
             size="sm"
             isLoading={loadingUrl}
             leftIcon={<Download className="size-4" />}
+            className="w-full sm:w-auto justify-center text-xs"
           >
             Tải xuống bài thi
           </Button>
         )}
         {!isFile && submission.submission_url && (
-          <a href={submission.submission_url} target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary" size="sm" rightIcon={<ExternalLink className="size-4" />}>
+          <a href={submission.submission_url} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+            <Button variant="secondary" size="sm" rightIcon={<ExternalLink className="size-4" />} className="w-full justify-center text-xs">
               Mở link bài nộp
             </Button>
           </a>
@@ -714,6 +717,7 @@ function CurrentSubmissionCard({
             variant="ghost"
             size="sm"
             leftIcon={<RefreshCw className="size-4" />}
+            className="w-full sm:w-auto justify-center text-xs"
           >
             Nộp lại đề án
           </Button>
@@ -932,7 +936,7 @@ function PhaseSubmissionSection({
               variant="primary"
               size="sm"
               leftIcon={<Upload className="size-3.5" />}
-              className="shrink-0 self-end sm:self-center"
+              className="w-full sm:w-auto shrink-0 self-start sm:self-center justify-center text-xs"
             >
               Nộp bài
             </Button>

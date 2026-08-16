@@ -153,52 +153,54 @@ export default function SpeakersSection() {
         </div>
 
         {/* Refined Filter Controls & Scroll Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          {/* Subtle Segmented Pill Filter */}
-          <div
-            role="tablist"
-            aria-label="Phân loại hội đồng chuyên gia"
-            className="inline-flex items-center gap-1 p-1 rounded-xl bg-surface-raised border border-surface-border"
-          >
-            <span className="pl-2 pr-1 text-text-disabled text-xs hidden xs:inline-flex items-center gap-1" aria-hidden="true">
-              <Filter className="size-3 text-text-tertiary" />
-            </span>
-            {TABS.map((tab) => {
-              const count = speakers.filter((s) => s.category === tab.key).length
-              const isActive = activeCategory === tab.key
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  role="tab"
-                  id={`speaker-tab-${tab.key}`}
-                  aria-controls="speaker-tab-panel"
-                  aria-selected={isActive}
-                  onClick={() => setActiveCategory(tab.key)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
-                    isActive
-                      ? 'bg-brand-cyan/15 border border-brand-cyan/40 text-brand-cyan font-semibold shadow-sm'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-surface-overlay/60 border border-transparent'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  {count > 0 && (
-                    <span
-                      className={`text-[10px] font-mono font-bold px-1 rounded ${
-                        isActive ? 'bg-brand-cyan/20 text-brand-cyan' : 'text-text-tertiary'
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 sm:gap-4">
+          {/* Subtle Segmented Pill Filter with horizontal scroll on mobile */}
+          <div className="w-full sm:w-auto overflow-x-auto scrollbar-hide py-1 flex justify-center sm:justify-start">
+            <div
+              role="tablist"
+              aria-label="Phân loại hội đồng chuyên gia"
+              className="inline-flex items-center gap-1 p-1 rounded-xl bg-surface-raised border border-surface-border min-w-max"
+            >
+              <span className="pl-2 pr-1 text-text-disabled text-xs hidden sm:inline-flex items-center gap-1" aria-hidden="true">
+                <Filter className="size-3 text-text-tertiary" />
+              </span>
+              {TABS.map((tab) => {
+                const count = speakers.filter((s) => s.category === tab.key).length
+                const isActive = activeCategory === tab.key
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    id={`speaker-tab-${tab.key}`}
+                    aria-controls="speaker-tab-panel"
+                    aria-selected={isActive}
+                    onClick={() => setActiveCategory(tab.key)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer shrink-0 ${
+                      isActive
+                        ? 'bg-brand-cyan/15 border border-brand-cyan/40 text-brand-cyan font-semibold shadow-sm'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-overlay/60 border border-transparent'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    {count > 0 && (
+                      <span
+                        className={`text-[10px] font-mono font-bold px-1 rounded ${
+                          isActive ? 'bg-brand-cyan/20 text-brand-cyan' : 'text-text-tertiary'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Carousel Buttons */}
           {filteredSpeakers.length > 0 && (
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
               <Button
                 variant="secondary"
                 size="sm"

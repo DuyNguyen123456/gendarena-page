@@ -146,6 +146,13 @@ export default function ProfilePage() {
     }
 
     const p = data as unknown as Profile
+
+    // If role is participant, redirect to unified participant dashboard
+    if (p.role === 'participant') {
+      router.replace('/dashboard')
+      return
+    }
+
     setProfile(p)
     setForm({
       full_name: p.full_name ?? '',
