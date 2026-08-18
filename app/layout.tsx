@@ -33,7 +33,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://gendarena.vn"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://gendarena.com"),
   title: {
     default: `${siteConfig.name} — Đấu Trường Khởi Nghiệp Công Nghệ`,
     template: `%s | ${siteConfig.name}`,
