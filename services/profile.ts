@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase'
 import type { TopicCategory } from '@/types/submission'
+import type { Profile } from '@/types/profile'
+export type { Profile } from '@/types/profile'
+export { isProfileComplete } from '@/lib/profile-utils'
 
 const AVATAR_BUCKET = 'avatars'
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024
@@ -8,7 +11,11 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 export type ProfileUpdate = {
   full_name?: string | null
   organization?: string | null
+  university?: string | null
+  faculty?: string | null
+  major?: string | null
   phone?: string | null
+  dob?: string | null
   facebook_url?: string | null
   avatar_url?: string | null
 }
@@ -64,6 +71,18 @@ export async function uploadAvatar(
 
   const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path)
   return { ok: true, url: data.publicUrl }
+}
+
+export async function getProfile(userId: string): Promise<Profile | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  if (error || !data) return null
+  return data as Profile
 }
 
 export async function updateProfile(

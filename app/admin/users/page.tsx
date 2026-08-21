@@ -4,13 +4,20 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Users, Search, Pencil, CheckCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Users, Search, Pencil, CheckCircle, AlertCircle, UserPlus, Mail, User as UserIcon, Building2 } from 'lucide-react'
 import Loading from '@/components/loading'
 import DotGridBackground from '@/components/dot-grid-background'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { updateProfileExpertise } from '@/services/profile'
 import type { TopicCategory } from '@/types/submission'
 import { TOPIC_CATEGORIES, TOPIC_CATEGORY_CONFIG } from '@/types/submission'
@@ -156,6 +163,17 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('')
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [editingExpertiseFor, setEditingExpertiseFor] = useState<UserRow | null>(null)
+
+  // Invite Judge Modal State
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteForm, setInviteForm] = useState({
+    email: '',
+    full_name: '',
+    organization: '',
+  })
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteError, setInviteError] = useState('')
+
   const router = useRouter()
   const supabase = createClient()
 
@@ -195,6 +213,36 @@ export default function AdminUsers() {
     } else {
       setMessage({ type: 'success', text: 'Đã cập nhật quyền người dùng thành công.' })
       await loadUsers()
+    }
+  }
+
+  const handleInviteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setInviteLoading(true)
+    setInviteError('')
+
+    try {
+      const res = await fetch('/api/admin/invite-judge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inviteForm),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setInviteError(data.error || 'Gửi lời mời thất bại.')
+      } else {
+        setMessage({ type: 'success', text: `Đã gửi email mời cho Giám khảo ${inviteForm.full_name} (${inviteForm.email}) thành công!` })
+        setShowInviteModal(false)
+        setInviteForm({ email: '', full_name: '', organization: '' })
+        await loadUsers()
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lỗi kết nối máy chủ.'
+      setInviteError(msg)
+    } finally {
+      setInviteLoading(false)
     }
   }
 
@@ -246,8 +294,19 @@ export default function AdminUsers() {
                 Giám sát danh sách thành viên, cập nhật quyền hạn và lĩnh vực chuyên môn của BGK
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Badge variant="info" size="md">Tổng số: {users.length} thành viên</Badge>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<UserPlus className="size-4" />}
+                onClick={() => {
+                  setInviteError('')
+                  setShowInviteModal(true)
+                }}
+              >
+                Thêm Giám khảo
+              </Button>
             </div>
           </div>
         </div>
@@ -370,6 +429,93 @@ export default function AdminUsers() {
           )}
         </Card>
       </main>
+
+      {/* Invite Judge Modal */}
+      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+        <DialogContent className="max-w-md p-6 sm:p-7">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="size-5 text-brand-cyan" />
+              <span>Thêm Giám khảo mới</span>
+            </DialogTitle>
+            <DialogDescription>
+              Gửi thư mời qua Email để Giám khảo kích hoạt tài khoản và tự thiết lập mật khẩu truy cập hệ thống chấm thi.
+            </DialogDescription>
+          </DialogHeader>
+
+          {inviteError && (
+            <div className="p-3 rounded-lg bg-semantic-danger/10 border border-semantic-danger/30 text-xs text-semantic-danger flex items-start gap-2 mt-2">
+              <AlertCircle className="size-4 shrink-0 text-semantic-danger mt-0.5" />
+              <span>{inviteError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleInviteSubmit} className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Địa chỉ Email <span className="text-semantic-danger">*</span>
+              </label>
+              <Input
+                type="email"
+                required
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="judge@university.edu.vn"
+                leftIcon={<Mail className="size-4" />}
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Họ và tên <span className="text-semantic-danger">*</span>
+              </label>
+              <Input
+                type="text"
+                required
+                value={inviteForm.full_name}
+                onChange={(e) => setInviteForm(prev => ({ ...prev, full_name: e.target.value }))}
+                placeholder="VD: TS. Nguyễn Văn B"
+                leftIcon={<UserIcon className="size-4" />}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Đơn vị công tác / Học hàm, học vị
+              </label>
+              <Input
+                type="text"
+                value={inviteForm.organization}
+                onChange={(e) => setInviteForm(prev => ({ ...prev, organization: e.target.value }))}
+                placeholder="VD: Viện CNTT - ĐHQG HN"
+                leftIcon={<Building2 className="size-4" />}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-border">
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
+                onClick={() => setShowInviteModal(false)}
+                disabled={inviteLoading}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                isLoading={inviteLoading}
+                leftIcon={<Mail className="size-4" />}
+              >
+                Gửi lời mời
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -14,6 +14,9 @@ import {
   User as UserIcon,
   Phone,
   Building2,
+  GraduationCap,
+  Calendar,
+  BookOpen,
   Link as LinkIcon,
   Camera,
   Save,
@@ -27,6 +30,10 @@ export type ProfileData = {
   full_name: string | null
   email: string | null
   phone: string | null
+  dob?: string | null
+  university?: string | null
+  faculty?: string | null
+  major?: string | null
   organization: string | null
   uid: string | null
   facebook_url: string | null
@@ -37,6 +44,10 @@ export type ProfileData = {
 type FormState = {
   full_name: string
   phone: string
+  dob: string
+  university: string
+  faculty: string
+  major: string
   organization: string
   facebook_url: string
 }
@@ -55,6 +66,10 @@ export default function ProfileEditor({
   const [form, setForm] = useState<FormState>({
     full_name: profile.full_name ?? '',
     phone: profile.phone ?? '',
+    dob: profile.dob ?? '',
+    university: profile.university ?? '',
+    faculty: profile.faculty ?? '',
+    major: profile.major ?? '',
     organization: profile.organization ?? '',
     facebook_url: profile.facebook_url ?? '',
   })
@@ -69,6 +84,10 @@ export default function ProfileEditor({
     setForm({
       full_name: profile.full_name ?? '',
       phone: profile.phone ?? '',
+      dob: profile.dob ?? '',
+      university: profile.university ?? '',
+      faculty: profile.faculty ?? '',
+      major: profile.major ?? '',
       organization: profile.organization ?? '',
       facebook_url: profile.facebook_url ?? '',
     })
@@ -115,6 +134,10 @@ export default function ProfileEditor({
     const payload = {
       full_name: form.full_name.trim() || null,
       phone: form.phone.trim() || null,
+      dob: form.dob.trim() || null,
+      university: form.university.trim() || null,
+      faculty: form.faculty.trim() || null,
+      major: form.major.trim() || null,
       organization: form.organization.trim() || null,
       facebook_url: form.facebook_url.trim() || null,
       avatar_url: avatarUrl,
@@ -219,80 +242,144 @@ export default function ProfileEditor({
           />
         </div>
 
-        {/* Full Name */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-text-secondary">
-            Họ và tên <span className="text-semantic-danger">*</span>
-          </label>
-          <Input
-            type="text"
-            required
-            value={form.full_name}
-            onChange={(e) => {
-              setForm((prev) => ({ ...prev, full_name: e.target.value }))
-              if (formErrors.full_name) setFormErrors((prev) => ({ ...prev, full_name: undefined }))
-            }}
-            placeholder="VD: Nguyễn Văn A"
-            leftIcon={<UserIcon className="size-4" />}
-          />
+        {/* Full Name & DOB */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-text-secondary">
+              Họ và tên <span className="text-semantic-danger">*</span>
+            </label>
+            <Input
+              type="text"
+              required
+              value={form.full_name}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, full_name: e.target.value }))
+                if (formErrors.full_name) setFormErrors((prev) => ({ ...prev, full_name: undefined }))
+              }}
+              placeholder="VD: Nguyễn Văn A"
+              leftIcon={<UserIcon className="size-4" />}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-text-secondary">
+              Ngày sinh <span className="text-semantic-danger">*</span>
+            </label>
+            <Input
+              type="date"
+              required
+              value={form.dob}
+              onChange={(e) => setForm((prev) => ({ ...prev, dob: e.target.value }))}
+              leftIcon={<Calendar className="size-4" />}
+            />
+          </div>
         </div>
 
-        {/* Phone */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-text-secondary">
-            Số điện thoại liên hệ
-          </label>
-          <Input
-            type="tel"
-            value={form.phone}
-            onChange={(e) => {
-              setForm((prev) => ({ ...prev, phone: e.target.value }))
-              if (formErrors.phone) setFormErrors((prev) => ({ ...prev, phone: undefined }))
-            }}
-            placeholder="VD: 0912345678"
-            leftIcon={<Phone className="size-4" />}
-          />
-          {formErrors.phone && (
-            <p className="text-xs text-semantic-danger flex items-center gap-1">
-              <AlertTriangle className="size-3" /> {formErrors.phone}
-            </p>
-          )}
+        {/* Phone & Organization */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-text-secondary">
+              Số điện thoại <span className="text-semantic-danger">*</span>
+            </label>
+            <Input
+              type="tel"
+              required
+              value={form.phone}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, phone: e.target.value }))
+                if (formErrors.phone) setFormErrors((prev) => ({ ...prev, phone: undefined }))
+              }}
+              placeholder="VD: 0912345678"
+              leftIcon={<Phone className="size-4" />}
+            />
+            {formErrors.phone && (
+              <p className="text-xs text-semantic-danger flex items-center gap-1">
+                <AlertTriangle className="size-3" /> {formErrors.phone}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-text-secondary">
+              Trường học (Đại học / Cao đẳng) <span className="text-semantic-danger">*</span>
+            </label>
+            <Input
+              type="text"
+              required
+              value={form.university}
+              onChange={(e) => setForm((prev) => ({ ...prev, university: e.target.value }))}
+              placeholder="VD: Đại học Bách Khoa Hà Nội"
+              leftIcon={<GraduationCap className="size-4" />}
+            />
+          </div>
         </div>
 
-        {/* Organization */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-text-secondary">
-            Trường học / Đơn vị công tác
-          </label>
-          <Input
-            type="text"
-            value={form.organization}
-            onChange={(e) => setForm((prev) => ({ ...prev, organization: e.target.value }))}
-            placeholder="VD: ĐH Bách Khoa Hà Nội"
-            leftIcon={<Building2 className="size-4" />}
-          />
+        {/* Faculty & Major */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-text-secondary">
+              Khoa / Viện đào tạo <span className="text-semantic-danger">*</span>
+            </label>
+            <Input
+              type="text"
+              required
+              value={form.faculty}
+              onChange={(e) => setForm((prev) => ({ ...prev, faculty: e.target.value }))}
+              placeholder="VD: Trường CNTT & Truyền thông"
+              leftIcon={<Building2 className="size-4" />}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-text-secondary">
+              Ngành học <span className="text-semantic-danger">*</span>
+            </label>
+            <Input
+              type="text"
+              required
+              value={form.major}
+              onChange={(e) => setForm((prev) => ({ ...prev, major: e.target.value }))}
+              placeholder="VD: Khoa học Máy tính"
+              leftIcon={<BookOpen className="size-4" />}
+            />
+          </div>
         </div>
 
-        {/* Facebook URL */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-text-secondary">
-            Link Facebook cá nhân
-          </label>
-          <Input
-            type="url"
-            value={form.facebook_url}
-            onChange={(e) => {
-              setForm((prev) => ({ ...prev, facebook_url: e.target.value }))
-              if (formErrors.facebook_url) setFormErrors((prev) => ({ ...prev, facebook_url: undefined }))
-            }}
-            placeholder="VD: https://facebook.com/username"
-            leftIcon={<LinkIcon className="size-4" />}
-          />
-          {formErrors.facebook_url && (
-            <p className="text-xs text-semantic-danger flex items-center gap-1">
-              <AlertTriangle className="size-3" /> {formErrors.facebook_url}
-            </p>
-          )}
+        {/* Additional Info: Organization & Facebook */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-text-secondary">
+              Đơn vị / Doanh nghiệp công tác
+            </label>
+            <Input
+              type="text"
+              value={form.organization}
+              onChange={(e) => setForm((prev) => ({ ...prev, organization: e.target.value }))}
+              placeholder="VD: Viettel, FPT..."
+              leftIcon={<Building2 className="size-4" />}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-text-secondary">
+              Link Facebook cá nhân
+            </label>
+            <Input
+              type="url"
+              value={form.facebook_url}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, facebook_url: e.target.value }))
+                if (formErrors.facebook_url) setFormErrors((prev) => ({ ...prev, facebook_url: undefined }))
+              }}
+              placeholder="VD: https://facebook.com/username"
+              leftIcon={<LinkIcon className="size-4" />}
+            />
+            {formErrors.facebook_url && (
+              <p className="text-xs text-semantic-danger flex items-center gap-1">
+                <AlertTriangle className="size-3" /> {formErrors.facebook_url}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -333,7 +420,7 @@ export default function ProfileEditor({
           Thông tin cá nhân
         </h3>
         <p className="text-xs text-text-secondary mt-0.5">
-          Cập nhật hồ sơ để ban tổ chức và đồng đội dễ dàng liên hệ
+          Cập nhật hồ sơ đầy đủ để nhận huy hiệu Xác thực và giúp ban tổ chức liên hệ trao giải
         </p>
       </div>
       {content}

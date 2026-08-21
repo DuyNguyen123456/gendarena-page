@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton'
 
 export default function RegisterForm() {
   const [loading, setLoading] = useState(false)
@@ -262,6 +263,21 @@ export default function RegisterForm() {
               Đăng ký tài khoản
             </Button>
           </form>
+
+          {/* Divider */}
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-surface-border" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-surface-raised px-3 text-text-tertiary">
+                Hoặc
+              </span>
+            </div>
+          </div>
+
+          {/* Google OAuth Login */}
+          <GoogleSignInButton label="Tiếp tục với Google" />
 
           <p className="text-center text-xs text-text-secondary mt-6 font-medium">
             Đã có tài khoản?{' '}

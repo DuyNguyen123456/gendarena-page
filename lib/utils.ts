@@ -5,19 +5,25 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getAppUrl() {
-  // In browser during local development, always use actual origin to avoid
-  // accidentally sending recovery emails to a production URL from .env.local
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-    return window.location.origin
-  }
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    const url = process.env.NEXT_PUBLIC_SITE_URL
-    return url.endsWith('/') ? url.slice(0, -1) : url
-  }
-  // Production browser fallback
+export function getAppUrl(): string {
+  // 1. Nếu đang chạy trên Trình duyệt (Client-side)
   if (typeof window !== 'undefined') {
-    return window.location.origin
+    const origin = window.location.origin
+    // Nếu là localhost / 127.0.0.1 -> Luôn dùng http://
+    if (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1'
+    ) {
+      return origin.replace(/^https:/, 'http:')
+    }
+    return origin
   }
-  return 'http://localhost:3000'
+
+  // 2. Môi trường Server-side hoặc Build
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:3000'
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://gendarena.com'
+  return siteUrl.replace(/\/$/, '')
 }

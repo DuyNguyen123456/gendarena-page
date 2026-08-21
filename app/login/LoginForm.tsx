@@ -20,6 +20,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton'
 
 export default function LoginForm() {
   const [loading, setLoading] = useState(false)
@@ -241,6 +242,21 @@ export default function LoginForm() {
               Đăng nhập
             </Button>
           </form>
+
+          {/* Divider */}
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-surface-border" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-surface-raised px-3 text-text-tertiary">
+                Hoặc
+              </span>
+            </div>
+          </div>
+
+          {/* Google OAuth Login */}
+          <GoogleSignInButton />
 
           <p className="text-center text-xs text-text-secondary mt-6 font-medium">
             Chưa có tài khoản?{' '}

@@ -37,10 +37,15 @@ import {
   Shield,
   Phone,
   Building2,
+  GraduationCap,
+  BookOpen,
+  Calendar,
   ExternalLink,
   CheckCircle2,
   Share2,
+  BadgeCheck,
 } from 'lucide-react'
+import { isProfileComplete } from '@/lib/profile-utils'
 
 type Competition = {
   id: string
@@ -71,6 +76,10 @@ type TeamMember = {
     email: string | null
     phone: string | null
     organization: string | null
+    university?: string | null
+    faculty?: string | null
+    major?: string | null
+    dob?: string | null
     avatar_url: string | null
     facebook_url: string | null
   } | null
@@ -181,7 +190,7 @@ function DashboardContent() {
     const userIds = membersData.map((m) => m.user_id)
     const { data: profilesData } = await supabase
       .from('profiles')
-      .select('id, full_name, email, phone, organization, avatar_url, facebook_url')
+      .select('id, full_name, email, phone, organization, university, faculty, major, dob, avatar_url, facebook_url')
       .in('id', userIds)
 
     const profileMap: Record<
@@ -191,6 +200,10 @@ function DashboardContent() {
         email: string | null
         phone: string | null
         organization: string | null
+        university?: string | null
+        faculty?: string | null
+        major?: string | null
+        dob?: string | null
         avatar_url: string | null
         facebook_url: string | null
       }
@@ -202,6 +215,10 @@ function DashboardContent() {
         email: p.email,
         phone: p.phone,
         organization: p.organization,
+        university: ((p as Record<string, unknown>).university as string | null) ?? null,
+        faculty: ((p as Record<string, unknown>).faculty as string | null) ?? null,
+        major: ((p as Record<string, unknown>).major as string | null) ?? null,
+        dob: ((p as Record<string, unknown>).dob as string | null) ?? null,
         avatar_url: ((p as Record<string, unknown>).avatar_url as string | null) ?? null,
         facebook_url: ((p as Record<string, unknown>).facebook_url as string | null) ?? null,
       }
@@ -780,10 +797,21 @@ function DashboardContent() {
                 variant="secondary"
                 size="sm"
                 onClick={() => setShowProfileModal(true)}
-                leftIcon={<UserIcon className="size-3.5" />}
-                className="w-full sm:w-auto shrink-0 justify-center text-xs"
+                leftIcon={
+                  isProfileComplete(profile) ? (
+                    <BadgeCheck className="size-3.5 text-brand-cyan" />
+                  ) : (
+                    <UserIcon className="size-3.5" />
+                  )
+                }
+                className="w-full sm:w-auto shrink-0 justify-center text-xs gap-1.5"
               >
-                Hồ sơ cá nhân ({profile.full_name || 'Tôi'})
+                <span>Hồ sơ cá nhân ({profile.full_name || 'Tôi'})</span>
+                {isProfileComplete(profile) && (
+                  <span className="text-[10px] text-brand-cyan font-medium hidden sm:inline">
+                    · Đã xác thực
+                  </span>
+                )}
               </Button>
             )}
           </div>
@@ -792,13 +820,21 @@ function DashboardContent() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
             <div className="space-y-1">
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
+                <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-text-primary flex items-center gap-2.5 flex-wrap">
                   {myTeam ? (
                     <>
-                      Đội thi: <span className="text-brand-cyan">{myTeam.name}</span>
+                      <span>Đội thi: <span className="text-brand-cyan">{myTeam.name}</span></span>
                     </>
                   ) : (
-                    `Xin chào, ${profile?.full_name || 'Đấu thủ'}!`
+                    <>
+                      <span>Xin chào, {profile?.full_name || 'Đấu thủ'}!</span>
+                      {isProfileComplete(profile) && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-cyan bg-brand-cyan/10 border border-brand-cyan/30 px-2.5 py-1 rounded-full" title="Đã xác thực hồ sơ">
+                          <BadgeCheck className="size-3.5 text-brand-cyan" />
+                          <span>Đã xác thực hồ sơ</span>
+                        </span>
+                      )}
+                    </>
                   )}
                 </h1>
 
@@ -863,6 +899,34 @@ function DashboardContent() {
           </div>
         </div>
       </div>
+
+      {/* Incomplete Profile Banner Notice */}
+      {profile && !isProfileComplete(profile) && (
+        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-6">
+          <div className="p-4 sm:p-5 rounded-xl border border-brand-cyan/40 bg-brand-cyan/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="size-5 text-brand-cyan shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-semibold text-text-primary">
+                  Hồ sơ chưa hoàn thiện
+                </p>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Hồ sơ của bạn chưa hoàn thiện. Vui lòng bổ sung thông tin cá nhân để nhận huy hiệu Xác thực (Verified) và thuận tiện cho việc trao giải.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setShowProfileModal(true)}
+              className="shrink-0 w-full sm:w-auto justify-center text-xs"
+              leftIcon={<Pencil className="size-3.5" />}
+            >
+              Bổ sung thông tin
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Global Status Message Toast */}
       {globalMessage && (
@@ -1619,13 +1683,21 @@ function DashboardContent() {
 
               {/* Detailed Info Fields */}
               <div className="space-y-3 pt-3 border-t border-surface-border text-sm">
-                {/* Organization */}
+                {/* Organization & School */}
                 <div className="flex items-start gap-3">
-                  <Building2 className="size-4 text-brand-cyan shrink-0 mt-0.5" />
+                  <GraduationCap className="size-4 text-brand-cyan shrink-0 mt-0.5" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] text-text-tertiary">Đơn vị / Trường học</p>
+                    <p className="text-[11px] text-text-tertiary">Trường học / Khoa - Ngành</p>
                     <p className="text-text-primary text-xs font-medium">
-                      {selectedMember.profiles?.organization || (
+                      {selectedMember.profiles?.university ? (
+                        <>
+                          {selectedMember.profiles.university}
+                          {selectedMember.profiles.faculty ? ` · ${selectedMember.profiles.faculty}` : ''}
+                          {selectedMember.profiles.major ? ` (${selectedMember.profiles.major})` : ''}
+                        </>
+                      ) : selectedMember.profiles?.organization ? (
+                        selectedMember.profiles.organization
+                      ) : (
                         <span className="text-text-disabled italic">Chưa cập nhật</span>
                       )}
                     </p>

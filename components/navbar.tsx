@@ -20,13 +20,17 @@ import {
   X,
   LogOut,
   Award,
+  BadgeCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { isProfileComplete } from '@/lib/profile-utils'
+import type { Profile } from '@/types/profile'
+import NotificationBell from '@/components/notifications/NotificationBell'
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<{ full_name?: string; role?: string } | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -44,10 +48,10 @@ export default function Navbar() {
       if (user) {
         const { data } = await supabase
           .from('profiles')
-          .select('full_name, role')
+          .select('id, full_name, role, university, faculty, major, phone, dob')
           .eq('id', user.id)
           .single()
-        setProfile(data)
+        setProfile(data as Profile | null)
       } else {
         setProfile(null)
       }
@@ -251,12 +255,14 @@ export default function Navbar() {
             <div className="w-24 h-9 bg-surface-elevated animate-pulse rounded-md" />
           ) : user ? (
             <div className="flex items-center gap-2.5">
+              <NotificationBell userId={user.id} />
+
               {/* Shortened Role Badge + Full Name */}
               <div
                 className="flex items-center gap-1.5 bg-surface-raised border border-surface-border px-2.5 py-1 rounded-full text-xs"
                 title={`Đã đăng nhập: ${profile?.full_name || 'Đấu thủ'} (${
                   isAdmin ? 'Ban Tổ Chức' : isJudge ? 'Ban Giám Khảo' : 'Thí sinh'
-                })`}
+                })${isParticipant && isProfileComplete(profile) ? ' - Đã xác thực hồ sơ' : ''}`}
               >
                 <span className="size-1.5 rounded-full bg-semantic-success animate-pulse" />
                 {isAdmin ? (
@@ -275,6 +281,11 @@ export default function Navbar() {
                 <span className="font-medium text-text-primary max-w-[100px] lg:max-w-[130px] truncate">
                   {profile?.full_name || 'Đấu thủ'}
                 </span>
+                {isParticipant && isProfileComplete(profile) && (
+                  <span title="Đã xác thực hồ sơ" aria-label="Đã xác thực hồ sơ" className="inline-flex items-center">
+                    <BadgeCheck className="size-3.5 text-brand-cyan shrink-0" />
+                  </span>
+                )}
               </div>
 
               <Button
@@ -304,8 +315,9 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Hamburger Button */}
-        <div className="md:hidden flex items-center">
+        {/* Mobile Hamburger Button & Quick Notifications */}
+        <div className="md:hidden flex items-center gap-1.5">
+          {user && <NotificationBell userId={user.id} />}
           <Button
             variant="ghost"
             size="sm"
@@ -435,6 +447,11 @@ export default function Navbar() {
                     <span className="text-xs font-medium text-text-primary truncate">
                       {profile?.full_name || 'Đấu thủ'}
                     </span>
+                    {isParticipant && isProfileComplete(profile) && (
+                      <span title="Đã xác thực hồ sơ" aria-label="Đã xác thực hồ sơ" className="inline-flex items-center">
+                        <BadgeCheck className="size-3.5 text-brand-cyan shrink-0" />
+                      </span>
+                    )}
                   </div>
                 </div>
                 <Button
