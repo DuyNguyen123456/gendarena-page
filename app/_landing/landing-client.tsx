@@ -18,7 +18,7 @@ import { siteConfig } from '@/config/site'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { Lightbulb, Users, Trophy, UserPlus, FileCode, Award, ArrowRight } from 'lucide-react'
+import { Lightbulb, Users, Trophy, ArrowRight } from 'lucide-react'
 
 // ─── Hero animation variants ───────────────────────────────────────────────
 const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1]
@@ -169,28 +169,6 @@ function HeroSection({ targetDate, phaseTitle }: HeroProps) {
   )
 }
 
-// ─── HOW IT WORKS section data ────────────────────────────────────────────
-const HOW_IT_WORKS = [
-  {
-    step: '01',
-    icon: <UserPlus className="size-6 text-brand-cyan card-icon" />,
-    title: 'Tạo Đội & Đăng Ký',
-    desc: 'Đăng ký tài khoản cá nhân, thành lập đội thi 2-5 thành viên hoặc ghép đội tự do trên hệ thống đấu trường.',
-  },
-  {
-    step: '02',
-    icon: <FileCode className="size-6 text-brand-cyan card-icon" />,
-    title: 'Hoàn Thiện Đề Án',
-    desc: 'Xây dựng giải pháp công nghệ, nộp báo cáo đề án theo tiêu chí chuẩn và nhận cố vấn từ hội đồng chuyên môn.',
-  },
-  {
-    step: '03',
-    icon: <Award className="size-6 text-brand-cyan card-icon" />,
-    title: 'Tranh Tài & Gọi Vốn',
-    desc: 'Thuyết trình tại các vòng đấu trực tiếp, tranh tài nhận tổng giải thưởng 100 triệu VNĐ cùng cơ hội đầu tư startup.',
-  },
-]
-
 // ─── CORE VALUES section data ─────────────────────────────────────────────
 const CORE_VALUES = [
   {
@@ -226,48 +204,7 @@ export default function LandingClient({
       {/* ─── SECTION 1: HERO ───────────────────────────────────────────────── */}
       <HeroSection targetDate={targetDate} phaseTitle={phaseTitle} />
 
-      {/* ─── SECTION 2: HOW IT WORKS ────────────────────────────────────── */}
-      <section className="relative py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-surface-border/60">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <RevealOnScroll className="flex flex-col items-center text-center mb-10 sm:mb-12 md:mb-16">
-            <Badge variant="brand" size="md" className="mb-3">QUY TRÌNH</Badge>
-            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-text-primary mb-3">
-              3 Bước Tham Gia Đấu Trường
-            </h2>
-            <p className="text-text-secondary text-sm md:text-base max-w-xl">
-              Lộ trình tinh gọn giúp đội thi phát triển từ ý tưởng sơ khởi đến sản phẩm hoàn thiện.
-            </p>
-          </RevealOnScroll>
-
-          <RevealOnScroll delay={0.15}>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
-              {HOW_IT_WORKS.map((item, idx) => (
-                <Card key={idx} interactive className="card-hover-glow flex flex-col justify-between h-full relative overflow-hidden">
-                  <CursorCardGlow />
-                  <CardHeader className="relative z-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="size-11 rounded-lg bg-brand-cyan/10 border border-brand-cyan/20 flex items-center justify-center">
-                        {item.icon}
-                      </div>
-                      <span className="font-mono text-2xl font-semibold text-text-tertiary">{item.step}</span>
-                    </div>
-                    <CardTitle className="text-lg md:text-xl font-semibold text-text-primary">
-                      {item.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="relative z-10">
-                    <CardDescription className="text-text-secondary text-sm leading-relaxed mt-0">
-                      {item.desc}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </RevealOnScroll>
-        </div>
-      </section>
-
-      {/* ─── SECTION 3: CORE VALUES ─────────────────────────────────────── */}
+      {/* ─── SECTION 2: CORE VALUES ─────────────────────────────────────── */}
       <section className="relative py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-surface-border/60">
         <div className="max-w-7xl mx-auto relative z-10">
           <RevealOnScroll className="flex flex-col items-center text-center mb-10 sm:mb-12 md:mb-16">
@@ -305,17 +242,17 @@ export default function LandingClient({
         </div>
       </section>
 
-      {/* ─── SECTION 4: TIMELINE ────────────────────────────────────────── */}
+      {/* ─── SECTION 3: TIMELINE ────────────────────────────────────────── */}
       <RevealOnScroll>
         <TimelineSection phases={phases} />
       </RevealOnScroll>
 
-      {/* ─── SECTION 5: SPEAKERS ────────────────────────────────────────── */}
+      {/* ─── SECTION 4: SPEAKERS ────────────────────────────────────────── */}
       <RevealOnScroll>
         <SpeakersSection />
       </RevealOnScroll>
 
-      {/* ─── SECTION 6: SPONSORS ────────────────────────────────────────── */}
+      {/* ─── SECTION 5: SPONSORS ────────────────────────────────────────── */}
       <RevealOnScroll>
         <SponsorsSection />
       </RevealOnScroll>
@@ -325,4 +262,3 @@ export default function LandingClient({
     </div>
   )
 }
-

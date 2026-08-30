@@ -4,13 +4,53 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
-import { CheckCircle2, XCircle, User, Mail, Phone, Building2, Lock, Eye, EyeOff } from 'lucide-react'
+import {
+  CheckCircle2,
+  XCircle,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  GraduationCap,
+  Building2,
+  BookOpen,
+  Lock,
+  Eye,
+  EyeOff,
+} from 'lucide-react'
+import { z } from 'zod'
 import DotGridBackground from '@/components/dot-grid-background'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton'
+import { formatDob, dobToDbFormat } from '@/lib/utils'
+
+const registerSchema = z
+  .object({
+    fullName: z.string().trim().min(1, 'Vui lòng nhập họ và tên'),
+    email: z.string().trim().email('Địa chỉ email không hợp lệ'),
+    phone: z.string().trim().optional().or(z.literal('')),
+    dob: z
+      .string()
+      .trim()
+      .refine(
+        (val) => !val || /^\d{2}\/\d{2}\/\d{4}$/.test(val),
+        'Ngày sinh phải theo định dạng DD/MM/YYYY (VD: 15/08/2002)'
+      )
+      .optional()
+      .or(z.literal('')),
+    university: z.string().trim().optional().or(z.literal('')),
+    faculty: z.string().trim().optional().or(z.literal('')),
+    major: z.string().trim().optional().or(z.literal('')),
+    password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+    confirmPassword: z.string().min(6, 'Mật khẩu xác nhận phải có ít nhất 6 ký tự'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Mật khẩu xác nhận không khớp',
+    path: ['confirmPassword'],
+  })
 
 export default function RegisterForm() {
   const [loading, setLoading] = useState(false)
@@ -18,9 +58,15 @@ export default function RegisterForm() {
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [dob, setDob] = useState('')
 
   const supabase = createClient()
   const prefersReducedMotion = useReducedMotion()
+
+  const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatDob(e.target.value)
+    setDob(formatted)
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -28,22 +74,49 @@ export default function RegisterForm() {
     setError('')
 
     const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-    const fullName = formData.get('fullName') as string
-    const phone = formData.get('phone') as string
-    const organization = formData.get('organization') as string
+    const rawData = {
+      fullName: formData.get('fullName') as string,
+      email: formData.get('email') as string,
+      phone: (formData.get('phone') as string) || '',
+      dob: dob || (formData.get('dob') as string) || '',
+      university: (formData.get('university') as string) || '',
+      faculty: (formData.get('faculty') as string) || '',
+      major: (formData.get('major') as string) || '',
+      password: formData.get('password') as string,
+      confirmPassword: formData.get('confirmPassword') as string,
+    }
 
-    const confirmPassword = formData.get('confirmPassword') as string
-    if (password !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp')
+    const validation = registerSchema.safeParse(rawData)
+    if (!validation.success) {
+      setError(validation.error.issues[0]?.message || 'Dữ liệu không hợp lệ')
       setLoading(false)
       return
     }
 
+    const {
+      fullName,
+      email,
+      phone,
+      dob: validatedDob,
+      university,
+      faculty,
+      major,
+      password,
+    } = validation.data
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          full_name: fullName,
+          phone: phone || '',
+          dob: validatedDob || '',
+          university: university || '',
+          faculty: faculty || '',
+          major: major || '',
+        },
+      },
     })
 
     if (authError) {
@@ -53,20 +126,28 @@ export default function RegisterForm() {
     }
 
     if (authData.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          full_name: fullName,
-          email: email,
-          phone: phone,
-          organization: organization,
-        } as never)
+      try {
+        const dbDob = dobToDbFormat(validatedDob)
+        const { error: profileError } = await supabase.from('profiles').upsert(
+          {
+            id: authData.user.id,
+            full_name: fullName,
+            email: email,
+            phone: phone || null,
+            dob: dbDob || null,
+            university: university || null,
+            faculty: faculty || null,
+            major: major || null,
+            role: 'participant',
+          } as never,
+          { onConflict: 'id' }
+        )
 
-      if (profileError) {
-        setError(profileError.message)
-        setLoading(false)
-        return
+        if (profileError) {
+          console.error('Profile creation notice:', profileError.message)
+        }
+      } catch (profileErr) {
+        console.error('Profile creation exception:', profileErr)
       }
     }
 
@@ -99,7 +180,9 @@ export default function RegisterForm() {
             <div className="size-16 rounded-full bg-semantic-success/10 border border-semantic-success/30 flex items-center justify-center mx-auto text-semantic-success mb-5">
               <CheckCircle2 className="size-8" />
             </div>
-            <Badge variant="brand" size="sm" className="mb-3">GenD Arena 2026</Badge>
+            <Badge variant="brand" size="sm" className="mb-3">
+              GenD Arena 2026
+            </Badge>
             <h2 className="font-display text-2xl font-semibold text-text-primary mb-2">
               Đăng ký thành công!
             </h2>
@@ -135,7 +218,7 @@ export default function RegisterForm() {
         initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="relative z-10 w-full max-w-md my-4"
+        className="relative z-10 w-full max-w-xl my-4"
       >
         <Card className="p-6 sm:p-8 bg-surface-raised border border-surface-border shadow-elevation-2">
           {/* Brand header */}
@@ -159,98 +242,149 @@ export default function RegisterForm() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Row 1: Full Name & Email */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Họ và tên <span className="text-brand-cyan">*</span>
+                </label>
+                <Input
+                  name="fullName"
+                  required
+                  placeholder="Nguyễn Văn A"
+                  leftIcon={<User className="size-4" />}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Email <span className="text-brand-cyan">*</span>
+                </label>
+                <Input
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="email@example.com"
+                  leftIcon={<Mail className="size-4" />}
+                />
+              </div>
+            </div>
+
+            {/* Row 2: Phone & DOB (DD/MM/YYYY) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Số điện thoại
+                </label>
+                <Input
+                  name="phone"
+                  type="tel"
+                  placeholder="0901234567"
+                  leftIcon={<Phone className="size-4" />}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Ngày sinh (DD/MM/YYYY)
+                </label>
+                <Input
+                  name="dob"
+                  type="text"
+                  value={dob}
+                  onChange={handleDobChange}
+                  maxLength={10}
+                  placeholder="DD/MM/YYYY (VD: 15/08/2002)"
+                  leftIcon={<Calendar className="size-4" />}
+                />
+              </div>
+            </div>
+
+            {/* Row 3: University */}
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-text-secondary">
-                Họ và tên <span className="text-brand-cyan">*</span>
+                Trường học / Đại học
               </label>
               <Input
-                name="fullName"
-                required
-                placeholder="Nguyễn Văn A"
-                leftIcon={<User className="size-4" />}
+                name="university"
+                placeholder="VD: Đại học Bách Khoa Hà Nội"
+                leftIcon={<GraduationCap className="size-4" />}
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-text-secondary">
-                Email <span className="text-brand-cyan">*</span>
-              </label>
-              <Input
-                name="email"
-                type="email"
-                required
-                placeholder="email@example.com"
-                leftIcon={<Mail className="size-4" />}
-              />
+            {/* Row 4: Faculty & Major */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Khoa / Viện đào tạo
+                </label>
+                <Input
+                  name="faculty"
+                  placeholder="VD: Viện CNTT & TT"
+                  leftIcon={<Building2 className="size-4" />}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Ngành học
+                </label>
+                <Input
+                  name="major"
+                  placeholder="VD: Khoa học máy tính"
+                  leftIcon={<BookOpen className="size-4" />}
+                />
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-text-secondary">
-                Số điện thoại
-              </label>
-              <Input
-                name="phone"
-                placeholder="0901234567"
-                leftIcon={<Phone className="size-4" />}
-              />
-            </div>
+            {/* Row 5: Password & Confirm Password */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Mật khẩu <span className="text-brand-cyan">*</span>
+                </label>
+                <Input
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  placeholder="Ít nhất 6 ký tự"
+                  leftIcon={<Lock className="size-4" />}
+                  rightIcon={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="pointer-events-auto text-text-tertiary hover:text-text-primary transition focus:outline-none"
+                      aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  }
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-text-secondary">
-                Đơn vị / Trường học
-              </label>
-              <Input
-                name="organization"
-                placeholder="Đại học ABC"
-                leftIcon={<Building2 className="size-4" />}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-text-secondary">
-                Mật khẩu <span className="text-brand-cyan">*</span>
-              </label>
-              <Input
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                required
-                minLength={6}
-                placeholder="Ít nhất 6 ký tự"
-                leftIcon={<Lock className="size-4" />}
-                rightIcon={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="pointer-events-auto text-text-tertiary hover:text-text-primary transition focus:outline-none"
-                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  >
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                }
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-text-secondary">
-                Xác nhận mật khẩu <span className="text-brand-cyan">*</span>
-              </label>
-              <Input
-                name="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                required
-                placeholder="Nhập lại mật khẩu"
-                leftIcon={<Lock className="size-4" />}
-                rightIcon={
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="pointer-events-auto text-text-tertiary hover:text-text-primary transition focus:outline-none"
-                    aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  >
-                    {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                }
-              />
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-secondary">
+                  Xác nhận mật khẩu <span className="text-brand-cyan">*</span>
+                </label>
+                <Input
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Nhập lại mật khẩu"
+                  leftIcon={<Lock className="size-4" />}
+                  rightIcon={
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="pointer-events-auto text-text-tertiary hover:text-text-primary transition focus:outline-none"
+                      aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    >
+                      {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  }
+                />
+              </div>
             </div>
 
             <Button
@@ -293,4 +427,3 @@ export default function RegisterForm() {
     </div>
   )
 }
-

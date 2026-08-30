@@ -10,6 +10,7 @@ import {
   validatePhone,
   validateFacebookUrl,
 } from '@/services/profile'
+import { formatDob } from '@/lib/utils'
 import {
   User as UserIcon,
   Phone,
@@ -66,7 +67,7 @@ export default function ProfileEditor({
   const [form, setForm] = useState<FormState>({
     full_name: profile.full_name ?? '',
     phone: profile.phone ?? '',
-    dob: profile.dob ?? '',
+    dob: formatDob(profile.dob ?? ''),
     university: profile.university ?? '',
     faculty: profile.faculty ?? '',
     major: profile.major ?? '',
@@ -84,7 +85,7 @@ export default function ProfileEditor({
     setForm({
       full_name: profile.full_name ?? '',
       phone: profile.phone ?? '',
-      dob: profile.dob ?? '',
+      dob: formatDob(profile.dob ?? ''),
       university: profile.university ?? '',
       faculty: profile.faculty ?? '',
       major: profile.major ?? '',
@@ -132,6 +133,7 @@ export default function ProfileEditor({
     }
 
     const payload = {
+      email: profile.email || null,
       full_name: form.full_name.trim() || null,
       phone: form.phone.trim() || null,
       dob: form.dob.trim() || null,
@@ -146,7 +148,7 @@ export default function ProfileEditor({
     const result = await updateProfile(profile.id, payload)
 
     if (!result.ok) {
-      setStatusMessage({ text: result.error, type: 'error' })
+      setStatusMessage({ text: `Không thể lưu thông tin hồ sơ: ${result.error}`, type: 'error' })
     } else {
       setStatusMessage({ text: 'Đã lưu thông tin hồ sơ thành công!', type: 'success' })
       setAvatarFile(null)
@@ -263,13 +265,15 @@ export default function ProfileEditor({
 
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-text-secondary">
-              Ngày sinh <span className="text-semantic-danger">*</span>
+              Ngày sinh (DD/MM/YYYY) <span className="text-semantic-danger">*</span>
             </label>
             <Input
-              type="date"
+              type="text"
               required
               value={form.dob}
-              onChange={(e) => setForm((prev) => ({ ...prev, dob: e.target.value }))}
+              onChange={(e) => setForm((prev) => ({ ...prev, dob: formatDob(e.target.value) }))}
+              maxLength={10}
+              placeholder="DD/MM/YYYY (VD: 15/08/2002)"
               leftIcon={<Calendar className="size-4" />}
             />
           </div>

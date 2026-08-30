@@ -48,9 +48,9 @@ export default function Navbar() {
       if (user) {
         const { data } = await supabase
           .from('profiles')
-          .select('id, full_name, role, university, faculty, major, phone, dob')
+          .select('id, full_name, email, role, university, faculty, major, phone, dob')
           .eq('id', user.id)
-          .single()
+          .maybeSingle()
         setProfile(data as Profile | null)
       } else {
         setProfile(null)
@@ -80,7 +80,7 @@ export default function Navbar() {
     setUser(null)
     setProfile(null)
     await supabase.auth.signOut()
-    router.replace('/')
+    window.location.href = '/login'
   }
 
   const isAdmin = profile?.role === 'admin'
@@ -279,7 +279,7 @@ export default function Navbar() {
                   </Badge>
                 )}
                 <span className="font-medium text-text-primary max-w-[100px] lg:max-w-[130px] truncate">
-                  {profile?.full_name || 'Đấu thủ'}
+                  {profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Đấu thủ'}
                 </span>
                 {isParticipant && isProfileComplete(profile) && (
                   <span title="Đã xác thực hồ sơ" aria-label="Đã xác thực hồ sơ" className="inline-flex items-center">
@@ -445,7 +445,7 @@ export default function Navbar() {
                       </Badge>
                     )}
                     <span className="text-xs font-medium text-text-primary truncate">
-                      {profile?.full_name || 'Đấu thủ'}
+                      {profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Đấu thủ'}
                     </span>
                     {isParticipant && isProfileComplete(profile) && (
                       <span title="Đã xác thực hồ sơ" aria-label="Đã xác thực hồ sơ" className="inline-flex items-center">

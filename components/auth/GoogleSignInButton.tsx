@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { getAppUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 
 interface GoogleSignInButtonProps {
   label?: string
@@ -46,17 +46,29 @@ export default function GoogleSignInButton({
     setLoading(true)
     setError(null)
 
-    const redirectTo = `${getAppUrl()}/auth/callback?next=/dashboard`
-    const { error: signInError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo,
-      },
-    })
+    try {
+      const redirectTo = `${getAppUrl()}/auth/callback?next=/dashboard`
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+        },
+      })
 
-    if (signInError) {
-      console.error('Google Sign-In Error:', signInError.message)
-      setError('Không thể kết nối Google. Vui lòng thử lại.')
+      if (signInError) {
+        console.error('Google Sign-In Error:', signInError)
+        setError(signInError.message || 'Không thể kết nối Google. Vui lòng thử lại.')
+        setLoading(false)
+      }
+    } catch (err: unknown) {
+      console.error('Google Sign-In Exception:', err)
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Đã có lỗi không xác định xảy ra khi đăng nhập bằng Google'
+      setError(message)
       setLoading(false)
     }
   }
@@ -80,9 +92,10 @@ export default function GoogleSignInButton({
       </Button>
 
       {error && (
-        <p className="text-xs text-semantic-danger mt-2 text-center leading-snug">
-          {error}
-        </p>
+        <div className="mt-3 p-3 rounded-lg bg-semantic-danger/10 border border-semantic-danger/30 text-xs font-medium text-semantic-danger flex items-start gap-2 animate-in fade-in-0 duration-150">
+          <AlertCircle className="size-4 shrink-0 mt-0.5 text-semantic-danger" />
+          <span className="leading-snug">Lỗi đăng nhập Google: {error}</span>
+        </div>
       )}
     </div>
   )

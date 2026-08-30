@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { NextResponse } from 'next/server'
+import { getAppUrl } from '@/lib/utils'
 
 export async function POST(request: Request) {
   try {
@@ -75,9 +76,7 @@ export async function POST(request: Request) {
     )
 
     // Determine redirect url for email invite
-    const requestUrl = new URL(request.url)
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin
-    const redirectTo = `${siteUrl.replace(/\/$/, '')}/auth/callback?next=/reset-password`
+    const redirectTo = `${getAppUrl()}/auth/callback?next=/reset-password`
 
     // 4. Invite user via Supabase Auth Admin API
     const { data: inviteData, error: inviteError } =
@@ -108,7 +107,6 @@ export async function POST(request: Request) {
           full_name: trimmedFullName,
           organization: trimmedOrg,
           role: 'judge',
-          updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' }
       )

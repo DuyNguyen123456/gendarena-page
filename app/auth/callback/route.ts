@@ -16,16 +16,42 @@ function resolveErrorMessage(message: string): string {
   return 'Không thể xác thực liên kết. Vui lòng thử lại hoặc gửi lại yêu cầu.'
 }
 
+/** Resolves safe origin: guarantees http:// on localhost/127.0.0.1 and https:// in production */
+function getSafeOrigin(request: Request, requestUrl: URL): string {
+  const rawHost =
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    requestUrl.host
+
+  const host = rawHost.split(',')[0].trim()
+  const hostname = host.split(':')[0].toLowerCase()
+
+  // Local environment -> ALWAYS use http://
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `http://${host}`
+  }
+
+  // Production / Deployed environment
+  const protoHeader = request.headers.get('x-forwarded-proto')
+  const proto = protoHeader ? protoHeader.split(',')[0].trim() : 'https'
+  return `${proto}://${host}`
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
+  const safeOrigin = getSafeOrigin(request, requestUrl)
   const code = requestUrl.searchParams.get('code')
-  const next = requestUrl.searchParams.get('next') ?? '/reset-password'
 
-  // G-2 / G-6: Missing code param — user navigated here directly, not via email link
+  // Sanitize next path: must be a relative path, prevent open redirects and protocol forcing
+  const rawNext = requestUrl.searchParams.get('next') || '/dashboard'
+  const nextPath =
+    rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard'
+
+  // Missing code param — user navigated here directly, not via auth provider / email link
   if (!code) {
     console.warn('[auth/callback] Missing code param — direct navigation or malformed link')
     return NextResponse.redirect(
-      `${requestUrl.origin}/login?error=${encodeURIComponent('Truy cập không hợp lệ.')}`
+      `${safeOrigin}/login?error=${encodeURIComponent('Truy cập không hợp lệ.')}`
     )
   }
 
@@ -33,27 +59,18 @@ export async function GET(request: Request) {
   const { error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (!error) {
-    const forwardedHost = request.headers.get('x-forwarded-host')
-    const isLocalEnv = process.env.NODE_ENV === 'development'
-
-    if (isLocalEnv) {
-      return NextResponse.redirect(`${requestUrl.origin}${next}`)
-    } else if (forwardedHost) {
-      return NextResponse.redirect(`https://${forwardedHost}${next}`)
-    } else {
-      return NextResponse.redirect(`${requestUrl.origin}${next}`)
-    }
+    return NextResponse.redirect(`${safeOrigin}${nextPath}`)
   }
 
-  // G-1: Log real error without leaking tokens (message + status only, capped at 200 chars)
+  // Log real error without leaking sensitive tokens
   const safeMessage = (error.message ?? 'unknown').slice(0, 200)
   console.error(
     `[auth/callback] exchangeCodeForSession failed — status: ${error.status ?? 'n/a'}, message: ${safeMessage}`
   )
 
-  // G-2: Return categorised user-facing message
+  // Return categorised user-facing message
   const userMessage = resolveErrorMessage(error.message ?? '')
   return NextResponse.redirect(
-    `${requestUrl.origin}/login?error=${encodeURIComponent(userMessage)}`
+    `${safeOrigin}/login?error=${encodeURIComponent(userMessage)}`
   )
 }

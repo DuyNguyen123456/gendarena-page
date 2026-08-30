@@ -20,6 +20,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import ProfileEditor, { ProfileData } from '@/components/profile/ProfileEditor'
+import { ensureProfileExists, getProfile, dobToUiFormat } from '@/services/profile'
 import {
   User as UserIcon,
   Plus,
@@ -125,8 +126,38 @@ type DuplicateMembership = {
   joined_at: string
 }
 
+type DashboardStatus = 'loading' | 'ready' | 'error'
+
+function createSyntheticProfile(
+  authUser: { id: string; email?: string | null; user_metadata?: Record<string, any> | null }
+): ProfileData {
+  const meta = authUser.user_metadata || {}
+  return {
+    id: authUser.id,
+    email: authUser.email || '',
+    full_name:
+      meta.full_name ||
+      meta.fullName ||
+      meta.name ||
+      authUser.email?.split('@')[0] ||
+      'Thí sinh',
+    role: (meta.role as any) || 'participant',
+    university: meta.university || '',
+    faculty: meta.faculty || '',
+    major: meta.major || '',
+    phone: meta.phone || '',
+    dob: dobToUiFormat(meta.dob || ''),
+    organization: meta.organization || '',
+    uid: meta.uid || null,
+    facebook_url: meta.facebook_url || null,
+    avatar_url: meta.avatar_url || null,
+  }
+}
+
 function DashboardContent() {
-  const [user, setUser] = useState<{ id: string } | null>(null)
+  const [status, setStatus] = useState<DashboardStatus>('loading')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [user, setUser] = useState<{ id: string; email?: string | null; user_metadata?: Record<string, any> | null } | null>(null)
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [myTeam, setMyTeam] = useState<Team | null>(null)
   const [isLeader, setIsLeader] = useState(false)
@@ -137,7 +168,6 @@ function DashboardContent() {
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [duplicateTeams, setDuplicateTeams] = useState<DuplicateMembership[]>([])
   const [resolvingTeam, setResolvingTeam] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
 
   // Modals & Dialogs
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -176,217 +206,261 @@ function DashboardContent() {
 
   // Fetch Team Members
   const fetchMembers = useCallback(async (teamId: string) => {
-    const { data: membersData } = await supabase
-      .from('team_members')
-      .select('user_id, role, joined_at')
-      .eq('team_id', teamId)
-      .order('joined_at', { ascending: true })
+    try {
+      const { data: membersData } = await supabase
+        .from('team_members')
+        .select('user_id, role, joined_at')
+        .eq('team_id', teamId)
+        .order('joined_at', { ascending: true })
 
-    if (!membersData || membersData.length === 0) {
-      setMembers([])
-      return
-    }
-
-    const userIds = membersData.map((m) => m.user_id)
-    const { data: profilesData } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, phone, organization, university, faculty, major, dob, avatar_url, facebook_url')
-      .in('id', userIds)
-
-    const profileMap: Record<
-      string,
-      {
-        full_name: string | null
-        email: string | null
-        phone: string | null
-        organization: string | null
-        university?: string | null
-        faculty?: string | null
-        major?: string | null
-        dob?: string | null
-        avatar_url: string | null
-        facebook_url: string | null
+      if (!membersData || membersData.length === 0) {
+        setMembers([])
+        return
       }
-    > = {}
 
-    profilesData?.forEach((p) => {
-      profileMap[p.id] = {
-        full_name: p.full_name,
-        email: p.email,
-        phone: p.phone,
-        organization: p.organization,
-        university: ((p as Record<string, unknown>).university as string | null) ?? null,
-        faculty: ((p as Record<string, unknown>).faculty as string | null) ?? null,
-        major: ((p as Record<string, unknown>).major as string | null) ?? null,
-        dob: ((p as Record<string, unknown>).dob as string | null) ?? null,
-        avatar_url: ((p as Record<string, unknown>).avatar_url as string | null) ?? null,
-        facebook_url: ((p as Record<string, unknown>).facebook_url as string | null) ?? null,
-      }
-    })
+      const userIds = membersData.map((m) => m.user_id)
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, phone, organization, university, faculty, major, dob, avatar_url, facebook_url')
+        .in('id', userIds)
 
-    const merged = membersData.map((m) => ({
-      ...m,
-      profiles: profileMap[m.user_id] ?? null,
-    }))
+      const profileMap: Record<
+        string,
+        {
+          full_name: string | null
+          email: string | null
+          phone: string | null
+          organization: string | null
+          university?: string | null
+          faculty?: string | null
+          major?: string | null
+          dob?: string | null
+          avatar_url: string | null
+          facebook_url: string | null
+        }
+      > = {}
 
-    setMembers(merged as unknown as TeamMember[])
-  }, [supabase])
-
-  // Load Dashboard Data
-  const loadDashboardData = useCallback(async () => {
-    setLoading(true)
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser()
-
-    if (!authUser) {
-      router.push('/login')
-      return
-    }
-    setUser(authUser)
-
-    // Role-based redirect
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authUser.id)
-      .single()
-
-    if (profileData?.role && profileData.role !== 'participant') {
-      router.push(getPostLoginPath(profileData.role))
-      return
-    }
-
-    if (profileData) {
-      setProfile(profileData as unknown as ProfileData)
-    }
-
-    // 1. Check ALL team memberships of this user
-    const { data: allMemberships } = await supabase
-      .from('team_members')
-      .select('team_id, role, joined_at')
-      .eq('user_id', authUser.id)
-
-    if (allMemberships && allMemberships.length > 1) {
-      // Duplicate membership detected
-      const teamIds = allMemberships.map((m) => m.team_id)
-      const { data: teamsData } = await supabase
-        .from('teams')
-        .select('id, name')
-        .in('id', teamIds)
-
-      const teamsMap: Record<string, string> = {}
-      teamsData?.forEach((t) => {
-        teamsMap[t.id] = t.name
+      profilesData?.forEach((p) => {
+        profileMap[p.id] = {
+          full_name: p.full_name,
+          email: p.email,
+          phone: p.phone,
+          organization: p.organization,
+          university: ((p as Record<string, unknown>).university as string | null) ?? null,
+          faculty: ((p as Record<string, unknown>).faculty as string | null) ?? null,
+          major: ((p as Record<string, unknown>).major as string | null) ?? null,
+          dob: ((p as Record<string, unknown>).dob as string | null) ?? null,
+          avatar_url: ((p as Record<string, unknown>).avatar_url as string | null) ?? null,
+          facebook_url: ((p as Record<string, unknown>).facebook_url as string | null) ?? null,
+        }
       })
 
-      setDuplicateTeams(
-        allMemberships.map((m) => ({
-          team_id: m.team_id,
-          team_name: teamsMap[m.team_id] ?? m.team_id,
-          role: m.role,
-          joined_at: m.joined_at,
-        }))
-      )
-      setMyTeam(null)
-    } else if (allMemberships && allMemberships.length === 1) {
-      // User has exactly 1 team
-      setDuplicateTeams([])
-      const memberRecord = allMemberships[0]
-      const userIsLeader = memberRecord.role === 'leader'
-      setIsLeader(userIsLeader)
+      const merged = membersData.map((m) => ({
+        ...m,
+        profiles: profileMap[m.user_id] ?? null,
+      }))
 
-      const { data: teamData } = await supabase
-        .from('teams')
-        .select('id, name, description, max_members, is_open, leader_id, competition_id, competitions(title)')
-        .eq('id', memberRecord.team_id)
-        .single()
+      setMembers(merged as unknown as TeamMember[])
+    } catch (err) {
+      console.error('[Dashboard] Error fetching team members:', err)
+    }
+  }, [supabase])
 
-      if (teamData) {
-        setMyTeam(teamData as unknown as Team)
-        setRenameValue(teamData.name)
-        await fetchMembers(teamData.id)
+  // Load Dashboard Data with Auto-Heal & Synthetic Fallback
+  const loadDashboardData = useCallback(async () => {
+    setStatus('loading')
+    setErrorMessage(null)
 
-        if (userIsLeader) {
-          // Fetch join requests
-          const { data: reqs } = await supabase
-            .from('team_join_requests')
-            .select('id, requester_id, message, status, created_at')
-            .eq('team_id', teamData.id)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false })
+    let authUser: { id: string; email?: string | null; user_metadata?: Record<string, any> | null } | null = null
 
-          if (reqs && reqs.length > 0) {
-            const reqUserIds = reqs.map((r) => r.requester_id)
-            const { data: reqProfiles } = await supabase
-              .from('profiles')
-              .select('id, full_name, email, phone')
-              .in('id', reqUserIds)
+    try {
+      const {
+        data: { user: currentUser },
+        error: authError,
+      } = await supabase.auth.getUser()
 
-            const reqProfileMap: Record<string, { full_name: string | null; email: string | null; phone: string | null }> = {}
-            reqProfiles?.forEach((p) => {
-              reqProfileMap[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone }
-            })
+      if (!currentUser || authError) {
+        window.location.href = '/login'
+        return
+      }
+      authUser = currentUser
+      setUser(authUser)
 
-            setJoinRequests(
-              reqs.map((r) => ({
-                ...r,
-                profiles: reqProfileMap[r.requester_id] ?? null,
-              })) as unknown as JoinRequest[]
-            )
-          } else {
-            setJoinRequests([])
+      // 1. Thu thập profile từ Database hoặc Auto-heal
+      let userProfile: ProfileData | null = null
+      try {
+        const ensureRes = await ensureProfileExists(authUser)
+        if (ensureRes.data) {
+          userProfile = ensureRes.data as unknown as ProfileData
+        } else {
+          const fetched = await getProfile(authUser.id)
+          if (fetched) {
+            userProfile = fetched as unknown as ProfileData
           }
-
-          // Fetch sent invites
-          const { data: invitesData } = await supabase
-            .from('team_invites')
-            .select('id, invited_uid, status, created_at')
-            .eq('team_id', teamData.id)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false })
-
-          setSentInvites((invitesData ?? []) as unknown as SentInvite[])
         }
+      } catch (profileErr) {
+        console.error('[Dashboard] Error during ensureProfileExists/getProfile:', profileErr)
       }
-    } else {
-      // User has NO team
-      setMyTeam(null)
-      setDuplicateTeams([])
 
-      // Fetch received team invitations
-      if (profileData?.uid) {
-        const { data: receivedData } = await supabase
-          .from('team_invites')
-          .select(`
-            id, team_id, status, created_at,
-            teams(name),
-            inviter:invited_by(full_name)
-          `)
-          .eq('invited_uid', profileData.uid)
-          .eq('status', 'pending')
+      // 2. Nếu DB/RLS không trả về profile -> Tự động dùng Synthetic Fallback Profile từ Auth Metadata
+      if (!userProfile) {
+        console.warn('[Dashboard] Falling back to synthetic profile from Auth Metadata')
+        userProfile = createSyntheticProfile(authUser)
+      }
 
-        setReceivedInvites((receivedData ?? []) as unknown as ReceivedInvite[])
+      // Role-based redirect
+      if (userProfile.role && userProfile.role !== 'participant') {
+        router.push(getPostLoginPath(userProfile.role))
+        return
+      }
+
+      setProfile(userProfile)
+
+      // 3. Load thông tin đội thi (bọc try-catch an toàn)
+      try {
+        const { data: allMemberships } = await supabase
+          .from('team_members')
+          .select('team_id, role, joined_at')
+          .eq('user_id', authUser.id)
+
+        if (allMemberships && allMemberships.length > 1) {
+          // Duplicate membership detected
+          const teamIds = allMemberships.map((m) => m.team_id)
+          const { data: teamsData } = await supabase
+            .from('teams')
+            .select('id, name')
+            .in('id', teamIds)
+
+          const teamsMap: Record<string, string> = {}
+          teamsData?.forEach((t) => {
+            teamsMap[t.id] = t.name
+          })
+
+          setDuplicateTeams(
+            allMemberships.map((m) => ({
+              team_id: m.team_id,
+              team_name: teamsMap[m.team_id] ?? m.team_id,
+              role: m.role,
+              joined_at: m.joined_at,
+            }))
+          )
+          setMyTeam(null)
+        } else if (allMemberships && allMemberships.length === 1) {
+          // User has exactly 1 team
+          setDuplicateTeams([])
+          const memberRecord = allMemberships[0]
+          const userIsLeader = memberRecord.role === 'leader'
+          setIsLeader(userIsLeader)
+
+          const { data: teamData } = await supabase
+            .from('teams')
+            .select('id, name, description, max_members, is_open, leader_id, competition_id, competitions(title)')
+            .eq('id', memberRecord.team_id)
+            .maybeSingle()
+
+          if (teamData) {
+            setMyTeam(teamData as unknown as Team)
+            setRenameValue(teamData.name)
+            await fetchMembers(teamData.id)
+
+            if (userIsLeader) {
+              // Fetch join requests
+              const { data: reqs } = await supabase
+                .from('team_join_requests')
+                .select('id, requester_id, message, status, created_at')
+                .eq('team_id', teamData.id)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false })
+
+              if (reqs && reqs.length > 0) {
+                const reqUserIds = reqs.map((r) => r.requester_id)
+                const { data: reqProfiles } = await supabase
+                  .from('profiles')
+                  .select('id, full_name, email, phone')
+                  .in('id', reqUserIds)
+
+                const reqProfileMap: Record<string, { full_name: string | null; email: string | null; phone: string | null }> = {}
+                reqProfiles?.forEach((p) => {
+                  reqProfileMap[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone }
+                })
+
+                setJoinRequests(
+                  reqs.map((r) => ({
+                    ...r,
+                    profiles: reqProfileMap[r.requester_id] ?? null,
+                  })) as unknown as JoinRequest[]
+                )
+              } else {
+                setJoinRequests([])
+              }
+
+              // Fetch sent invites
+              const { data: invitesData } = await supabase
+                .from('team_invites')
+                .select('id, invited_uid, status, created_at')
+                .eq('team_id', teamData.id)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false })
+
+              setSentInvites((invitesData ?? []) as unknown as SentInvite[])
+            }
+          }
+        } else {
+          // User has NO team
+          setMyTeam(null)
+          setDuplicateTeams([])
+
+          // Fetch received team invitations
+          if (userProfile.uid) {
+            const { data: receivedData } = await supabase
+              .from('team_invites')
+              .select(`
+                id, team_id, status, created_at,
+                teams(name),
+                inviter:invited_by(full_name)
+              `)
+              .eq('invited_uid', userProfile.uid)
+              .eq('status', 'pending')
+
+            setReceivedInvites((receivedData ?? []) as unknown as ReceivedInvite[])
+          }
+        }
+      } catch (teamErr) {
+        console.error('[Dashboard] Error loading team data:', teamErr)
+      }
+
+      // 4. Load competitions an toàn
+      try {
+        const { data: compsData } = await supabase
+          .from('competitions')
+          .select('id, title, description, status')
+          .order('created_at', { ascending: false })
+
+        if (compsData) {
+          setCompetitions(compsData as unknown as Competition[])
+          const paramCompId = searchParams.get('competitionId')
+          if (paramCompId && compsData.some((c) => c.id === paramCompId)) {
+            setCreateCompId(paramCompId)
+          } else if (compsData.length > 0 && !createCompId) {
+            setCreateCompId(compsData[0].id)
+          }
+        }
+      } catch (compErr) {
+        console.error('[Dashboard] Error loading competitions:', compErr)
+      }
+
+      // Chuyển sang Ready state
+      setStatus('ready')
+    } catch (err: any) {
+      console.error('[Dashboard Load Error]:', err)
+      if (authUser) {
+        setProfile(createSyntheticProfile(authUser))
+        setStatus('ready')
+      } else {
+        setStatus('error')
+        setErrorMessage(err?.message || 'Đã xảy ra lỗi khi tải dữ liệu bảng điều khiển.')
       }
     }
-
-    // Fetch active competitions
-    const { data: compsData } = await supabase
-      .from('competitions')
-      .select('id, title, description, status')
-      .order('created_at', { ascending: false })
-
-    if (compsData) {
-      setCompetitions(compsData as unknown as Competition[])
-      const paramCompId = searchParams.get('competitionId')
-      if (paramCompId && compsData.some((c) => c.id === paramCompId)) {
-        setCreateCompId(paramCompId)
-      } else if (compsData.length > 0 && !createCompId) {
-        setCreateCompId(compsData[0].id)
-      }
-    }
-
-    setLoading(false)
   }, [supabase, router, searchParams, fetchMembers, createCompId])
 
   useEffect(() => {
@@ -503,6 +577,14 @@ function DashboardContent() {
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
+
+    // Enforce profile completion gate
+    if (!profile || !isProfileComplete(profile)) {
+      setCreateError('Vui lòng hoàn thiện hồ sơ cá nhân trước khi thành lập đội thi.')
+      setShowProfileModal(true)
+      return
+    }
+
     if (!createName.trim()) {
       setCreateError('Vui lòng nhập tên đội thi.')
       return
@@ -758,8 +840,56 @@ function DashboardContent() {
     }
   }
 
-  if (loading) return <Loading variant="dashboard" text="Đang tải dữ liệu bảng điều khiển..." />
+  // 1. Loading State (First fetch)
+  if (status === 'loading') {
+    return <Loading variant="dashboard" text="Đang tải thông tin hồ sơ..." />
+  }
 
+  // 2. Error State (Fetch failed / auto-heal failed)
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-surface-base text-text-primary flex items-center justify-center p-4">
+        <Card className="max-w-md w-full p-6 sm:p-8 text-center space-y-5 border-semantic-danger/30 bg-surface-raised">
+          <div className="size-12 rounded-full bg-semantic-danger/10 text-semantic-danger mx-auto flex items-center justify-center">
+            <AlertTriangle className="size-6" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="font-display text-lg font-semibold text-text-primary">
+              Không thể tải thông tin hồ sơ
+            </h3>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              {errorMessage || 'Đã xảy ra lỗi khi tải hoặc khởi tạo dữ liệu hồ sơ. Vui lòng thử lại.'}
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => loadDashboardData()}
+              className="w-full sm:w-auto text-xs"
+            >
+              Thử lại
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={async () => {
+                if (user) {
+                  await ensureProfileExists(user)
+                  await loadDashboardData()
+                }
+              }}
+              className="w-full sm:w-auto text-xs"
+            >
+              Tạo hồ sơ mặc định
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  // 3. Ready State
   return (
     <div className="min-h-screen bg-surface-base text-text-primary">
       {/* Hero Header */}
@@ -791,8 +921,8 @@ function DashboardContent() {
               )}
             </div>
 
-            {/* If user HAS team -> small secondary profile edit button in header */}
-            {myTeam && profile && (
+            {/* Always visible Profile button for participants */}
+            {profile && (
               <Button
                 variant="secondary"
                 size="sm"
@@ -801,15 +931,19 @@ function DashboardContent() {
                   isProfileComplete(profile) ? (
                     <BadgeCheck className="size-3.5 text-brand-cyan" />
                   ) : (
-                    <UserIcon className="size-3.5" />
+                    <Pencil className="size-3.5 text-semantic-warning" />
                   )
                 }
                 className="w-full sm:w-auto shrink-0 justify-center text-xs gap-1.5"
               >
                 <span>Hồ sơ cá nhân ({profile.full_name || 'Tôi'})</span>
-                {isProfileComplete(profile) && (
+                {isProfileComplete(profile) ? (
                   <span className="text-[10px] text-brand-cyan font-medium hidden sm:inline">
                     · Đã xác thực
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-semantic-warning font-medium hidden sm:inline">
+                    · Chưa hoàn thiện
                   </span>
                 )}
               </Button>
@@ -900,18 +1034,18 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* Incomplete Profile Banner Notice */}
+      {/* Incomplete Profile Alert Banner */}
       {profile && !isProfileComplete(profile) && (
         <div className="max-w-6xl mx-auto px-4 md:px-6 pt-6">
-          <div className="p-4 sm:p-5 rounded-xl border border-brand-cyan/40 bg-brand-cyan/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="p-4 sm:p-5 rounded-xl border border-semantic-warning/40 bg-semantic-warning/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="size-5 text-brand-cyan shrink-0 mt-0.5" />
+              <AlertTriangle className="size-5 text-semantic-warning shrink-0 mt-0.5" />
               <div className="space-y-0.5">
                 <p className="text-sm font-semibold text-text-primary">
-                  Hồ sơ chưa hoàn thiện
+                  Hoàn thiện hồ sơ để tiếp tục
                 </p>
                 <p className="text-xs text-text-secondary leading-relaxed">
-                  Hồ sơ của bạn chưa hoàn thiện. Vui lòng bổ sung thông tin cá nhân để nhận huy hiệu Xác thực (Verified) và thuận tiện cho việc trao giải.
+                  Bạn cần cập nhật đủ thông tin bắt buộc trước khi tạo đội hoặc xin gia nhập đội.
                 </p>
               </div>
             </div>
@@ -922,7 +1056,7 @@ function DashboardContent() {
               className="shrink-0 w-full sm:w-auto justify-center text-xs"
               leftIcon={<Pencil className="size-3.5" />}
             >
-              Bổ sung thông tin
+              Cập nhật hồ sơ ngay
             </Button>
           </div>
         </div>
@@ -1096,6 +1230,24 @@ function DashboardContent() {
                     </div>
                   )}
 
+                  {!isProfileComplete(profile) && (
+                    <div className="p-3.5 rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 text-xs text-semantic-warning flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <AlertTriangle className="size-4 shrink-0 text-semantic-warning" />
+                        <span className="truncate">Hồ sơ chưa hoàn thiện. Cần cập nhật để tạo đội.</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowProfileModal(true)}
+                        className="text-xs h-7 px-2.5 shrink-0"
+                      >
+                        Cập nhật
+                      </Button>
+                    </div>
+                  )}
+
                   <form onSubmit={handleCreateTeam} className="space-y-4">
                     {/* Competition select */}
                     <div className="space-y-1.5">
@@ -1188,8 +1340,10 @@ function DashboardContent() {
                         variant="primary"
                         size="md"
                         isLoading={createLoading}
+                        disabled={!isProfileComplete(profile)}
                         leftIcon={<Plus className="size-4" />}
                         className="w-full"
+                        title={!isProfileComplete(profile) ? 'Vui lòng hoàn thiện hồ sơ trước khi tạo đội' : undefined}
                       >
                         Thành lập đội thi
                       </Button>
