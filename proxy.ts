@@ -44,7 +44,6 @@ export async function proxy(request: NextRequest) {
     (pathname.startsWith('/dashboard') ||
       pathname.startsWith('/submissions') ||
       pathname.startsWith('/admin') ||
-      pathname.startsWith('/judge') ||
       pathname.startsWith('/team/'))
   ) {
     return NextResponse.redirect(new URL('/login', request.url))
@@ -69,19 +68,6 @@ export async function proxy(request: NextRequest) {
       .single()
 
     if (profile?.role !== 'admin') {
-      const dest = getPostLoginPath(profile?.role)
-      return NextResponse.redirect(new URL(dest, request.url))
-    }
-  }
-
-  if (user && pathname.startsWith('/judge')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'judge') {
       const dest = getPostLoginPath(profile?.role)
       return NextResponse.redirect(new URL(dest, request.url))
     }

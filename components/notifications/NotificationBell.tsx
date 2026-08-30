@@ -45,6 +45,7 @@ function formatRelativeTime(dateString: string): string {
 function getNotificationIcon(type: NotificationType) {
   switch (type) {
     case 'team_invite':
+    case 'team_request':
       return <Users className="size-4 text-brand-cyan shrink-0" />
     case 'submission':
       return <Upload className="size-4 text-accent-violet shrink-0" />
@@ -81,7 +82,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
     isLoading: loading,
   } = useSWR(
     userId && isOpen ? `notifications_list_${userId}` : null,
-    () => getUserNotifications(userId, 15),
+    () => getUserNotifications(userId, 20),
     {
       revalidateOnFocus: true,
     }
@@ -132,10 +133,10 @@ export default function NotificationBell({ userId }: { userId: string }) {
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-[calc(100vw-2rem)] sm:w-[400px] p-0 overflow-hidden bg-surface-overlay/95 backdrop-blur-xl border border-surface-border shadow-elevation-3 right-0"
+        className="z-[100] w-[calc(100vw-2rem)] sm:w-[400px] max-h-[480px] p-0 overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-2xl backdrop-blur-none right-0"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border bg-surface-raised/40">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/90">
           <div className="flex items-center gap-2">
             <h4 className="font-display font-semibold text-sm text-text-primary">
               Thông báo
@@ -160,26 +161,27 @@ export default function NotificationBell({ userId }: { userId: string }) {
         </div>
 
         {/* List Content */}
-        <div className="max-h-[60vh] overflow-y-auto divide-y divide-surface-border/50">
+        <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-800/60 bg-slate-950">
           {loading ? (
             <div className="py-8 text-center text-xs text-text-tertiary">
               Đang tải thông báo...
             </div>
           ) : notifications.length === 0 ? (
             <div className="py-10 px-4 flex flex-col items-center justify-center text-center text-text-tertiary">
-              <Inbox className="size-8 stroke-1 text-text-disabled mb-2" />
-              <p className="text-xs">Chưa có thông báo nào</p>
+              <Inbox className="size-8 stroke-1 text-text-disabled mb-2 opacity-50" />
+              <p className="text-xs font-medium text-text-secondary">Chưa có thông báo nào</p>
+              <p className="text-[11px] text-text-disabled mt-0.5">Các cập nhật quan trọng sẽ hiển thị tại đây</p>
             </div>
           ) : (
             notifications.map((notif) => (
               <div
                 key={notif.id}
                 onClick={() => handleNotificationClick(notif)}
-                className={`p-3.5 flex items-start gap-3 transition cursor-pointer hover:bg-surface-raised/70 ${
-                  !notif.is_read ? 'bg-brand-cyan/5' : ''
+                className={`p-3.5 flex items-start gap-3 transition cursor-pointer hover:bg-slate-900/70 ${
+                  !notif.is_read ? 'bg-slate-900/40' : 'bg-transparent'
                 }`}
               >
-                <div className="mt-0.5 p-1.5 rounded-lg bg-surface-raised border border-surface-border">
+                <div className="mt-0.5 p-1.5 rounded-lg bg-slate-900 border border-slate-800">
                   {getNotificationIcon(notif.type)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -194,7 +196,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
                       {notif.title}
                     </p>
                     {!notif.is_read && (
-                      <span className="size-2 rounded-full bg-brand-cyan shrink-0" />
+                      <span className="size-2 rounded-full bg-brand-cyan shrink-0 shadow-sm shadow-brand-cyan/50" />
                     )}
                   </div>
                   <p className="text-[11px] text-text-secondary mt-0.5 line-clamp-2 leading-relaxed">

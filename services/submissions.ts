@@ -74,22 +74,65 @@ function buildStoragePath(userId: string, phaseId: string, filename: string): st
 export async function getMyTeams(userId: string): Promise<TeamRecord[]> {
   const supabase = createClient()
 
-  type MemberRow = {
-    team_id: string
-    teams: TeamRecord[] | null
-  }
+  try {
+    // 1. Fetch via team_members
+    let memberTeams: TeamRecord[] = []
+    const { data: memberData, error: memberErr } = await supabase
+      .from('team_members')
+      .select('team_id, teams(id, name, competition_id, leader_id, status)')
+      .eq('user_id', userId)
 
-  const { data, error } = await supabase
-    .from('team_members')
-    .select('team_id, teams(id, name, competition_id, leader_id)')
-    .eq('user_id', userId) as { data: MemberRow[] | null; error: unknown }
+    if (!memberErr && memberData) {
+      memberTeams = memberData
+        .flatMap((m: any) => (m.teams ? (Array.isArray(m.teams) ? m.teams : [m.teams]) : []))
+        .filter(Boolean)
+    } else {
+      // Fallback if status column does not exist
+      const { data: fallbackMemberData } = await supabase
+        .from('team_members')
+        .select('team_id, teams(id, name, competition_id, leader_id)')
+        .eq('user_id', userId)
+      if (fallbackMemberData) {
+        memberTeams = fallbackMemberData
+          .flatMap((m: any) => (m.teams ? (Array.isArray(m.teams) ? m.teams : [m.teams]) : []))
+          .filter(Boolean)
+      }
+    }
 
-  if (error) {
-    console.error('getMyTeams error:', error)
+    // 2. Fetch directly where user is leader_id in teams table
+    let leaderTeams: TeamRecord[] = []
+    const { data: lData, error: lErr } = await supabase
+      .from('teams')
+      .select('id, name, competition_id, leader_id, status')
+      .eq('leader_id', userId)
+
+    if (!lErr && lData) {
+      leaderTeams = lData as TeamRecord[]
+    } else {
+      const { data: fallbackLeaderData } = await supabase
+        .from('teams')
+        .select('id, name, competition_id, leader_id')
+        .eq('leader_id', userId)
+      if (fallbackLeaderData) {
+        leaderTeams = fallbackLeaderData as TeamRecord[]
+      }
+    }
+
+    const teamMap = new Map<string, TeamRecord>()
+    ;[...memberTeams, ...leaderTeams].forEach((t) => {
+      if (t && t.id) {
+        teamMap.set(t.id, {
+          ...t,
+          status: t.status || 'draft',
+        })
+      }
+    })
+
+    return Array.from(teamMap.values())
+  } catch (err) {
+    console.error('getMyTeams error:', err)
     return []
   }
-
-  return (data ?? []).flatMap((m) => m.teams ?? [])
 }
 
 // ─── Submission queries ───────────────────────────────────────────────────────
@@ -476,7 +519,7 @@ export async function getAllSubmissionsForAdmin() {
   // ── Query 4: scores summary for admin view ──────────────────────────────
   const { data: scoresData, error: scoresError } = await supabase
     .from('scores')
-    .select('id, submission_id, judge_id, total_score, comment')
+    .select('id, submission_id, judge_id, total_score, comment, round_id, criteria_scores')
 
   if (scoresError) {
     console.error('[getAllSubmissionsForAdmin] scores query failed:', JSON.stringify(scoresError, null, 2))
@@ -495,7 +538,14 @@ export async function getAllSubmissionsForAdmin() {
   }
 
   // Build scores Map: submission_id -> list of scores
-  type ScoreEntry = { id: string; judge_id: string; total_score: number; comment?: string | null }
+  type ScoreEntry = {
+    id: string
+    judge_id: string
+    total_score: number
+    comment?: string | null
+    round_id?: string | null
+    criteria_scores?: Record<string, number>
+  }
   const scoresMap = new Map<string, ScoreEntry[]>()
   for (const s of (scoresData ?? [])) {
     if (s.submission_id) {
@@ -505,6 +555,8 @@ export async function getAllSubmissionsForAdmin() {
         judge_id: s.judge_id,
         total_score: Number(s.total_score ?? 0),
         comment: s.comment,
+        round_id: s.round_id,
+        criteria_scores: s.criteria_scores,
       })
       scoresMap.set(s.submission_id, existing)
     }

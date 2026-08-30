@@ -88,8 +88,7 @@ function Toast({ text, type, onDismiss }: { text: string; type: ToastType; onDis
 
 const ROLE_LABELS: Record<string, string> = {
   participant: 'Thí sinh',
-  judge: 'Giám khảo',
-  admin: 'Quản trị viên',
+  admin: 'Quản trị viên (BTC)',
 }
 
 export default function ProfilePage() {
@@ -109,9 +108,6 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
-  // Expertise (judge only)
-  const [expertise, setExpertise] = useState<TopicCategory[]>([])
-  const [expertiseSaving, setExpertiseSaving] = useState(false)
 
   // Toast
   const [toast, setToast] = useState<{ text: string; type: ToastType } | null>(null)
@@ -160,7 +156,6 @@ export default function ProfilePage() {
       organization: p.organization ?? '',
       facebook_url: p.facebook_url ?? '',
     })
-    setExpertise(p.expertise ?? [])
     setLoading(false)
   }
 
@@ -227,27 +222,8 @@ export default function ProfilePage() {
     setSaving(false)
   }
 
-  const handleExpertiseSave = async () => {
-    if (!profile) return
-    setExpertiseSaving(true)
-    const result = await updateProfileExpertise(profile.id, expertise)
-    if (!result.ok) {
-      showToast(result.error, 'error')
-    } else {
-      showToast('Đã cập nhật chuyên môn.', 'success')
-    }
-    setExpertiseSaving(false)
-  }
-
-  const toggleExpertise = (cat: TopicCategory) => {
-    setExpertise((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    )
-  }
-
   if (loading) return <Loading variant="profile" text="Đang tải hồ sơ cá nhân..." />
 
-  const isJudge = profile?.role === 'judge'
   const displayAvatar = avatarPreview ?? profile?.avatar_url
 
   return (
@@ -280,7 +256,7 @@ export default function ProfilePage() {
                   GenD Arena 2026
                 </Badge>
                 <Badge
-                  variant={isJudge ? 'brand' : profile?.role === 'admin' ? 'danger' : 'info'}
+                  variant={profile?.role === 'admin' ? 'warning' : 'info'}
                   size="sm"
                 >
                   {ROLE_LABELS[profile?.role ?? ''] ?? profile?.role ?? 'Thí sinh'}
@@ -393,7 +369,7 @@ export default function ProfilePage() {
                   <div className="px-3.5 py-2.5 bg-surface-overlay border border-surface-border rounded-lg flex items-center justify-between text-sm">
                     <span className="text-text-secondary">Quyền hạn tài khoản</span>
                     <Badge
-                      variant={isJudge ? 'brand' : profile?.role === 'admin' ? 'danger' : 'info'}
+                      variant={profile?.role === 'admin' ? 'warning' : 'info'}
                       size="sm"
                     >
                       {ROLE_LABELS[profile?.role ?? ''] ?? profile?.role ?? 'Thí sinh'}
@@ -508,61 +484,6 @@ export default function ProfilePage() {
             </div>
           </Card>
         </form>
-
-        {/* Judge expertise section */}
-        {isJudge && (
-          <Card className="p-6 sm:p-8 border-brand-cyan/30">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="size-5 text-brand-cyan" />
-              <h2 className="font-display text-lg font-semibold text-text-primary">
-                Chuyên môn giám khảo
-              </h2>
-            </div>
-            <p className="text-xs text-text-secondary mb-6">
-              Chọn các nhóm chủ đề bạn có chuyên môn để tham gia chấm thi các đề án phù hợp.
-            </p>
-
-            <div className="space-y-3">
-              {TOPIC_CATEGORIES.map((cat) => {
-                const selected = expertise.includes(cat)
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    id={`expertise-${cat.replace(/[\s,/]/g, '-')}`}
-                    onClick={() => toggleExpertise(cat)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-sm font-medium transition text-left cursor-pointer ${
-                      selected
-                        ? 'border-brand-cyan/60 bg-brand-cyan/10 text-brand-cyan-bright'
-                        : 'border-surface-border bg-surface-overlay text-text-secondary hover:border-brand-cyan/30 hover:text-text-primary'
-                    }`}
-                  >
-                    {selected ? (
-                      <CheckSquare className="size-5 text-brand-cyan shrink-0" />
-                    ) : (
-                      <Square className="size-5 text-text-tertiary shrink-0" />
-                    )}
-                    <span>{cat}</span>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <Button
-                id="save-expertise-btn"
-                type="button"
-                variant="primary"
-                size="md"
-                isLoading={expertiseSaving}
-                onClick={handleExpertiseSave}
-                leftIcon={<Save className="size-4" />}
-              >
-                Lưu chuyên môn
-              </Button>
-            </div>
-          </Card>
-        )}
       </motion.main>
 
       {/* Toast notification */}

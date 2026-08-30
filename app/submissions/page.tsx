@@ -35,6 +35,7 @@ import type { Submission, SubmissionHistory, TeamRecord, TopicCategory } from '@
 import { TOPIC_CATEGORIES } from '@/types/submission'
 import { CompetitionPhase } from '@/types/phase'
 import { getSubmissionGate } from '@/types/phase'
+import PaymentModal from '@/components/team/PaymentModal'
 import {
   CheckCircle2,
   XCircle,
@@ -59,6 +60,9 @@ import {
   ClipboardPen,
   Users,
   Check,
+  ShieldAlert,
+  BadgeCheck,
+  CreditCard,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -356,6 +360,7 @@ function UploadProgress({ progress }: { progress: number }) {
 function SubmitForm({
   phase,
   teamId,
+  userId,
   onSuccess,
   onCancel,
 }: {
@@ -1069,27 +1074,15 @@ function TeamPhasesSection({
     )
   }
 
-  // R3 Visibility Rules:
-  // 1. Phase đang mở nộp bài -> Hiện đầy đủ
-  // 2. Phase đã đóng nhưng team đã từng nộp bài -> Vẫn hiện (read-only)
-  // 3. Phase đã đóng/hết hạn nhưng chưa nộp -> Vẫn hiện với trạng thái "Đã hết hạn"
-  // 4. Mọi phase chưa mở -> ẨN HOÀN TOÀN
   const visiblePhases = phases.filter((phase) => {
     const sub = submissionsMap[phase.id]
     const hasSubmitted = !!sub
     const gate = getSubmissionGate(phase)
 
-    // Rule 1: Phase đang mở
     if (gate === 'open') return true
-
-    // Rule 2: Phase đã đóng nhưng team đã từng nộp
     if (hasSubmitted) return true
-
-    // Rule 3: Phase đã đóng / hết hạn nhưng chưa nộp
     const isClosedOrExpired = gate === 'expired' || (gate === 'closed' && phase.status === 'completed')
     if (isClosedOrExpired && !hasSubmitted) return true
-
-    // Rule 4: Phase chưa mở (gate === 'not_yet' hoặc gate === 'closed' && phase.status === 'upcoming') => Ẩn hoàn toàn!
     return false
   })
 
@@ -1138,19 +1131,20 @@ export default function SubmissionsPage() {
   const [user, setUser] = useState<User | null>(null)
   const [myTeams, setMyTeams] = useState<TeamRecord[]>([])
   const [phases, setPhases] = useState<CompetitionPhase[]>([])
+  const [teamMemberCounts, setTeamMemberCounts] = useState<Record<string, number>>({})
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentTeam, setPaymentTeam] = useState<TeamRecord | null>(null)
   const [loading, setLoading] = useState(true)
-  const [refreshKey] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const prefersReducedMotion = useReducedMotion()
 
-  useEffect(() => {
-    let isMounted = true
-    async function loadData() {
+  const loadData = useCallback(async () => {
+    try {
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser()
-      if (!isMounted) return
       if (!authUser) {
         router.push('/login')
         return
@@ -1158,17 +1152,31 @@ export default function SubmissionsPage() {
       setUser(authUser)
 
       const [teams, allPhases] = await Promise.all([getMyTeams(authUser.id), getPhases()])
-      if (!isMounted) return
 
+      const counts: Record<string, number> = {}
+      await Promise.all(
+        teams.map(async (t) => {
+          const { count } = await supabase
+            .from('team_members')
+            .select('id', { count: 'exact', head: true })
+            .eq('team_id', t.id)
+          counts[t.id] = Math.max(count ?? 1, 1)
+        })
+      )
+
+      setTeamMemberCounts(counts)
       setMyTeams(teams)
       setPhases(allPhases)
       setLoading(false)
-    }
-    loadData()
-    return () => {
-      isMounted = false
+    } catch (err) {
+      console.error('Error loading submissions data:', err)
+      setLoading(false)
     }
   }, [router, supabase])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData, refreshKey])
 
   if (loading) return <Loading variant="submissions" text="Đang tải danh sách bài nộp..." />
 
@@ -1186,7 +1194,6 @@ export default function SubmissionsPage() {
         </div>
 
         <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12">
-          {/* Back link */}
           <Link
             href="/dashboard"
             className="inline-flex items-center gap-1.5 text-xs text-brand-cyan hover:text-brand-cyan-bright font-medium transition mb-4 group"
@@ -1209,14 +1216,12 @@ export default function SubmissionsPage() {
         </div>
       </div>
 
-      {/* Main Content Area */}
       <motion.main
         initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         className="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12 space-y-8"
       >
-        {/* No team state */}
         {myTeams.length === 0 && (
           <Card className="p-12 text-center">
             <Users className="size-12 text-text-tertiary mx-auto mb-3 opacity-60" />
@@ -1241,45 +1246,128 @@ export default function SubmissionsPage() {
           </Card>
         )}
 
-        {/* Per-team view */}
         {myTeams.length > 0 && (
           <div className="space-y-8">
-            {myTeams.map((team) => (
-              <div key={team.id} className="space-y-6">
-                {/* Team header badge */}
-                <div className="flex items-center gap-3 pb-3 border-b border-surface-border">
-                  <div className="size-9 rounded-lg bg-surface-overlay border border-surface-border flex items-center justify-center text-brand-cyan font-display font-semibold text-sm">
-                    {team.name.charAt(0).toUpperCase()}
+            {myTeams.map((team) => {
+              const isVerified = team.status === 'verified'
+              return (
+                <div key={team.id} className="space-y-6">
+                  <div className="flex items-center justify-between pb-3 border-b border-surface-border gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="size-9 rounded-lg bg-surface-overlay border border-surface-border flex items-center justify-center text-brand-cyan font-display font-semibold text-sm">
+                        {team.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="font-display font-semibold text-text-primary text-lg">
+                            Đội: {team.name}
+                          </h2>
+                          {isVerified ? (
+                            <Badge variant="brand" size="sm">
+                              <BadgeCheck className="size-3 mr-1" />
+                              Verified
+                            </Badge>
+                          ) : (
+                            <Badge variant="warning" size="sm">
+                              Chưa xác thực
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-text-tertiary">Đội thi</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="font-display font-semibold text-text-primary text-lg">
-                      Đội: {team.name}
-                    </h2>
-                    <span className="text-xs text-text-tertiary">Đội thi</span>
-                  </div>
-                </div>
 
-                {/* Phases Journey */}
-                {phases.length === 0 ? (
-                  <Card className="text-center py-10">
-                    <ClipboardPen className="size-10 text-text-tertiary mx-auto mb-2 opacity-60" />
-                    <p className="text-text-secondary text-sm">
-                      Chưa có vòng thi nào được cấu hình trên hệ thống.
-                    </p>
-                  </Card>
-                ) : (
-                  <TeamPhasesSection
-                    team={team}
-                    phases={phases}
-                    userId={user?.id ?? ''}
-                    refreshKey={refreshKey}
-                  />
-                )}
-              </div>
-            ))}
+                  {!isVerified ? (
+                    <Card className="p-8 sm:p-10 border-slate-800 bg-slate-900/70 text-center max-w-xl mx-auto space-y-5">
+                      <div className="size-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-lg">
+                        <ShieldAlert className="size-8" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="font-display text-xl font-bold text-text-primary">
+                          Đội thi của bạn chưa hoàn tất lệ phí dự thi để nộp bài
+                        </h3>
+                        <p className="text-xs sm:text-sm text-text-secondary leading-relaxed max-w-md mx-auto">
+                          Vui lòng hoàn tất nộp lệ phí dự thi và nhận xác thực từ Ban tổ chức để mở khóa cổng nộp bài đề án.
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-left text-xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-text-tertiary">Đội thi:</span>
+                          <span className="font-semibold text-text-primary">{team.name}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-text-tertiary">Trạng thái lệ phí:</span>
+                          {team.status === 'locked_pending_payment' ? (
+                            <Badge variant="warning" size="sm">Đang chờ BTC đối soát</Badge>
+                          ) : team.status === 'payment_rejected' ? (
+                            <Badge variant="danger" size="sm">Lệ phí bị từ chối</Badge>
+                          ) : (
+                            <Badge variant="default" size="sm">Chưa đóng lệ phí</Badge>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-text-secondary pt-1 border-t border-slate-800/80 leading-relaxed">
+                          {team.status === 'locked_pending_payment'
+                            ? 'Biên lai chuyển khoản đã được gửi và đang chờ BTC phê duyệt trong 24h.'
+                            : team.status === 'payment_rejected'
+                            ? 'Biên lai chuyển khoản bị từ chối. Vui lòng nộp lại biên lai mới.'
+                            : 'Trưởng đội có thể nộp lệ phí trực tiếp ngay tại đây để nhận Huy hiệu Verified và mở cổng nộp bài.'}
+                        </p>
+                      </div>
+                      <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <Button
+                          variant="primary"
+                          size="md"
+                          leftIcon={<CreditCard className="size-4" />}
+                          onClick={() => {
+                            setPaymentTeam(team)
+                            setShowPaymentModal(true)
+                          }}
+                          className="w-full sm:w-auto justify-center"
+                        >
+                          {team.status === 'payment_rejected' ? 'Nộp lại biên lai mới' : 'Thanh toán lệ phí ngay'}
+                        </Button>
+                        <Link href="/dashboard" className="w-full sm:w-auto">
+                          <Button variant="secondary" size="md" leftIcon={<ArrowLeft className="size-4" />} className="w-full justify-center">
+                            Về Bảng điều khiển
+                          </Button>
+                        </Link>
+                      </div>
+                    </Card>
+                  ) : phases.length === 0 ? (
+                    <Card className="text-center py-10">
+                      <ClipboardPen className="size-10 text-text-tertiary mx-auto mb-2 opacity-60" />
+                      <p className="text-text-secondary text-sm">
+                        Chưa có vòng thi nào được cấu hình trên hệ thống.
+                      </p>
+                    </Card>
+                  ) : (
+                    <TeamPhasesSection
+                      team={team}
+                      phases={phases}
+                      userId={user?.id ?? ''}
+                      refreshKey={refreshKey}
+                    />
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </motion.main>
+
+      {/* Direct Payment Modal on Submissions Page */}
+      {paymentTeam && (
+        <PaymentModal
+          open={showPaymentModal}
+          onOpenChange={setShowPaymentModal}
+          team={paymentTeam as any}
+          membersCount={teamMemberCounts[paymentTeam.id] || 3}
+          onSuccess={() => {
+            loadData()
+          }}
+        />
+      )}
     </div>
   )
 }

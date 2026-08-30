@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase'
-import type { AppNotification } from '@/types/notification'
+import type { AppNotification, NotificationType } from '@/types/notification'
 
 export async function getUserNotifications(
   userId: string,
@@ -66,4 +66,45 @@ export async function markAllAsRead(userId: string): Promise<boolean> {
   }
 
   return true
+}
+
+export interface CreateNotificationParams {
+  userId: string
+  title: string
+  message: string
+  type?: NotificationType
+  link?: string | null
+}
+
+/**
+ * Creates a new notification record in the database.
+ * Wrapped in try/catch to ensure caller flows are not blocked if notification fails.
+ */
+export async function createNotification({
+  userId,
+  title,
+  message,
+  type = 'info',
+  link = null,
+}: CreateNotificationParams): Promise<boolean> {
+  const supabase = createClient()
+  try {
+    const { error } = await supabase.from('notifications').insert({
+      user_id: userId,
+      title,
+      message,
+      type,
+      link,
+      is_read: false,
+    })
+
+    if (error) {
+      console.warn('[services/notifications] Failed to insert notification:', error.message)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.warn('[services/notifications] Exception in createNotification:', err)
+    return false
+  }
 }

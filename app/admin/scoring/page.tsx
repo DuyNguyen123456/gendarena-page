@@ -9,14 +9,9 @@ import {
   createOrUpdateScoringRound,
   saveScoringCriterion,
   deleteScoringCriterion,
-  getJudges,
-  getAllSubmissionsForAssign,
-  assignJudgeToSubmission,
-  getAssignments,
-  removeAssignment,
   type ScoringRound,
 } from '@/services/scoring'
-import { ArrowLeft, Scale, Plus, Trash2, CheckCircle, AlertCircle, ExternalLink, Link2, UserCheck, Shield } from 'lucide-react'
+import { ArrowLeft, Scale, Plus, Trash2, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react'
 import Loading from '@/components/loading'
 import DotGridBackground from '@/components/dot-grid-background'
 import { Button } from '@/components/ui/button'
@@ -32,13 +27,6 @@ export default function AdminScoringPage() {
   const [newCriterionName, setNewCriterionName] = useState('')
   const [newCriterionWeight, setNewCriterionWeight] = useState(0)
   const [newCriterionMaxScore, setNewCriterionMaxScore] = useState(10)
-  const [judges, setJudges] = useState<{ id: string; full_name: string; email: string }[]>([])
-  const [submissions, setSubmissions] = useState<{ id: string; label: string }[]>([])
-  const [assignments, setAssignments] = useState<
-    { id: string; judge_id: string; submission_id: string; judge?: { full_name: string }; submission_label?: string }[]
-  >([])
-  const [selectedJudge, setSelectedJudge] = useState('')
-  const [selectedSubmission, setSelectedSubmission] = useState('')
   const [roundOpen, setRoundOpen] = useState(false)
   const [roundRubricUrl, setRoundRubricUrl] = useState('')
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null)
@@ -50,16 +38,8 @@ export default function AdminScoringPage() {
   const supabase = createClient()
 
   const loadAll = useCallback(async () => {
-    const [roundsData, judgeList, subList, assignList] = await Promise.all([
-      getScoringRounds(),
-      getJudges(),
-      getAllSubmissionsForAssign(),
-      getAssignments(),
-    ])
+    const roundsData = await getScoringRounds()
     setRounds(roundsData)
-    setJudges(judgeList)
-    setSubmissions(subList)
-    setAssignments(assignList)
     if (!selectedRoundId && roundsData.length > 0) {
       const defaultRound = roundsData.find((round) => round.scoring_open) ?? roundsData[0]
       setSelectedRoundId(defaultRound.id)
@@ -100,28 +80,6 @@ export default function AdminScoringPage() {
       setRoundRubricUrl(cur.rubric_url ?? '')
     }
   }, [selectedRoundId, rounds])
-
-  const handleAssign = async () => {
-    if (!userId || !selectedJudge || !selectedSubmission) return
-    const result = await assignJudgeToSubmission(selectedJudge, selectedSubmission, userId)
-    if (!result.ok) setMessage({ text: result.error, ok: false })
-    else {
-      setMessage({ text: 'Đã phân công bài chấm thành công.', ok: true })
-      setSelectedJudge('')
-      setSelectedSubmission('')
-      await loadAll()
-    }
-  }
-
-  const handleRemove = async (assignmentId: string) => {
-    const result = await removeAssignment(assignmentId)
-    if (!result.ok) {
-      setMessage({ text: result.error, ok: false })
-      return
-    }
-    setMessage({ text: 'Đã xoá phân công thành công.', ok: true })
-    await loadAll()
-  }
 
   const selectedRound = rounds.find((round) => round.id === selectedRoundId)
   const totalRoundWeight = selectedRound?.criteria.reduce((sum, criterion) => sum + criterion.weight, 0) ?? 0
@@ -251,7 +209,7 @@ export default function AdminScoringPage() {
                 Cấu hình vòng chấm & tiêu chí
               </h1>
               <p className="mt-1 text-sm text-text-secondary">
-                Quản lý các vòng chấm điểm, trọng số tiêu chí, liên kết barem và phân công bài thi
+                Quản lý các vòng chấm điểm, trọng số tiêu chí và liên kết barem điểm chính thức
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -304,7 +262,7 @@ export default function AdminScoringPage() {
                     <label htmlFor="round-open-toggle" className="text-sm font-medium text-text-primary block cursor-pointer">
                       Mở cổng chấm điểm
                     </label>
-                    <span className="text-xs text-text-tertiary">Cho phép BGK truy cập và nhập điểm</span>
+                    <span className="text-xs text-text-tertiary">Bật để kích hoạt tính năng chấm điểm</span>
                   </div>
                   <input
                     id="round-open-toggle"
@@ -530,96 +488,6 @@ export default function AdminScoringPage() {
                     ))}
                   </div>
                 )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Quick Assignment Widget */}
-        <Card className="border-surface-border">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <UserCheck className="size-4 text-brand-cyan" />
-              Phân công nhanh Giám khảo ↔ Bài nộp
-            </CardTitle>
-            <CardDescription>
-              Gán giám khảo trực tiếp cho bài nộp (để quản lý chuyên sâu theo ma trận chuyên môn, sử dụng phân hệ Phân công)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="assign-judge-select" className="block text-xs font-medium text-text-secondary mb-1.5">
-                  Chọn giám khảo
-                </label>
-                <select
-                  id="assign-judge-select"
-                  value={selectedJudge}
-                  onChange={(e) => setSelectedJudge(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors cursor-pointer"
-                >
-                  <option value="">-- Chọn giám khảo --</option>
-                  {judges.map((j) => (
-                    <option key={j.id} value={j.id}>{j.full_name} ({j.email})</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="assign-sub-select" className="block text-xs font-medium text-text-secondary mb-1.5">
-                  Chọn bài nộp
-                </label>
-                <select
-                  id="assign-sub-select"
-                  value={selectedSubmission}
-                  onChange={(e) => setSelectedSubmission(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition-colors cursor-pointer"
-                >
-                  <option value="">-- Chọn bài nộp --</option>
-                  {submissions.map((s) => (
-                    <option key={s.id} value={s.id}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Plus className="size-3.5" />}
-              onClick={handleAssign}
-              disabled={!selectedJudge || !selectedSubmission}
-            >
-              Phân công bài nộp
-            </Button>
-
-            {assignments.length > 0 && (
-              <div className="mt-4 space-y-2 border-t border-surface-border pt-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2">
-                  Danh sách phân công hiện tại ({assignments.length})
-                </p>
-                <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                  {assignments.map((a) => (
-                    <div
-                      key={a.id}
-                      className="flex justify-between items-center bg-surface-overlay border border-surface-border rounded-lg px-4 py-2.5 text-sm"
-                    >
-                      <span className="truncate pr-2">
-                        <strong className="text-text-primary font-medium">{a.judge?.full_name || 'Giám khảo'}</strong>
-                        <span className="text-text-tertiary mx-2">→</span>
-                        <span className="text-text-secondary">{a.submission_label ?? a.submission_id}</span>
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        leftIcon={<Trash2 className="size-3.5" />}
-                        onClick={() => handleRemove(a.id)}
-                        className="text-semantic-danger hover:bg-semantic-danger/10 hover:text-semantic-danger h-7 px-2"
-                      >
-                        Huỷ
-                      </Button>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
           </CardContent>

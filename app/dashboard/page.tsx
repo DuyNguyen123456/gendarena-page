@@ -21,6 +21,9 @@ import {
 } from '@/components/ui/dialog'
 import ProfileEditor, { ProfileData } from '@/components/profile/ProfileEditor'
 import { ensureProfileExists, getProfile, dobToUiFormat } from '@/services/profile'
+import { createNotification } from '@/services/notifications'
+import PaymentModal from '@/components/team/PaymentModal'
+import type { TeamPaymentStatus } from '@/types/payment'
 import {
   User as UserIcon,
   Plus,
@@ -45,6 +48,10 @@ import {
   CheckCircle2,
   Share2,
   BadgeCheck,
+  CreditCard,
+  Sparkles,
+  ShieldCheck,
+  Lock,
 } from 'lucide-react'
 import { isProfileComplete } from '@/lib/profile-utils'
 
@@ -63,6 +70,12 @@ type Team = {
   is_open: boolean
   leader_id: string
   competition_id: string
+  status?: TeamPaymentStatus
+  payment_amount?: number
+  payment_receipt_url?: string | null
+  payment_submitted_at?: string | null
+  payment_verified_at?: string | null
+  payment_rejected_reason?: string | null
   competitions?: {
     title: string
   } | null
@@ -109,6 +122,7 @@ type SentInvite = {
 type ReceivedInvite = {
   id: string
   team_id: string
+  invited_by?: string
   status: string
   created_at: string
   teams?: {
@@ -126,7 +140,7 @@ type DuplicateMembership = {
   joined_at: string
 }
 
-type DashboardStatus = 'loading' | 'ready' | 'error'
+type DashboardStatus = 'loading' | 'ready' | 'error' | 'unauthenticated'
 
 function createSyntheticProfile(
   authUser: { id: string; email?: string | null; user_metadata?: Record<string, any> | null }
@@ -171,6 +185,7 @@ function DashboardContent() {
 
   // Modals & Dialogs
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showRenameDialog, setShowRenameDialog] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [renameLoading, setRenameLoading] = useState(false)
@@ -205,7 +220,7 @@ function DashboardContent() {
   const prefersReducedMotion = useReducedMotion()
 
   // Fetch Team Members
-  const fetchMembers = useCallback(async (teamId: string) => {
+  const fetchMembers = useCallback(async (teamId: string, leaderId?: string) => {
     try {
       const { data: membersData } = await supabase
         .from('team_members')
@@ -213,12 +228,23 @@ function DashboardContent() {
         .eq('team_id', teamId)
         .order('joined_at', { ascending: true })
 
-      if (!membersData || membersData.length === 0) {
+      const rawMembers = membersData ? [...membersData] : []
+
+      // If leaderId is provided and not in team_members list, add leader
+      if (leaderId && !rawMembers.some((m) => m.user_id === leaderId)) {
+        rawMembers.unshift({
+          user_id: leaderId,
+          role: 'leader',
+          joined_at: new Date().toISOString(),
+        })
+      }
+
+      if (rawMembers.length === 0) {
         setMembers([])
         return
       }
 
-      const userIds = membersData.map((m) => m.user_id)
+      const userIds = rawMembers.map((m) => m.user_id)
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, full_name, email, phone, organization, university, faculty, major, dob, avatar_url, facebook_url')
@@ -255,7 +281,7 @@ function DashboardContent() {
         }
       })
 
-      const merged = membersData.map((m) => ({
+      const merged = rawMembers.map((m) => ({
         ...m,
         profiles: profileMap[m.user_id] ?? null,
       }))
@@ -268,30 +294,27 @@ function DashboardContent() {
 
   // Load Dashboard Data with Auto-Heal & Synthetic Fallback
   const loadDashboardData = useCallback(async () => {
-    setStatus('loading')
-    setErrorMessage(null)
-
-    let authUser: { id: string; email?: string | null; user_metadata?: Record<string, any> | null } | null = null
-
+    let currentAuthUser: any = null
     try {
       const {
-        data: { user: currentUser },
-        error: authError,
+        data: { user: authUser },
       } = await supabase.auth.getUser()
+      currentAuthUser = authUser
 
-      if (!currentUser || authError) {
-        window.location.href = '/login'
+      if (!authUser) {
+        setStatus('unauthenticated')
+        router.push('/login')
         return
       }
-      authUser = currentUser
+
       setUser(authUser)
 
-      // 1. Thu thập profile từ Database hoặc Auto-heal
+      // 1. Fetch Profile an toàn qua ensureProfileExists
       let userProfile: ProfileData | null = null
       try {
-        const ensureRes = await ensureProfileExists(authUser)
-        if (ensureRes.data) {
-          userProfile = ensureRes.data as unknown as ProfileData
+        const ensured = await ensureProfileExists(authUser)
+        if (ensured.ok && ensured.data) {
+          userProfile = ensured.data as unknown as ProfileData
         } else {
           const fetched = await getProfile(authUser.id)
           if (fetched) {
@@ -316,12 +339,27 @@ function DashboardContent() {
 
       setProfile(userProfile)
 
-      // 3. Load thông tin đội thi (bọc try-catch an toàn)
+      // 3. Load thông tin đội thi (hỗ trợ cả leader_id trong bảng teams và membership trong team_members)
       try {
-        const { data: allMemberships } = await supabase
-          .from('team_members')
-          .select('team_id, role, joined_at')
-          .eq('user_id', authUser.id)
+        const [
+          { data: allMemberships, error: memberErr },
+          { data: leaderTeams, error: leaderErr },
+        ] = await Promise.all([
+          supabase
+            .from('team_members')
+            .select('team_id, role, joined_at')
+            .eq('user_id', authUser.id),
+          supabase
+            .from('teams')
+            .select('id, name')
+            .eq('leader_id', authUser.id),
+        ])
+
+        if (memberErr) console.warn('[Dashboard] team_members fetch warning:', memberErr)
+        if (leaderErr) console.warn('[Dashboard] leader teams fetch warning:', leaderErr)
+
+        let targetTeamId: string | null = null
+        let userIsLeader = false
 
         if (allMemberships && allMemberships.length > 1) {
           // Duplicate membership detected
@@ -345,84 +383,121 @@ function DashboardContent() {
             }))
           )
           setMyTeam(null)
-        } else if (allMemberships && allMemberships.length === 1) {
-          // User has exactly 1 team
-          setDuplicateTeams([])
-          const memberRecord = allMemberships[0]
-          const userIsLeader = memberRecord.role === 'leader'
-          setIsLeader(userIsLeader)
-
-          const { data: teamData } = await supabase
-            .from('teams')
-            .select('id, name, description, max_members, is_open, leader_id, competition_id, competitions(title)')
-            .eq('id', memberRecord.team_id)
-            .maybeSingle()
-
-          if (teamData) {
-            setMyTeam(teamData as unknown as Team)
-            setRenameValue(teamData.name)
-            await fetchMembers(teamData.id)
-
-            if (userIsLeader) {
-              // Fetch join requests
-              const { data: reqs } = await supabase
-                .from('team_join_requests')
-                .select('id, requester_id, message, status, created_at')
-                .eq('team_id', teamData.id)
-                .eq('status', 'pending')
-                .order('created_at', { ascending: false })
-
-              if (reqs && reqs.length > 0) {
-                const reqUserIds = reqs.map((r) => r.requester_id)
-                const { data: reqProfiles } = await supabase
-                  .from('profiles')
-                  .select('id, full_name, email, phone')
-                  .in('id', reqUserIds)
-
-                const reqProfileMap: Record<string, { full_name: string | null; email: string | null; phone: string | null }> = {}
-                reqProfiles?.forEach((p) => {
-                  reqProfileMap[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone }
-                })
-
-                setJoinRequests(
-                  reqs.map((r) => ({
-                    ...r,
-                    profiles: reqProfileMap[r.requester_id] ?? null,
-                  })) as unknown as JoinRequest[]
-                )
-              } else {
-                setJoinRequests([])
-              }
-
-              // Fetch sent invites
-              const { data: invitesData } = await supabase
-                .from('team_invites')
-                .select('id, invited_uid, status, created_at')
-                .eq('team_id', teamData.id)
-                .eq('status', 'pending')
-                .order('created_at', { ascending: false })
-
-              setSentInvites((invitesData ?? []) as unknown as SentInvite[])
-            }
-          }
         } else {
-          // User has NO team
-          setMyTeam(null)
           setDuplicateTeams([])
 
-          // Fetch received team invitations
-          if (userProfile.uid) {
-            const { data: receivedData } = await supabase
-              .from('team_invites')
-              .select(`
-                id, team_id, status, created_at,
-                teams(name),
-                inviter:invited_by(full_name)
-              `)
-              .eq('invited_uid', userProfile.uid)
-              .eq('status', 'pending')
+          if (allMemberships && allMemberships.length === 1) {
+            targetTeamId = allMemberships[0].team_id
+            userIsLeader = allMemberships[0].role === 'leader'
+          } else if (leaderTeams && leaderTeams.length > 0) {
+            // User là Leader của đội trong bảng teams nhưng chưa có row trong team_members
+            targetTeamId = leaderTeams[0].id
+            userIsLeader = true
+          }
 
-            setReceivedInvites((receivedData ?? []) as unknown as ReceivedInvite[])
+          if (targetTeamId) {
+            let teamRecord: any = null
+
+            // Thử query đầy đủ các cột payment
+            const { data: fullTeam, error: fullErr } = await supabase
+              .from('teams')
+              .select('id, name, description, max_members, is_open, leader_id, competition_id, status, payment_amount, payment_receipt_url, payment_submitted_at, payment_verified_at, payment_rejected_reason, competitions(title)')
+              .eq('id', targetTeamId)
+              .maybeSingle()
+
+            if (fullErr || !fullTeam) {
+              // Fallback query base columns nếu migration cột payment chưa chạy
+              const { data: baseTeam } = await supabase
+                .from('teams')
+                .select('id, name, description, max_members, is_open, leader_id, competition_id, competitions(title)')
+                .eq('id', targetTeamId)
+                .maybeSingle()
+
+              if (baseTeam) {
+                teamRecord = {
+                  ...baseTeam,
+                  status: 'draft',
+                }
+              }
+            } else {
+              teamRecord = {
+                ...fullTeam,
+                status: fullTeam.status || 'draft',
+              }
+            }
+
+            if (teamRecord) {
+              if (teamRecord.leader_id === authUser.id) {
+                userIsLeader = true
+              }
+              setIsLeader(userIsLeader)
+              setMyTeam(teamRecord as unknown as Team)
+              setRenameValue(teamRecord.name)
+              await fetchMembers(teamRecord.id, teamRecord.leader_id)
+
+              if (userIsLeader) {
+                // Fetch join requests
+                const { data: reqs } = await supabase
+                  .from('team_join_requests')
+                  .select('id, requester_id, message, status, created_at')
+                  .eq('team_id', teamRecord.id)
+                  .eq('status', 'pending')
+                  .order('created_at', { ascending: false })
+
+                if (reqs && reqs.length > 0) {
+                  const reqUserIds = reqs.map((r) => r.requester_id)
+                  const { data: reqProfiles } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, email, phone')
+                    .in('id', reqUserIds)
+
+                  const reqProfileMap: Record<string, { full_name: string | null; email: string | null; phone: string | null }> = {}
+                  reqProfiles?.forEach((p) => {
+                    reqProfileMap[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone }
+                  })
+
+                  setJoinRequests(
+                    reqs.map((r) => ({
+                      ...r,
+                      profiles: reqProfileMap[r.requester_id] ?? null,
+                    })) as unknown as JoinRequest[]
+                  )
+                } else {
+                  setJoinRequests([])
+                }
+
+                // Fetch sent invites
+                const { data: invitesData } = await supabase
+                  .from('team_invites')
+                  .select('id, invited_uid, status, created_at')
+                  .eq('team_id', teamRecord.id)
+                  .eq('status', 'pending')
+                  .order('created_at', { ascending: false })
+
+                setSentInvites((invitesData ?? []) as unknown as SentInvite[])
+              }
+            } else {
+              setMyTeam(null)
+            }
+          } else {
+            // User has NO team
+            setMyTeam(null)
+            setDuplicateTeams([])
+
+            // Fetch received team invitations
+            if (userProfile.uid) {
+              const { data: receivedData } = await supabase
+                .from('team_invites')
+                .select(`
+                  id, team_id, invited_by, status, created_at,
+                  teams(name),
+                  inviter:invited_by(full_name)
+                `)
+                .eq('invited_uid', userProfile.uid)
+                .eq('status', 'pending')
+
+              setReceivedInvites((receivedData ?? []) as unknown as ReceivedInvite[])
+            }
           }
         }
       } catch (teamErr) {
@@ -453,8 +528,8 @@ function DashboardContent() {
       setStatus('ready')
     } catch (err: any) {
       console.error('[Dashboard Load Error]:', err)
-      if (authUser) {
-        setProfile(createSyntheticProfile(authUser))
+      if (currentAuthUser) {
+        setProfile(createSyntheticProfile(currentAuthUser))
         setStatus('ready')
       } else {
         setStatus('error')
@@ -564,11 +639,42 @@ function DashboardContent() {
 
       await supabase.from('team_invites').update({ status: 'accepted' }).eq('id', invite.id)
       setGlobalMessage({ text: 'Gia nhập đội thi thành công!', type: 'success' })
+
+      // Send notification to inviter (try/catch non-blocking)
+      try {
+        if (invite.invited_by) {
+          await createNotification({
+            userId: invite.invited_by,
+            title: 'Lời mời đã được chấp nhận',
+            message: `${profile?.full_name || 'Một đấu thủ'} đã đồng ý gia nhập đội thi.`,
+            type: 'team_invite',
+            link: '/dashboard',
+          })
+        }
+      } catch (notifErr) {
+        console.warn('Failed to send invite accepted notification:', notifErr)
+      }
+
       await loadDashboardData()
     } else {
       await supabase.from('team_invites').update({ status: 'rejected' }).eq('id', invite.id)
       setReceivedInvites((prev) => prev.filter((i) => i.id !== invite.id))
       setGlobalMessage({ text: 'Đã từ chối lời mời.', type: 'success' })
+
+      // Send notification to inviter (try/catch non-blocking)
+      try {
+        if (invite.invited_by) {
+          await createNotification({
+            userId: invite.invited_by,
+            title: 'Lời mời bị từ chối',
+            message: `${profile?.full_name || 'Một đấu thủ'} đã từ chối lời mời gia nhập đội.`,
+            type: 'team_invite',
+            link: '/dashboard',
+          })
+        }
+      } catch (notifErr) {
+        console.warn('Failed to send invite rejected notification:', notifErr)
+      }
     }
     setActionLoading(null)
   }
@@ -733,6 +839,19 @@ function DashboardContent() {
         .eq('status', 'pending')
 
       if (teamInvites) setSentInvites(teamInvites as unknown as SentInvite[])
+
+      // Send notification to invited user (try/catch non-blocking)
+      try {
+        await createNotification({
+          userId: targetProfile.id,
+          title: 'Lời mời tham gia đội thi',
+          message: `Đội "${myTeam.name}" đã gửi lời mời bạn tham gia đội thi.`,
+          type: 'team_invite',
+          link: '/dashboard',
+        })
+      } catch (notifErr) {
+        console.warn('Failed to send team invite notification:', notifErr)
+      }
     }
     setInviteLoading(false)
   }
@@ -785,10 +904,36 @@ function DashboardContent() {
       await fetchMembers(myTeam.id)
       setJoinRequests((prev) => prev.filter((r) => r.id !== requestId))
       setGlobalMessage({ text: 'Đã duyệt yêu cầu gia nhập!', type: 'success' })
+
+      // Send notification to requester (try/catch non-blocking)
+      try {
+        await createNotification({
+          userId: requesterId,
+          title: 'Kết quả yêu cầu gia nhập',
+          message: `Yêu cầu gia nhập đội "${myTeam.name}" của bạn đã được chấp nhận!`,
+          type: 'team_request',
+          link: '/dashboard',
+        })
+      } catch (notifErr) {
+        console.warn('Failed to send join request accepted notification:', notifErr)
+      }
     } else {
       await supabase.from('team_join_requests').update({ status: 'rejected' }).eq('id', requestId)
       setJoinRequests((prev) => prev.filter((r) => r.id !== requestId))
       setGlobalMessage({ text: 'Đã từ chối yêu cầu.', type: 'success' })
+
+      // Send notification to requester (try/catch non-blocking)
+      try {
+        await createNotification({
+          userId: requesterId,
+          title: 'Kết quả yêu cầu gia nhập',
+          message: `Yêu cầu gia nhập đội "${myTeam.name}" của bạn đã bị từ chối.`,
+          type: 'team_request',
+          link: '/team/browse',
+        })
+      } catch (notifErr) {
+        console.warn('Failed to send join request rejected notification:', notifErr)
+      }
     }
     setActionLoading(null)
   }
@@ -1370,6 +1515,125 @@ function DashboardContent() {
         {/* CASE 3: PARTICIPANT HAS TEAM (UNIFIED TEAM MANAGEMENT VIEW) */}
         {myTeam && (
           <div className="space-y-8">
+            {/* PAYMENT & VERIFICATION STATUS BANNER */}
+            {myTeam.status === 'verified' ? (
+              <div className="p-4 sm:p-5 rounded-2xl bg-brand-cyan/10 border border-brand-cyan/40 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-11 rounded-xl bg-brand-cyan text-slate-950 flex items-center justify-center font-bold shadow-md shrink-0">
+                    <BadgeCheck className="size-6" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-display font-bold text-base text-text-primary">
+                        Đội thi đã được xác thực (Verified)
+                      </h3>
+                      <Badge variant="brand" size="sm">Đã nộp lệ phí</Badge>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Đội đã hoàn tất lệ phí dự thi ({new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(myTeam.payment_amount || 0)}) và sẵn sàng nộp bài thi.
+                    </p>
+                  </div>
+                </div>
+                <Link href="/submissions">
+                  <Button variant="primary" size="sm" leftIcon={<ClipboardPen className="size-4" />} className="text-xs shrink-0">
+                    Vào phòng nộp bài
+                  </Button>
+                </Link>
+              </div>
+            ) : myTeam.status === 'locked_pending_payment' ? (
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/40 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-11 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0">
+                    <Clock className="size-6 animate-pulse" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-display font-bold text-base text-amber-300">
+                        Đã nộp biên lai - Đang chờ BTC đối soát
+                      </h3>
+                      <Badge variant="warning" size="sm">Chờ duyệt</Badge>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Biên lai chuyển khoản đã được ghi nhận. Danh sách thành viên ({members.length} người) đã được chốt và bảo vệ.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-xs text-amber-400/90 font-medium px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  BTC sẽ phê duyệt trong 24h
+                </div>
+              </div>
+            ) : myTeam.status === 'payment_rejected' ? (
+              <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/50 border border-rose-800/90 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-11 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-400 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="size-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-display font-bold text-base text-rose-300">
+                        Lệ phí dự thi bị từ chối
+                      </h3>
+                      <Badge variant="danger" size="sm">Cần nộp lại</Badge>
+                    </div>
+                    <p className="text-xs text-rose-200">
+                      <strong>Lý do từ BTC: </strong>{myTeam.payment_rejected_reason || 'Biên lai chuyển khoản không hợp lệ.'}
+                    </p>
+                  </div>
+                </div>
+                {isLeader && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setShowPaymentModal(true)}
+                    leftIcon={<CreditCard className="size-4" />}
+                    className="text-xs shrink-0"
+                  >
+                    Nộp lại biên lai mới
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-brand-cyan/30 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-11 rounded-xl bg-brand-cyan/15 border border-brand-cyan/30 text-brand-cyan flex items-center justify-center shrink-0">
+                    <CreditCard className="size-6" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-display font-bold text-base text-text-primary">
+                        Lệ phí dự thi &amp; Chốt danh sách đội
+                      </h3>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-text-secondary border border-slate-700">
+                        Chưa đóng lệ phí
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      {members.length < 3
+                        ? `Cần tối thiểu 3 thành viên (hiện có ${members.length}) để chốt đội và đóng lệ phí.`
+                        : `Đội đã có ${members.length} thành viên. Trưởng đội hãy chuyển khoản và gửi biên lai để nhận Huy hiệu Verified.`}
+                    </p>
+                  </div>
+                </div>
+                {isLeader ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setShowPaymentModal(true)}
+                    disabled={members.length < 3}
+                    leftIcon={<CreditCard className="size-4" />}
+                    className="text-xs shrink-0"
+                    title={members.length < 3 ? 'Cần tối thiểu 3 thành viên để nộp lệ phí' : undefined}
+                  >
+                    Thanh toán lệ phí dự thi
+                  </Button>
+                ) : (
+                  <span className="text-xs text-text-tertiary italic">
+                    Chờ Trưởng nhóm thanh toán lệ phí
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Overview Stats Bar */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="p-5 flex items-center gap-3.5">
@@ -1556,126 +1820,126 @@ function DashboardContent() {
                         </p>
                       </div>
 
-                      {inviteMessage && (
-                        <p
-                          className={`text-xs font-medium p-2.5 rounded-lg border ${
-                            inviteMessage.startsWith('Gửi')
-                              ? 'bg-semantic-success/10 border-semantic-success/30 text-semantic-success'
-                              : 'bg-semantic-danger/10 border-semantic-danger/30 text-semantic-danger'
-                          }`}
-                        >
-                          {inviteMessage}
-                        </p>
-                      )}
-
-                      <form onSubmit={handleSendInvite} className="flex gap-2">
-                        <Input
-                          type="text"
-                          value={inviteUid}
-                          onChange={(e) => setInviteUid(e.target.value)}
-                          placeholder="Mã UID (VD: GEND-XXXX)"
-                          className="flex-1 text-sm font-mono uppercase"
-                          required
-                        />
-                        <Button
-                          type="submit"
-                          variant="primary"
-                          size="md"
-                          isLoading={inviteLoading}
-                          className="shrink-0"
-                        >
-                          Mời
-                        </Button>
-                      </form>
-
-                      {/* Sent Invites list */}
-                      {sentInvites.length > 0 && (
-                        <div className="pt-3 border-t border-surface-border space-y-2">
-                          <p className="text-xs font-semibold text-text-tertiary">
-                            Lời mời đang chờ ({sentInvites.length})
+                        {inviteMessage && (
+                          <p
+                            className={`text-xs font-medium p-2.5 rounded-lg border ${
+                              inviteMessage.startsWith('Gửi')
+                                ? 'bg-semantic-success/10 border-semantic-success/30 text-semantic-success'
+                                : 'bg-semantic-danger/10 border-semantic-danger/30 text-semantic-danger'
+                            }`}
+                          >
+                            {inviteMessage}
                           </p>
-                          <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                            {sentInvites.map((inv) => (
-                              <div
-                                key={inv.id}
-                                className="p-2.5 rounded-lg bg-surface-raised border border-surface-border flex items-center justify-between text-xs"
-                              >
-                                <span className="font-mono text-brand-cyan">{inv.invited_uid}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCancelInvite(inv.id)}
-                                  className="text-text-tertiary hover:text-semantic-danger text-[11px] cursor-pointer"
+                        )}
+
+                        <form onSubmit={handleSendInvite} className="flex gap-2">
+                          <Input
+                            type="text"
+                            value={inviteUid}
+                            onChange={(e) => setInviteUid(e.target.value)}
+                            placeholder="Mã UID (VD: GEND-XXXX)"
+                            className="flex-1 text-sm font-mono uppercase"
+                            required
+                          />
+                          <Button
+                            type="submit"
+                            variant="primary"
+                            size="md"
+                            isLoading={inviteLoading}
+                            className="shrink-0"
+                          >
+                            Mời
+                          </Button>
+                        </form>
+
+                        {/* Sent Invites list */}
+                        {sentInvites.length > 0 && (
+                          <div className="pt-3 border-t border-surface-border space-y-2">
+                            <p className="text-xs font-semibold text-text-tertiary">
+                              Lời mời đang chờ ({sentInvites.length})
+                            </p>
+                            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                              {sentInvites.map((inv) => (
+                                <div
+                                  key={inv.id}
+                                  className="p-2.5 rounded-lg bg-surface-raised border border-surface-border flex items-center justify-between text-xs"
                                 >
-                                  Thu hồi
-                                </button>
+                                  <span className="font-mono text-brand-cyan">{inv.invited_uid}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCancelInvite(inv.id)}
+                                    className="text-text-tertiary hover:text-semantic-danger text-[11px] cursor-pointer"
+                                  >
+                                    Thu hồi
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+
+                      {/* Join Requests Card */}
+                      <Card className="p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-display font-semibold text-text-primary text-base flex items-center gap-2">
+                            <Inbox className="size-4 text-brand-cyan" />
+                            <span>Đơn xin gia nhập ({joinRequests.length})</span>
+                          </h3>
+                        </div>
+
+                        {joinRequests.length === 0 ? (
+                          <p className="text-xs text-text-tertiary text-center py-4">
+                            Chưa có đơn xin gia nhập nào đang chờ duyệt
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {joinRequests.map((req) => (
+                              <div
+                                key={req.id}
+                                className="p-3.5 bg-surface-raised border border-surface-border rounded-xl space-y-2 text-xs"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-semibold text-text-primary">
+                                    {req.profiles?.full_name || 'Đấu thủ ẩn danh'}
+                                  </p>
+                                  <span className="text-[10px] text-text-tertiary font-mono">
+                                    {new Date(req.created_at).toLocaleDateString('vi-VN')}
+                                  </span>
+                                </div>
+                                {req.message && (
+                                  <p className="text-text-secondary italic bg-surface-overlay p-2 rounded">
+                                    "{req.message}"
+                                  </p>
+                                )}
+                                <div className="flex items-center justify-end gap-2 pt-1">
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    isLoading={actionLoading === req.id}
+                                    onClick={() => handleRequestAction(req.id, req.requester_id, 'accept')}
+                                    className="text-xs h-7 px-2.5"
+                                  >
+                                    Duyệt
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={actionLoading === req.id}
+                                    onClick={() => handleRequestAction(req.id, req.requester_id, 'reject')}
+                                    className="text-xs h-7 px-2.5 text-semantic-danger hover:bg-semantic-danger/10"
+                                  >
+                                    Từ chối
+                                  </Button>
+                                </div>
                               </div>
                             ))}
                           </div>
-                        </div>
-                      )}
-                    </Card>
-
-                    {/* Join Requests Card */}
-                    <Card className="p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-display font-semibold text-text-primary text-base flex items-center gap-2">
-                          <Inbox className="size-4 text-brand-cyan" />
-                          <span>Đơn xin gia nhập ({joinRequests.length})</span>
-                        </h3>
-                      </div>
-
-                      {joinRequests.length === 0 ? (
-                        <p className="text-xs text-text-tertiary text-center py-4">
-                          Chưa có đơn xin gia nhập nào đang chờ duyệt
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {joinRequests.map((req) => (
-                            <div
-                              key={req.id}
-                              className="p-3.5 bg-surface-raised border border-surface-border rounded-xl space-y-2 text-xs"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="font-semibold text-text-primary">
-                                  {req.profiles?.full_name || 'Đấu thủ ẩn danh'}
-                                </p>
-                                <span className="text-[10px] text-text-tertiary font-mono">
-                                  {new Date(req.created_at).toLocaleDateString('vi-VN')}
-                                </span>
-                              </div>
-                              {req.message && (
-                                <p className="text-text-secondary italic bg-surface-overlay p-2 rounded">
-                                  "{req.message}"
-                                </p>
-                              )}
-                              <div className="flex items-center justify-end gap-2 pt-1">
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  isLoading={actionLoading === req.id}
-                                  onClick={() => handleRequestAction(req.id, req.requester_id, 'accept')}
-                                  className="text-xs h-7 px-2.5"
-                                >
-                                  Duyệt
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={actionLoading === req.id}
-                                  onClick={() => handleRequestAction(req.id, req.requester_id, 'reject')}
-                                  className="text-xs h-7 px-2.5 text-semantic-danger hover:bg-semantic-danger/10"
-                                >
-                                  Từ chối
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </Card>
-                  </>
-                ) : (
-                  /* Member Info Card */
+                        )}
+                      </Card>
+                    </>
+                  ) : (
+                    /* Member Info Card */
                   <Card className="p-6 space-y-3">
                     <h3 className="font-display font-semibold text-text-primary text-base">
                       Quyền hạn thành viên
@@ -2002,6 +2266,23 @@ function DashboardContent() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* DIALOG 7: PAYMENT MODAL (LEADER & TEAM FEE VERIFICATION) */}
+      {myTeam && (
+        <PaymentModal
+          open={showPaymentModal}
+          onOpenChange={setShowPaymentModal}
+          team={myTeam}
+          membersCount={members.length}
+          onSuccess={() => {
+            setGlobalMessage({
+              text: 'Đã gửi biên lai lệ phí thành công! Đang chờ Ban tổ chức đối soát.',
+              type: 'success',
+            })
+            loadDashboardData()
+          }}
+        />
+      )}
     </div>
   )
 }

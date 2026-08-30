@@ -29,7 +29,6 @@ export default function AuthStateListener() {
           '/team',
           '/submissions',
           '/admin',
-          '/judge',
           '/profile',
         ]
         const isProtected = protectedPrefixes.some(

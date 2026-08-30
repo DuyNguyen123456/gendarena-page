@@ -9,7 +9,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: [
         '/admin/*',
-        '/judge/*',
         '/api/*',
         '/auth/callback',
         '/reset-password',

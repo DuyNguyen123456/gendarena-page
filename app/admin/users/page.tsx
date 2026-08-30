@@ -4,23 +4,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Users, Search, Pencil, CheckCircle, AlertCircle, UserPlus, Mail, User as UserIcon, Building2 } from 'lucide-react'
+import { ArrowLeft, Users, Search, CheckCircle, AlertCircle, Shield, ShieldCheck } from 'lucide-react'
 import Loading from '@/components/loading'
 import DotGridBackground from '@/components/dot-grid-background'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
-import { updateProfileExpertise } from '@/services/profile'
-import type { TopicCategory } from '@/types/submission'
-import { TOPIC_CATEGORIES, TOPIC_CATEGORY_CONFIG } from '@/types/submission'
 
 interface UserRow {
   id: string
@@ -28,151 +17,18 @@ interface UserRow {
   email: string
   phone?: string
   organization?: string
+  university?: string
+  faculty?: string
+  major?: string
   role?: string
-  expertise?: string[] | null
   created_at: string
 }
-
-// ─── Expertise Editor Modal ──────────────────────────────────────────────────
-
-function ExpertiseEditorModal({
-  userId,
-  current,
-  onSave,
-  onClose,
-}: {
-  userId: string
-  current: string[]
-  onSave: () => void
-  onClose: () => void
-}) {
-  const [selected, setSelected] = useState<TopicCategory[]>(
-    (current ?? []).filter((e): e is TopicCategory =>
-      TOPIC_CATEGORIES.includes(e as TopicCategory)
-    )
-  )
-  const [saving, setSaving] = useState(false)
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-
-  const toggle = (cat: TopicCategory) => {
-    setSelected((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    )
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
-    const result = await updateProfileExpertise(userId, selected)
-    setSaving(false)
-    if (!result.ok) {
-      setMsg({ ok: false, text: result.error })
-    } else {
-      setMsg({ ok: true, text: 'Đã cập nhật lĩnh vực chuyên môn.' })
-      setTimeout(() => {
-        onSave()
-        onClose()
-      }, 700)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="modal-expertise-title">
-      <div className="w-full max-w-md rounded-xl border border-surface-border bg-surface-overlay p-6 shadow-elevation-3 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-        <div>
-          <h3 id="modal-expertise-title" className="font-display text-base font-semibold text-text-primary">
-            Lĩnh vực chuyên môn của giám khảo
-          </h3>
-          <p className="text-xs text-text-secondary mt-1">
-            Chọn các lĩnh vực để hỗ trợ thuật toán phân công bài nộp chuẩn xác.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          {TOPIC_CATEGORIES.map((cat) => {
-            const cfg = TOPIC_CATEGORY_CONFIG[cat]
-            const isSelected = selected.includes(cat)
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => toggle(cat)}
-                className={[
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left text-xs font-medium transition-colors duration-[150ms]',
-                  isSelected
-                    ? cfg.cls
-                    : 'border-surface-border bg-surface-base text-text-secondary hover:border-surface-border-strong',
-                ].join(' ')}
-              >
-                <span
-                  className={[
-                    'size-4 rounded border flex items-center justify-center shrink-0 transition-colors',
-                    isSelected ? 'bg-current border-current' : 'border-text-tertiary',
-                  ].join(' ')}
-                  aria-hidden="true"
-                >
-                  {isSelected && <span className="text-[9px] text-surface-base font-bold">✓</span>}
-                </span>
-                {cfg.label}
-              </button>
-            )
-          })}
-        </div>
-
-        {msg && (
-          <div
-            role={msg.ok ? 'status' : 'alert'}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
-              msg.ok
-                ? 'bg-semantic-success/10 border-semantic-success/30 text-semantic-success'
-                : 'bg-semantic-danger/10 border-semantic-danger/30 text-semantic-danger'
-            }`}
-          >
-            {msg.ok ? <CheckCircle className="size-3.5 shrink-0" /> : <AlertCircle className="size-3.5 shrink-0" />}
-            <span>{msg.text}</span>
-          </div>
-        )}
-
-        <div className="flex gap-3 pt-2">
-          <Button
-            variant="primary"
-            size="sm"
-            isLoading={saving}
-            onClick={handleSave}
-            className="flex-1"
-          >
-            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-          >
-            Huỷ
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Main Users Page ───────────────────────────────────────────────────────────
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<UserRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [editingExpertiseFor, setEditingExpertiseFor] = useState<UserRow | null>(null)
-
-  // Invite Judge Modal State
-  const [showInviteModal, setShowInviteModal] = useState(false)
-  const [inviteForm, setInviteForm] = useState({
-    email: '',
-    full_name: '',
-    organization: '',
-  })
-  const [inviteLoading, setInviteLoading] = useState(false)
-  const [inviteError, setInviteError] = useState('')
 
   const router = useRouter()
   const supabase = createClient()
@@ -180,7 +36,7 @@ export default function AdminUsers() {
   const loadUsers = useCallback(async () => {
     const { data } = await supabase
       .from('profiles')
-      .select('id, full_name, email, phone, organization, role, expertise, created_at')
+      .select('id, full_name, email, phone, organization, university, faculty, major, role, created_at')
       .order('created_at', { ascending: false })
     setUsers((data as UserRow[]) || [])
   }, [supabase])
@@ -214,42 +70,14 @@ export default function AdminUsers() {
       setMessage({ type: 'success', text: 'Đã cập nhật quyền người dùng thành công.' })
       await loadUsers()
     }
-  }
-
-  const handleInviteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setInviteLoading(true)
-    setInviteError('')
-
-    try {
-      const res = await fetch('/api/admin/invite-judge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inviteForm),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setInviteError(data.error || 'Gửi lời mời thất bại.')
-      } else {
-        setMessage({ type: 'success', text: `Đã gửi email mời cho Giám khảo ${inviteForm.full_name} (${inviteForm.email}) thành công!` })
-        setShowInviteModal(false)
-        setInviteForm({ email: '', full_name: '', organization: '' })
-        await loadUsers()
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Lỗi kết nối máy chủ.'
-      setInviteError(msg)
-    } finally {
-      setInviteLoading(false)
-    }
+    setTimeout(() => setMessage(null), 4000)
   }
 
   const filteredUsers = users.filter(u =>
     u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     u.email?.toLowerCase().includes(search.toLowerCase()) ||
-    u.organization?.toLowerCase().includes(search.toLowerCase())
+    u.organization?.toLowerCase().includes(search.toLowerCase()) ||
+    u.university?.toLowerCase().includes(search.toLowerCase())
   )
 
   if (loading) return <Loading text="Đang tải danh sách người dùng..." />
@@ -261,15 +89,6 @@ export default function AdminUsers() {
         <DotGridBackground />
         <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-brand-cyan/5 blur-[120px]" />
       </div>
-
-      {editingExpertiseFor && (
-        <ExpertiseEditorModal
-          userId={editingExpertiseFor.id}
-          current={editingExpertiseFor.expertise ?? []}
-          onSave={() => loadUsers()}
-          onClose={() => setEditingExpertiseFor(null)}
-        />
-      )}
 
       {/* Internal Page Header */}
       <header className="relative z-10 border-b border-surface-border bg-surface-base/80 backdrop-blur-sm">
@@ -291,22 +110,11 @@ export default function AdminUsers() {
                 Quản lý người dùng & phân quyền
               </h1>
               <p className="mt-1 text-sm text-text-secondary">
-                Giám sát danh sách thành viên, cập nhật quyền hạn và lĩnh vực chuyên môn của BGK
+                Giám sát danh sách thành viên, cập nhật quyền hạn quản trị viên và thí sinh
               </p>
             </div>
             <div className="flex items-center gap-3">
               <Badge variant="info" size="md">Tổng số: {users.length} thành viên</Badge>
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<UserPlus className="size-4" />}
-                onClick={() => {
-                  setInviteError('')
-                  setShowInviteModal(true)
-                }}
-              >
-                Thêm Giám khảo
-              </Button>
             </div>
           </div>
         </div>
@@ -333,7 +141,7 @@ export default function AdminUsers() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm kiếm theo tên, email, đơn vị..."
+            placeholder="Tìm kiếm theo tên, email, trường, đơn vị..."
             leftIcon={<Search className="size-4" />}
           />
         </div>
@@ -347,16 +155,23 @@ export default function AdminUsers() {
                   <th scope="col" className="px-5 py-3.5">Họ và tên</th>
                   <th scope="col" className="px-5 py-3.5">Email</th>
                   <th scope="col" className="px-5 py-3.5">SĐT</th>
-                  <th scope="col" className="px-5 py-3.5">Đơn vị</th>
+                  <th scope="col" className="px-5 py-3.5">Trường / Đơn vị</th>
                   <th scope="col" className="px-5 py-3.5">Quyền truy cập</th>
-                  <th scope="col" className="px-5 py-3.5">Chuyên môn (BGK)</th>
+                  <th scope="col" className="px-5 py-3.5">Ngày tham gia</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
                 {filteredUsers.map((u) => (
                   <tr key={u.id} className="hover:bg-surface-overlay/50 transition-colors duration-150">
                     <td className="px-5 py-4 font-medium text-text-primary whitespace-nowrap">
-                      {u.full_name || 'Chưa cập nhật'}
+                      <div className="flex items-center gap-2">
+                        {u.role === 'admin' ? (
+                          <ShieldCheck className="size-4 text-semantic-warning shrink-0" />
+                        ) : (
+                          <Shield className="size-4 text-text-tertiary shrink-0" />
+                        )}
+                        <span>{u.full_name || 'Chưa cập nhật'}</span>
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-text-secondary whitespace-nowrap">
                       {u.email}
@@ -365,7 +180,8 @@ export default function AdminUsers() {
                       {u.phone || '—'}
                     </td>
                     <td className="px-5 py-4 text-text-tertiary whitespace-nowrap">
-                      {u.organization || '—'}
+                      {u.university || u.organization || '—'}
+                      {u.major ? ` (${u.major})` : ''}
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <select
@@ -374,45 +190,11 @@ export default function AdminUsers() {
                         className="h-8 rounded-md border border-surface-border bg-surface-raised px-2.5 text-xs text-text-primary outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/30 transition-colors cursor-pointer"
                       >
                         <option value="participant">Thí sinh</option>
-                        <option value="judge">Giám khảo</option>
-                        <option value="admin">Quản trị viên</option>
+                        <option value="admin">Quản trị viên (BTC)</option>
                       </select>
                     </td>
-                    <td className="px-5 py-4">
-                      {u.role === 'judge' ? (
-                        <div className="space-y-1.5">
-                          {u.expertise?.length ? (
-                            <div className="flex flex-wrap gap-1">
-                              {u.expertise.map((e) => {
-                                const cfg = TOPIC_CATEGORY_CONFIG[e as TopicCategory]
-                                return cfg ? (
-                                  <span
-                                    key={e}
-                                    className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium ${cfg.cls}`}
-                                  >
-                                    {cfg.label}
-                                  </span>
-                                ) : null
-                              })}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-text-tertiary italic">Chưa khai báo</span>
-                          )}
-                          <div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              leftIcon={<Pencil className="size-3" />}
-                              onClick={() => setEditingExpertiseFor(u)}
-                              className="h-6 px-2 text-xs text-brand-cyan hover:text-brand-cyan-bright"
-                            >
-                              Cập nhật
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-text-disabled text-xs">—</span>
-                      )}
+                    <td className="px-5 py-4 text-text-tertiary text-xs whitespace-nowrap">
+                      {u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : '—'}
                     </td>
                   </tr>
                 ))}
@@ -429,93 +211,6 @@ export default function AdminUsers() {
           )}
         </Card>
       </main>
-
-      {/* Invite Judge Modal */}
-      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-        <DialogContent className="max-w-md p-6 sm:p-7">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="size-5 text-brand-cyan" />
-              <span>Thêm Giám khảo mới</span>
-            </DialogTitle>
-            <DialogDescription>
-              Gửi thư mời qua Email để Giám khảo kích hoạt tài khoản và tự thiết lập mật khẩu truy cập hệ thống chấm thi.
-            </DialogDescription>
-          </DialogHeader>
-
-          {inviteError && (
-            <div className="p-3 rounded-lg bg-semantic-danger/10 border border-semantic-danger/30 text-xs text-semantic-danger flex items-start gap-2 mt-2">
-              <AlertCircle className="size-4 shrink-0 text-semantic-danger mt-0.5" />
-              <span>{inviteError}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleInviteSubmit} className="space-y-4 mt-2">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-text-secondary">
-                Địa chỉ Email <span className="text-semantic-danger">*</span>
-              </label>
-              <Input
-                type="email"
-                required
-                value={inviteForm.email}
-                onChange={(e) => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="judge@university.edu.vn"
-                leftIcon={<Mail className="size-4" />}
-                autoFocus
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-text-secondary">
-                Họ và tên <span className="text-semantic-danger">*</span>
-              </label>
-              <Input
-                type="text"
-                required
-                value={inviteForm.full_name}
-                onChange={(e) => setInviteForm(prev => ({ ...prev, full_name: e.target.value }))}
-                placeholder="VD: TS. Nguyễn Văn B"
-                leftIcon={<UserIcon className="size-4" />}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-text-secondary">
-                Đơn vị công tác / Học hàm, học vị
-              </label>
-              <Input
-                type="text"
-                value={inviteForm.organization}
-                onChange={(e) => setInviteForm(prev => ({ ...prev, organization: e.target.value }))}
-                placeholder="VD: Viện CNTT - ĐHQG HN"
-                leftIcon={<Building2 className="size-4" />}
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-border">
-              <Button
-                type="button"
-                variant="ghost"
-                size="md"
-                onClick={() => setShowInviteModal(false)}
-                disabled={inviteLoading}
-              >
-                Hủy
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                size="md"
-                isLoading={inviteLoading}
-                leftIcon={<Mail className="size-4" />}
-              >
-                Gửi lời mời
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import { ensureProfileExists, getProfile } from '@/services/profile'
 import { isProfileComplete } from '@/lib/profile-utils'
+import { createNotification } from '@/services/notifications'
 
 /**
  * Translates Postgres / PostgREST errors for team join requests into user-friendly messages.
@@ -97,6 +98,28 @@ export async function sendTeamJoinRequest(
   if (error) {
     console.error('Gửi yêu cầu gia nhập thất bại:', error)
     return { ok: false, error: formatTeamJoinError(error) }
+  }
+
+  // 5. Gửi thông báo cho Trưởng đội (try/catch an toàn không làm hỏng request chính)
+  try {
+    const { data: teamData } = await supabase
+      .from('teams')
+      .select('name, leader_id')
+      .eq('id', teamId)
+      .maybeSingle()
+
+    if (teamData?.leader_id) {
+      const requesterName = profile?.full_name || 'Một thí sinh'
+      await createNotification({
+        userId: teamData.leader_id,
+        title: 'Yêu cầu gia nhập đội thi',
+        message: `${requesterName} đã gửi yêu cầu gia nhập đội "${teamData.name}".`,
+        type: 'team_request',
+        link: '/dashboard',
+      })
+    }
+  } catch (notifErr) {
+    console.warn('[services/teams] Failed to create join request notification:', notifErr)
   }
 
   return { ok: true }

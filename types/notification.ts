@@ -1,5 +1,6 @@
 export type NotificationType =
   | 'team_invite'
+  | 'team_request'
   | 'submission'
   | 'result'
   | 'system'

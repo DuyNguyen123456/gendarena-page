@@ -21,6 +21,7 @@ import {
   LogOut,
   Award,
   BadgeCheck,
+  CreditCard,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -31,6 +32,7 @@ import NotificationBell from '@/components/notifications/NotificationBell'
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [isTeamVerified, setIsTeamVerified] = useState(false)
   const [loading, setLoading] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -46,14 +48,24 @@ export default function Navbar() {
       setUser(user)
 
       if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('id, full_name, email, role, university, faculty, major, phone, dob')
-          .eq('id', user.id)
-          .maybeSingle()
-        setProfile(data as Profile | null)
+        const [{ data: profData }, { data: memberData }] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, full_name, email, role, university, faculty, major, phone, dob')
+            .eq('id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('team_members')
+            .select('team_id, teams(status)')
+            .eq('user_id', user.id)
+            .maybeSingle(),
+        ])
+        setProfile(profData as Profile | null)
+        const teamStatus = (memberData as { teams?: { status?: string } | null } | null)?.teams?.status
+        setIsTeamVerified(teamStatus === 'verified')
       } else {
         setProfile(null)
+        setIsTeamVerified(false)
       }
       setLoading(false)
     }
@@ -84,8 +96,7 @@ export default function Navbar() {
   }
 
   const isAdmin = profile?.role === 'admin'
-  const isJudge = profile?.role === 'judge'
-  const isParticipant = user && !isAdmin && !isJudge
+  const isParticipant = user && !isAdmin
 
   // Desktop Icon-First link styling
   const getIconLinkClass = (path: string, color: 'cyan' | 'warning' | 'purple' = 'cyan') => {
@@ -194,6 +205,14 @@ export default function Navbar() {
                 <Settings className="size-4" />
               </Link>
               <Link
+                href="/admin/payments"
+                className={getIconLinkClass('/admin/payments', 'warning')}
+                title="Duyệt lệ phí"
+                aria-label="Duyệt lệ phí"
+              >
+                <CreditCard className="size-4" />
+              </Link>
+              <Link
                 href="/admin/phases"
                 className={getIconLinkClass('/admin/phases', 'warning')}
                 title="Timeline & Vòng thi"
@@ -206,28 +225,6 @@ export default function Navbar() {
                 className={getIconLinkClass('/profile', 'warning')}
                 title="Hồ sơ quản trị"
                 aria-label="Hồ sơ quản trị"
-              >
-                <UserIcon className="size-4" />
-              </Link>
-            </>
-          )}
-
-          {/* Judge Icons */}
-          {isJudge && (
-            <>
-              <Link
-                href="/judge"
-                className={getIconLinkClass('/judge', 'purple')}
-                title="Không gian chấm thi"
-                aria-label="Không gian chấm thi"
-              >
-                <Scale className="size-4" />
-              </Link>
-              <Link
-                href="/profile"
-                className={getIconLinkClass('/profile', 'purple')}
-                title="Hồ sơ & Chuyên môn"
-                aria-label="Hồ sơ & Chuyên môn"
               >
                 <UserIcon className="size-4" />
               </Link>
@@ -257,21 +254,17 @@ export default function Navbar() {
             <div className="flex items-center gap-2.5">
               <NotificationBell userId={user.id} />
 
-              {/* Shortened Role Badge + Full Name */}
+              {/* Shortened Role Badge + Full Name + Verified Indicator */}
               <div
                 className="flex items-center gap-1.5 bg-surface-raised border border-surface-border px-2.5 py-1 rounded-full text-xs"
                 title={`Đã đăng nhập: ${profile?.full_name || 'Đấu thủ'} (${
-                  isAdmin ? 'Ban Tổ Chức' : isJudge ? 'Ban Giám Khảo' : 'Thí sinh'
-                })${isParticipant && isProfileComplete(profile) ? ' - Đã xác thực hồ sơ' : ''}`}
+                  isAdmin ? 'Ban Tổ Chức' : 'Thí sinh'
+                })${isTeamVerified ? ' - Đội thi đã xác thực (Verified)' : isParticipant && isProfileComplete(profile) ? ' - Đã xác thực hồ sơ' : ''}`}
               >
                 <span className="size-1.5 rounded-full bg-semantic-success animate-pulse" />
                 {isAdmin ? (
                   <Badge variant="warning" size="sm" className="px-1 py-0 text-[10px] font-bold">
                     BTC
-                  </Badge>
-                ) : isJudge ? (
-                  <Badge variant="brand" size="sm" className="px-1 py-0 text-[10px] font-bold">
-                    BGK
                   </Badge>
                 ) : (
                   <Badge variant="info" size="sm" className="px-1 py-0 text-[10px] font-bold">
@@ -281,11 +274,16 @@ export default function Navbar() {
                 <span className="font-medium text-text-primary max-w-[100px] lg:max-w-[130px] truncate">
                   {profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Đấu thủ'}
                 </span>
-                {isParticipant && isProfileComplete(profile) && (
+                {isTeamVerified ? (
+                  <Badge variant="brand" size="sm" className="px-1 py-0 text-[10px] gap-0.5" title="Đội thi đã được xác thực lệ phí">
+                    <BadgeCheck className="size-3 text-brand-cyan shrink-0" />
+                    <span>Verified</span>
+                  </Badge>
+                ) : isParticipant && isProfileComplete(profile) ? (
                   <span title="Đã xác thực hồ sơ" aria-label="Đã xác thực hồ sơ" className="inline-flex items-center">
                     <BadgeCheck className="size-3.5 text-brand-cyan shrink-0" />
                   </span>
-                )}
+                ) : null}
               </div>
 
               <Button
@@ -379,6 +377,17 @@ export default function Navbar() {
                 <span>Quản trị hệ thống</span>
               </Link>
               <Link
+                href="/admin/payments"
+                className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  pathname === '/admin/payments'
+                    ? 'text-semantic-warning bg-semantic-warning/10 font-semibold'
+                    : 'text-text-secondary hover:text-semantic-warning hover:bg-surface-raised'
+                }`}
+              >
+                <CreditCard className="size-4" />
+                <span>Duyệt lệ phí</span>
+              </Link>
+              <Link
                 href="/admin/phases"
                 className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   pathname === '/admin/phases'
@@ -399,29 +408,6 @@ export default function Navbar() {
             </>
           )}
 
-          {isJudge && (
-            <>
-              <Link
-                href="/judge"
-                className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  pathname.startsWith('/judge')
-                    ? 'text-accent-violet bg-accent-violet/10 font-semibold'
-                    : 'text-text-secondary hover:text-accent-violet hover:bg-surface-raised'
-                }`}
-              >
-                <Scale className="size-4" />
-                <span>Không gian chấm thi</span>
-              </Link>
-              <Link
-                href="/profile"
-                className={getMobileLinkClass('/profile')}
-              >
-                <UserIcon className="size-4" />
-                <span>Hồ sơ &amp; Chuyên môn</span>
-              </Link>
-            </>
-          )}
-
           {/* User Auth Footer on Mobile */}
           <div className="pt-3 border-t border-surface-border mt-3 space-y-2.5">
             {loading ? (
@@ -435,10 +421,6 @@ export default function Navbar() {
                       <Badge variant="warning" size="sm" className="px-1 py-0 text-[10px] font-bold">
                         BTC
                       </Badge>
-                    ) : isJudge ? (
-                      <Badge variant="brand" size="sm" className="px-1 py-0 text-[10px] font-bold">
-                        BGK
-                      </Badge>
                     ) : (
                       <Badge variant="info" size="sm" className="px-1 py-0 text-[10px] font-bold">
                         TS
@@ -447,11 +429,16 @@ export default function Navbar() {
                     <span className="text-xs font-medium text-text-primary truncate">
                       {profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Đấu thủ'}
                     </span>
-                    {isParticipant && isProfileComplete(profile) && (
+                    {isTeamVerified ? (
+                      <Badge variant="brand" size="sm" className="px-1 py-0 text-[10px] gap-0.5" title="Đội thi đã được xác thực lệ phí">
+                        <BadgeCheck className="size-3 text-brand-cyan shrink-0" />
+                        <span>Verified</span>
+                      </Badge>
+                    ) : isParticipant && isProfileComplete(profile) ? (
                       <span title="Đã xác thực hồ sơ" aria-label="Đã xác thực hồ sơ" className="inline-flex items-center">
                         <BadgeCheck className="size-3.5 text-brand-cyan shrink-0" />
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 <Button

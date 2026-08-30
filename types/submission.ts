@@ -56,7 +56,14 @@ export interface AdminSubmissionRow {
     scoring_closes_at?: string | null
   } | null
   assigned_judge?: { id: string; judge_id: string; full_name?: string } | null
-  scores?: { id: string; judge_id: string; total_score: number; comment?: string | null }[]
+  scores?: {
+    id: string
+    judge_id: string
+    total_score: number
+    comment?: string | null
+    round_id?: string | null
+    criteria_scores?: Record<string, number>
+  }[]
 }
 
 export interface Submission {
@@ -104,6 +111,7 @@ export interface TeamRecord {
   name: string
   competition_id: string
   leader_id: string
+  status?: string
 }
 
 /** Result returned by the submission service functions */

@@ -18,6 +18,7 @@ import {
   Handshake,
   BarChart2,
   ChevronRight,
+  CreditCard,
 } from 'lucide-react'
 import Loading from '@/components/loading'
 import DotGridBackground from '@/components/dot-grid-background'
@@ -104,14 +105,14 @@ export default function AdminDashboard() {
   ]
 
   const navItems = [
+    { href: '/admin/payments', icon: CreditCard, title: 'Duyệt lệ phí dự thi', desc: 'Kiểm tra biên lai chuyển khoản và cấp trạng thái Verified cho đội thi' },
     { href: '/admin/competitions', icon: Trophy, title: 'Quản lý cuộc thi', desc: 'Thiết lập, hiệu chỉnh thông số các phân khu đấu trường' },
-    { href: '/admin/users', icon: Users, title: 'Quản lý người dùng', desc: 'Giám sát tài khoản và phân quyền truy cập, chuyên môn' },
-    { href: '/admin/submissions', icon: FileText, title: 'Quản lý bài nộp', desc: 'Xem danh sách bài nộp theo giai đoạn, lọc chờ chấm' },
-    { href: '/admin/assign', icon: Settings, title: 'Phân công giám khảo', desc: 'Gán giám khảo chấm điểm theo lĩnh vực chuyên môn' },
-    { href: '/admin/scoring', icon: Scale, title: 'Cấu hình chấm điểm', desc: 'Quản lý vòng chấm, tiêu chí, trọng số và barem điểm' },
+    { href: '/admin/users', icon: Users, title: 'Quản lý người dùng', desc: 'Giám sát tài khoản và phân quyền quản trị viên, thí sinh' },
+    { href: '/admin/submissions', icon: FileText, title: 'Quản lý & Chấm điểm bài nộp', desc: 'Xem bài thi, nhập điểm barem thay cho BGK và quản lý kết quả' },
+    { href: '/admin/scoring', icon: Scale, title: 'Cấu hình tiêu chí chấm điểm', desc: 'Quản lý vòng chấm, tiêu chí, trọng số và barem điểm chính thức' },
     { href: '/admin/leaderboard', icon: BarChart2, title: 'Bảng xếp hạng chung', desc: 'Theo dõi bảng xếp hạng điểm trung bình các đội thi' },
-    { href: '/admin/phases', icon: Calendar, title: 'Quản lý lịch trình', desc: 'Sắp xếp thời gian và cổng nộp bài/chấm điểm các giai đoạn' },
-    { href: '/admin/speakers', icon: Mic, title: 'Quản lý diễn giả', desc: 'Thêm, chỉnh sửa thông tin diễn giả, giám khảo và cố vấn' },
+    { href: '/admin/phases', icon: Calendar, title: 'Quản lý lịch trình', desc: 'Sắp xếp thời gian và cổng nộp bài các giai đoạn' },
+    { href: '/admin/speakers', icon: Mic, title: 'Quản lý diễn giả & chuyên gia', desc: 'Thêm, chỉnh sửa thông tin diễn giả, cố vấn và khách mời' },
     { href: '/admin/sponsors', icon: Handshake, title: 'Quản lý nhà tài trợ', desc: 'Quản lý logo, website và phân cấp đối tác tài trợ' },
   ]
 

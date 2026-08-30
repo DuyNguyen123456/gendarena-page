@@ -42,26 +42,18 @@ export type Score = {
   impact_score?: number
   total_score: number
   comment: string | null
+  created_at?: string
+  updated_at?: string
 }
 
-export type AssignedSubmission = {
-  id: string
-  team_id: string
-  phase_id: string
-  submission_kind: 'file' | 'link'
-  file_name: string | null
-  submission_url: string | null
-  file_path: string | null
-  uploaded_at: string
-  status: string
-  topic?: string | null
-  teams?: { name: string } | null
-  competition_phases?: {
-    title: string
-    scoring_open?: boolean
-    scoring_opens_at?: string | null
-    scoring_closes_at?: string | null
-  } | null
+export type AdminScorePayload = {
+  submission_id: string
+  admin_id: string
+  round_id?: string | null
+  criteria_scores: Record<string, number>
+  offline_judge_name?: string | null
+  comment?: string | null
+  total_score?: number
 }
 
 export async function getScoringRounds(): Promise<ScoringRound[]> {
@@ -216,112 +208,104 @@ export async function deleteScoreLevel(id: string): Promise<{ ok: true } | { ok:
   return { ok: true }
 }
 
-export async function getAssignedSubmissions(judgeId: string): Promise<AssignedSubmission[]> {
+export async function getScoreForSubmission(submissionId: string): Promise<Score | null> {
   const supabase = createClient()
-
-  const { data: assignments, error: assignError } = await supabase
-    .from('judge_assignments')
-    .select('submission_id')
-    .eq('judge_id', judgeId)
-
-  if (assignError) {
-    console.error('getAssignedSubmissions error:', assignError)
-    return []
-  }
-
-  if (!assignments?.length) return []
-
-  const ids = assignments.map((a) => a.submission_id)
-
   const { data, error } = await supabase
-    .from('submissions')
-    .select('*, teams(name), competition_phases(title, scoring_open, scoring_opens_at, scoring_closes_at)')
-    .in('id', ids)
-    .order('uploaded_at', { ascending: false })
-
-  if (error) {
-    console.error('getAssignedSubmissions details error:', error)
-    return []
-  }
-
-  return (data ?? []) as AssignedSubmission[]
-}
-
-export async function getMyScores(judgeId: string, roundId?: string | null): Promise<Record<string, Score>> {
-  const supabase = createClient()
-  let query = supabase
     .from('scores')
     .select('*')
-    .eq('judge_id', judgeId)
-
-  if (roundId) {
-    query = query.eq('round_id', roundId)
-  }
-
-  const { data, error } = await query
+    .eq('submission_id', submissionId)
+    .maybeSingle()
 
   if (error) {
-    console.error('getMyScores error:', error)
-    return {}
+    console.error('getScoreForSubmission error:', error)
+    return null
   }
-
-  const map: Record<string, Score> = {}
-  for (const row of (data ?? []) as Score[]) {
-    map[row.submission_id] = row
-  }
-  return map
+  return data as Score | null
 }
 
-export type ScorePayload = {
-  submission_id: string
-  judge_id: string
-  round_id?: string | null
-  criteria_scores?: Record<string, number>
-  innovation_score?: number
-  feasibility_score?: number
-  presentation_score?: number
-  impact_score?: number
-  comment: string
-}
-
-import { getScoringGate } from '@/types/phase'
-
-export async function upsertScore(
-  payload: ScorePayload,
-  existingId?: string,
-): Promise<{ ok: true; score?: Score } | { ok: false; error: string }> {
+export async function saveAdminScore(
+  payload: AdminScorePayload,
+): Promise<{ ok: true; score: Score } | { ok: false; error: string }> {
   const supabase = createClient()
 
-  // Validate scoring gate against competition_phases (source of truth)
-  const { data: subData, error: subError } = await supabase
-    .from('submissions')
-    .select('id, phase_id, competition_phases(scoring_open, scoring_opens_at, scoring_closes_at)')
-    .eq('id', payload.submission_id)
-    .single()
+  try {
+    // Check if score already exists for this submission
+    const { data: existingScore, error: fetchErr } = await supabase
+      .from('scores')
+      .select('id, comment')
+      .eq('submission_id', payload.submission_id)
+      .maybeSingle()
 
-  if (subError || !subData) {
-    console.error('upsertScore error fetching phase:', subError)
-    return { ok: false, error: 'Không thể xác thực vòng thi của bài nộp.' }
+    if (fetchErr) {
+      console.error('[saveAdminScore] Error checking existing score:', fetchErr)
+    }
+
+    // Build comment formatted with offline judge name if provided
+    let finalComment = (payload.comment || '').trim()
+    if (payload.offline_judge_name?.trim()) {
+      const prefix = `[BGK: ${payload.offline_judge_name.trim()}]`
+      if (!finalComment.startsWith('[BGK:')) {
+        finalComment = finalComment ? `${prefix} ${finalComment}` : prefix
+      }
+    }
+
+    const scoreData: Record<string, unknown> = {
+      submission_id: payload.submission_id,
+      judge_id: payload.admin_id,
+      round_id: payload.round_id || null,
+      criteria_scores: payload.criteria_scores || {},
+      comment: finalComment || null,
+      innovation_score: 0,
+      feasibility_score: 0,
+      presentation_score: 0,
+      impact_score: 0,
+    }
+
+    if (typeof payload.total_score === 'number' && !isNaN(payload.total_score)) {
+      scoreData.total_score = payload.total_score
+    }
+
+    let savedData: Score | null = null
+
+    if (existingScore?.id) {
+      const { data, error: updateErr } = await supabase
+        .from('scores')
+        .update(scoreData as never)
+        .eq('id', existingScore.id)
+        .select('*')
+        .single()
+
+      if (updateErr) {
+        console.error('[saveAdminScore] Update score error:', updateErr)
+        return { ok: false, error: updateErr.message }
+      }
+      savedData = data as Score
+    } else {
+      const { data, error: insertErr } = await supabase
+        .from('scores')
+        .insert(scoreData as never)
+        .select('*')
+        .single()
+
+      if (insertErr) {
+        console.error('[saveAdminScore] Insert score error:', insertErr)
+        return { ok: false, error: insertErr.message }
+      }
+      savedData = data as Score
+    }
+
+    // Update submission status to 'scored'
+    await supabase
+      .from('submissions')
+      .update({ status: 'scored' } as never)
+      .eq('id', payload.submission_id)
+
+    return { ok: true, score: savedData! }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Lỗi không xác định khi lưu điểm.'
+    console.error('[saveAdminScore] Exception:', err)
+    return { ok: false, error: msg }
   }
-
-  const phaseInfo = Array.isArray(subData.competition_phases)
-    ? subData.competition_phases[0]
-    : subData.competition_phases
-
-  const gate = getScoringGate(phaseInfo)
-  if (gate !== 'open') {
-    return { ok: false, error: 'Vòng chấm điểm cho bài nộp này hiện đang đóng.' }
-  }
-
-  const { data, error } = existingId
-    ? await supabase.from('scores').update(payload as never).eq('id', existingId).select('*').single()
-    : await supabase.from('scores').insert(payload as never).select('*').single()
-
-  if (error) {
-    console.error('upsertScore error:', error)
-    return { ok: false, error: error.message }
-  }
-  return { ok: true, score: data as Score }
 }
 
 export type LeaderboardRow = {
@@ -344,167 +328,3 @@ export async function getLeaderboard(): Promise<LeaderboardRow[]> {
   const rows = (data ?? []) as LeaderboardRow[]
   return rows.sort((a, b) => Number(b.avg_score || 0) - Number(a.avg_score || 0))
 }
-
-export async function getJudges(): Promise<{ id: string; full_name: string; email: string }[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, email')
-    .eq('role', 'judge')
-    .order('full_name')
-
-  if (error) {
-    console.error('getJudges error:', error)
-    return []
-  }
-  return (data ?? []) as { id: string; full_name: string; email: string }[]
-}
-
-export async function getAllSubmissionsForAssign(): Promise<{ id: string; label: string }[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('submissions')
-    .select('id, teams(name), competition_phases(title), uploaded_at')
-    .order('uploaded_at', { ascending: false })
-
-  if (error) {
-    console.error('getAllSubmissionsForAssign error:', error)
-    return []
-  }
-
-  return (data ?? []).map((s) => {
-    const row = s as {
-      id: string
-      teams?: { name: string } | { name: string }[] | null
-      competition_phases?: { title: string } | { title: string }[] | null
-    }
-    const teamName = Array.isArray(row.teams) ? row.teams[0]?.name : row.teams?.name
-    const phaseTitle = Array.isArray(row.competition_phases)
-      ? row.competition_phases[0]?.title
-      : row.competition_phases?.title
-    return {
-      id: row.id,
-      label: `${teamName ?? 'Team'} — ${phaseTitle ?? 'Phase'}`,
-    }
-  })
-}
-
-export async function assignJudgeToSubmission(
-  judgeId: string,
-  submissionId: string,
-  assignedBy: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const supabase = createClient()
-  // Ensure single judge per submission constraint
-  const { error: delErr } = await supabase.from('judge_assignments').delete().eq('submission_id', submissionId)
-  if (delErr) {
-    console.error('assignJudgeToSubmission clean delete error:', delErr)
-  }
-
-  const { error } = await supabase.from('judge_assignments').insert({
-    judge_id: judgeId,
-    submission_id: submissionId,
-    assigned_by: assignedBy,
-  } as never)
-
-  if (error) {
-    console.error('assignJudgeToSubmission insert error:', error)
-    return { ok: false, error: error.message }
-  }
-
-  // Update submission status in DB to 'reviewing' (assigned)
-  const { error: updateErr } = await supabase
-    .from('submissions')
-    .update({ status: 'reviewing' } as never)
-    .eq('id', submissionId)
-
-  if (updateErr) {
-    console.error('assignJudgeToSubmission status update error:', updateErr)
-  }
-
-  return { ok: true }
-}
-
-export async function removeAssignment(assignmentId: string, submissionId?: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  const supabase = createClient()
-
-  let subId = submissionId
-  if (!subId) {
-    const { data, error: fetchErr } = await supabase
-      .from('judge_assignments')
-      .select('submission_id')
-      .eq('id', assignmentId)
-      .single()
-    if (fetchErr) console.error('removeAssignment fetch subId error:', fetchErr)
-    subId = data?.submission_id
-  }
-
-  const { error } = await supabase.from('judge_assignments').delete().eq('id', assignmentId)
-  if (error) {
-    console.error('removeAssignment delete error:', error)
-    return { ok: false, error: error.message }
-  }
-
-  if (subId) {
-    const { count, error: countErr } = await supabase
-      .from('judge_assignments')
-      .select('id', { count: 'exact', head: true })
-      .eq('submission_id', subId)
-
-    if (countErr) console.error('removeAssignment count error:', countErr)
-
-    if (!count || count === 0) {
-      await supabase
-        .from('submissions')
-        .update({ status: 'submitted' } as never)
-        .eq('id', subId)
-    }
-  }
-
-  return { ok: true }
-}
-
-export async function getAssignments(): Promise<
-  { id: string; judge_id: string; submission_id: string; judge?: { full_name: string }; submission_label?: string }[]
-> {
-  const supabase = createClient()
-  const { data: assignData, error: assignError } = await supabase
-    .from('judge_assignments')
-    .select('id, judge_id, submission_id')
-    .order('assigned_at', { ascending: false })
-
-  if (assignError) {
-    console.error('getAssignments assignError:', assignError)
-    return []
-  }
-
-  const judgeIds = Array.from(new Set((assignData ?? []).map((a) => a.judge_id).filter(Boolean)))
-  let profileMap = new Map<string, string>()
-
-  if (judgeIds.length > 0) {
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .in('id', judgeIds)
-
-    if (profilesError) {
-      console.error('getAssignments profilesError:', profilesError)
-    } else {
-      profileMap = new Map((profilesData ?? []).map((p) => [p.id, p.full_name ?? 'Giám khảo']))
-    }
-  }
-
-  const subs = await getAllSubmissionsForAssign()
-  const subMap = Object.fromEntries(subs.map((s) => [s.id, s.label]))
-
-  return (assignData ?? []).map((row) => {
-    return {
-      id: row.id,
-      judge_id: row.judge_id,
-      submission_id: row.submission_id,
-      judge: { full_name: profileMap.get(row.judge_id) ?? 'Giám khảo' },
-      submission_label: subMap[row.submission_id],
-    }
-  })
-}
-
