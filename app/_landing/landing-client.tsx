@@ -10,6 +10,7 @@ import CursorCardGlow from '@/components/motion/cursor-card-glow'
 import StatsCounter from '@/components/stats-counter'
 import Countdown from '@/components/countdown'
 import Footer from '@/components/footer'
+import TopicsSection from '@/components/topics-section'
 import SpeakersSection from '@/components/speakers-section'
 import SponsorsSection from '@/components/sponsors-section'
 import TimelineSection from '@/components/timeline-section'
@@ -241,6 +242,11 @@ export default function LandingClient({
           </RevealOnScroll>
         </div>
       </section>
+
+      {/* ─── SECTION 2.5: TOPICS / TRACKS ────────────────────────────────── */}
+      <RevealOnScroll>
+        <TopicsSection />
+      </RevealOnScroll>
 
       {/* ─── SECTION 3: TIMELINE ────────────────────────────────────────── */}
       <RevealOnScroll>
