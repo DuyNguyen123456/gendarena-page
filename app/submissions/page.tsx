@@ -35,6 +35,7 @@ import type { Submission, SubmissionHistory, TeamRecord, TopicCategory } from '@
 import { TOPIC_CATEGORIES } from '@/types/submission'
 import { CompetitionPhase } from '@/types/phase'
 import { getSubmissionGate } from '@/types/phase'
+import { siteConfig } from '@/config/site'
 import PaymentModal from '@/components/team/PaymentModal'
 import {
   CheckCircle2,
@@ -527,6 +528,23 @@ function SubmitForm({
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Template Báo Cáo Shortcut */}
+        <div className="p-3 rounded-xl bg-surface-overlay/80 border border-brand-cyan/25 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-text-secondary min-w-0">
+            <FileText className="size-4 text-brand-cyan shrink-0" />
+            <span className="truncate">Thí sinh cần định dạng theo khung mẫu báo cáo chuẩn của BTC?</span>
+          </div>
+          <a
+            href={siteConfig.resources.reportTemplate}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-brand-cyan/10 hover:bg-brand-cyan/20 border border-brand-cyan/30 text-brand-cyan font-semibold text-[11px] transition shrink-0"
+          >
+            <span>Mở Template</span>
+            <ExternalLink className="size-3" />
+          </a>
+        </div>
+
         {/* Topic Category Selector */}
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold text-text-secondary flex items-center gap-1.5">
@@ -1202,16 +1220,29 @@ export default function SubmissionsPage() {
             <span>Quay lại Bảng điều khiển</span>
           </Link>
 
-          <div>
-            <Badge variant="brand" size="sm" className="mb-2">
-              GenD Arena 2026
-            </Badge>
-            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
-              Bài nộp đề án dự thi
-            </h1>
-            <p className="text-sm text-text-secondary mt-1">
-              Quản lý và theo dõi tiến độ nộp đề án qua từng vòng thi đấu
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <Badge variant="brand" size="sm" className="mb-2">
+                GenD Arena 2026
+              </Badge>
+              <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
+                Bài nộp đề án dự thi
+              </h1>
+              <p className="text-sm text-text-secondary mt-1">
+                Quản lý và theo dõi tiến độ nộp đề án qua từng vòng thi đấu
+              </p>
+            </div>
+
+            <a
+              href={siteConfig.resources.reportTemplate}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-overlay hover:bg-surface-raised border border-brand-cyan/35 hover:border-brand-cyan text-brand-cyan text-xs font-semibold shadow-sm transition-all shrink-0 self-start sm:self-center group"
+            >
+              <FileText className="size-4" />
+              <span>Template Báo Cáo Đề Án</span>
+              <ExternalLink className="size-3.5 opacity-70 group-hover:translate-x-0.5 transition-transform" />
+            </a>
           </div>
         </div>
       </div>

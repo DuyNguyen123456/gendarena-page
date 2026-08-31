@@ -1,6 +1,7 @@
 import AuthStateListener from "@/components/AuthStateListener"
 import type { Metadata } from "next"
 import Navbar from "@/components/navbar"
+import FacebookBubble from "@/components/FacebookBubble"
 import { Analytics } from "@vercel/analytics/next"
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics"
 import { Be_Vietnam_Pro, Inter, JetBrains_Mono } from "next/font/google"
@@ -76,6 +77,7 @@ export default function RootLayout({
         <AuthStateListener />
         <Navbar />
         {children}
+        <FacebookBubble />
         <Analytics />
         <GoogleAnalytics />
       </body>
