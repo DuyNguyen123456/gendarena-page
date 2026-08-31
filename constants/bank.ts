@@ -30,17 +30,20 @@ export function getVietQRUrl({
 
 /**
  * Formats a standardized payment transfer memo for a team
- * e.g. "GEND TEAM_ALPHA"
+ * Format: [Số lượng thành viên]_[Tên đội viết liền không dấu]_GENDARENA
+ * e.g. "04_AHNEMVANPHONG_GENDARENA"
  */
-export function generatePaymentMemo(teamName: string): string {
-  const cleaned = teamName
+export function generatePaymentMemo(teamName: string, membersCount: number = 1): string {
+  const memberPrefix = String(Math.max(1, membersCount || 1)).padStart(2, '0')
+  const cleaned = (teamName || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9\s]/g, '')
-    .trim()
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/[^a-zA-Z0-9]/g, '')
     .toUpperCase()
-    .replace(/\s+/g, ' ')
+    .trim()
 
-  return `GEND ${cleaned.slice(0, 20)}`
+  return `${memberPrefix}_${cleaned || 'DOITHI'}_GENDARENA`
 }
 

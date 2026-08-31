@@ -69,7 +69,7 @@ export default function PaymentModal({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const expectedAmount = useMemo(() => calculateExpectedFee(membersCount), [membersCount])
-  const memo = useMemo(() => generatePaymentMemo(team.name), [team.name])
+  const memo = useMemo(() => generatePaymentMemo(team.name, membersCount), [team.name, membersCount])
   const qrImageSrc = BANK_CONFIG.QR_IMAGE_URL || '/images/payment-qr.jpg'
 
   const isEligible = membersCount >= 1 && membersCount <= 5

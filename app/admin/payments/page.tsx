@@ -30,6 +30,7 @@ import {
   type AdminPaymentTeam,
   type TeamPaymentStatus,
 } from '@/types/payment'
+import { generatePaymentMemo } from '@/constants/bank'
 import {
   ArrowLeft,
   Search,
@@ -574,6 +575,12 @@ export default function AdminPaymentsPage() {
                           }`}
                         >
                           {formatVND(team.payment_amount)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-text-secondary">Cú pháp chuẩn:</span>
+                        <span className="font-mono text-[11px] text-brand-cyan truncate max-w-[160px]" title={generatePaymentMemo(team.name, team.members_count)}>
+                          {generatePaymentMemo(team.name, team.members_count)}
                         </span>
                       </div>
                       <div className="pt-1 text-[11px] text-text-tertiary flex items-center justify-between">
