@@ -1,8 +1,9 @@
 export const BANK_CONFIG = {
-  BANK_ID: process.env.NEXT_PUBLIC_BANK_ID || 'MB',
-  BANK_NAME: 'Ngân hàng Quân Đội (MBBank)',
-  ACCOUNT_NO: process.env.NEXT_PUBLIC_BANK_ACCOUNT || '0000123456789',
-  ACCOUNT_NAME: process.env.NEXT_PUBLIC_BANK_NAME || 'BTC CUOC THI GENDARENA 2026',
+  BANK_ID: process.env.NEXT_PUBLIC_BANK_ID || 'ICB',
+  BANK_NAME: 'VietinBank - CN Vĩnh Long - PGD Phước Thọ',
+  ACCOUNT_NO: process.env.NEXT_PUBLIC_BANK_ACCOUNT || '107882670096',
+  ACCOUNT_NAME: process.env.NEXT_PUBLIC_BANK_NAME || 'NGUYEN NHAT HAO',
+  QR_IMAGE_URL: '/images/payment-qr.jpg',
 }
 
 export interface VietQRParams {
@@ -42,3 +43,4 @@ export function generatePaymentMemo(teamName: string): string {
 
   return `GEND ${cleaned.slice(0, 20)}`
 }
+

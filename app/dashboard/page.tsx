@@ -21,9 +21,9 @@ import {
 } from '@/components/ui/dialog'
 import ProfileEditor, { ProfileData } from '@/components/profile/ProfileEditor'
 import { ensureProfileExists, getProfile, dobToUiFormat } from '@/services/profile'
-import { createNotification } from '@/services/notifications'
+import { createNotification, checkAndSendIncompleteProfileReminder } from '@/services/notifications'
 import PaymentModal from '@/components/team/PaymentModal'
-import type { TeamPaymentStatus } from '@/types/payment'
+import { calculateExpectedFee, type TeamPaymentStatus } from '@/types/payment'
 import {
   User as UserIcon,
   Plus,
@@ -338,6 +338,13 @@ function DashboardContent() {
       }
 
       setProfile(userProfile)
+
+      // Kiểm tra gửi thông báo nhắc nhở cập nhật đủ thông tin cá nhân (nếu chưa hoàn thiện)
+      if (userProfile && !isProfileComplete(userProfile)) {
+        checkAndSendIncompleteProfileReminder(authUser.id, false).catch((e) =>
+          console.warn('[Dashboard] checkAndSendIncompleteProfileReminder error:', e)
+        )
+      }
 
       // 3. Load thông tin đội thi (hỗ trợ cả leader_id trong bảng teams và membership trong team_members)
       try {
@@ -1608,9 +1615,11 @@ function DashboardContent() {
                       </span>
                     </div>
                     <p className="text-xs text-text-secondary">
-                      {members.length < 3
-                        ? `Cần tối thiểu 3 thành viên (hiện có ${members.length}) để chốt đội và đóng lệ phí.`
-                        : `Đội đã có ${members.length} thành viên. Trưởng đội hãy chuyển khoản và gửi biên lai để nhận Huy hiệu Verified.`}
+                      {members.length === 0
+                        ? 'Cần có tối thiểu 1 thành viên để chốt đội và đóng lệ phí.'
+                        : `Đội hiện có ${members.length} thành viên (${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
+                            calculateExpectedFee(members.length)
+                          )}). Trưởng đội hãy chuyển khoản và gửi biên lai để nhận Huy hiệu Verified.`}
                     </p>
                   </div>
                 </div>
@@ -1619,10 +1628,10 @@ function DashboardContent() {
                     variant="primary"
                     size="sm"
                     onClick={() => setShowPaymentModal(true)}
-                    disabled={members.length < 3}
+                    disabled={members.length < 1}
                     leftIcon={<CreditCard className="size-4" />}
                     className="text-xs shrink-0"
-                    title={members.length < 3 ? 'Cần tối thiểu 3 thành viên để nộp lệ phí' : undefined}
+                    title={members.length < 1 ? 'Cần tối thiểu 1 thành viên để nộp lệ phí' : undefined}
                   >
                     Thanh toán lệ phí dự thi
                   </Button>

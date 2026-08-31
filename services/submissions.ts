@@ -7,6 +7,7 @@
  */
 
 import { createClient } from '@/lib/supabase'
+import { notifySubmissionSuccess } from '@/services/notifications'
 import type {
   Submission,
   SubmissionHistory,
@@ -255,6 +256,14 @@ export async function insertFileSubmission(
     return { ok: false, error: 'Lưu dữ liệu thất bại: ' + dbError.message }
   }
 
+  // Gửi thông báo 'Nộp bài thành công' cho toàn đội
+  notifySubmissionSuccess({
+    teamId,
+    submitterId: userId,
+    action: 'submit',
+    detail: `File: ${file.name}`,
+  }).catch((err) => console.warn('[submissions.ts] notifySubmissionSuccess error:', err))
+
   return { ok: true, data: undefined }
 }
 
@@ -341,6 +350,14 @@ export async function replaceFileSubmission(
     return { ok: false, error: 'Cập nhật bài nộp thất bại: ' + updateError.message }
   }
 
+  // Gửi thông báo 'Thay đổi bài nộp thành công' cho toàn đội
+  notifySubmissionSuccess({
+    teamId,
+    submitterId: userId,
+    action: 'replace',
+    detail: `File mới: ${file.name}`,
+  }).catch((err) => console.warn('[submissions.ts] notifySubmissionSuccess error:', err))
+
   return { ok: true, data: undefined }
 }
 
@@ -379,6 +396,14 @@ export async function insertLinkSubmission(
     console.error('DB insert error (link):', error)
     return { ok: false, error: 'Lưu bài nộp thất bại: ' + error.message }
   }
+
+  // Gửi thông báo 'Nộp bài thành công' cho toàn đội
+  notifySubmissionSuccess({
+    teamId,
+    submitterId: userId,
+    action: 'submit',
+    detail: `Liên kết: ${url.trim()}`,
+  }).catch((err) => console.warn('[submissions.ts] notifySubmissionSuccess error:', err))
 
   return { ok: true, data: undefined }
 }
@@ -449,6 +474,14 @@ export async function replaceLinkSubmission(
     console.error('DB update error (replace-link):', updateError)
     return { ok: false, error: 'Cập nhật bài nộp thất bại: ' + updateError.message }
   }
+
+  // Gửi thông báo 'Thay đổi bài nộp thành công' cho toàn đội
+  notifySubmissionSuccess({
+    teamId,
+    submitterId: userId,
+    action: 'replace',
+    detail: `Liên kết mới: ${url.trim()}`,
+  }).catch((err) => console.warn('[submissions.ts] notifySubmissionSuccess error:', err))
 
   return { ok: true, data: undefined }
 }

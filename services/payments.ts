@@ -246,12 +246,11 @@ export async function submitTeamPayment({
   expectedAmount,
   teamName,
 }: SubmitPaymentParams): Promise<{ ok: boolean; error?: string; receiptUrl?: string }> {
-  const supabase = createClient()
   try {
     // 1. Validate file size and type
-    const maxSizeBytes = 10 * 1024 * 1024 // 10MB
+    const maxSizeBytes = 2 * 1024 * 1024 // 2MB
     if (file.size > maxSizeBytes) {
-      return { ok: false, error: 'Kích thước tệp không được vượt quá 10MB.' }
+      return { ok: false, error: 'Ảnh biên lai không được vượt quá 2MB.' }
     }
 
     const allowedTypes = [
@@ -264,17 +263,44 @@ export async function submitTeamPayment({
     if (!allowedTypes.includes(file.type)) {
       return {
         ok: false,
-        error: 'Định dạng tệp không hợp lệ. Chỉ chấp nhận ảnh JPG, PNG, WebP hoặc PDF.',
+        error: 'Định dạng tệp không hợp lệ. Chỉ chấp nhận ảnh JPG, PNG, WebP, HEIC hoặc PDF.',
       }
     }
 
-    // 2. Upload file to Supabase Storage bucket 'payment-receipts'
+    // 2. Gửi qua Server API Route (/api/payments/submit) để xử lý upload an toàn bằng Service Role
+    try {
+      const formData = new FormData()
+      formData.append('teamId', teamId)
+      formData.append('leaderId', leaderId)
+      formData.append('teamName', teamName)
+      formData.append('expectedAmount', String(expectedAmount))
+      formData.append('file', file)
+
+      const apiRes = await fetch('/api/payments/submit', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (apiRes.ok) {
+        const json = await apiRes.json()
+        if (json.ok) {
+          return { ok: true, receiptUrl: json.receiptUrl }
+        }
+        return { ok: false, error: json.error || 'Gửi biên lai thất bại.' }
+      }
+    } catch (apiErr) {
+      console.warn('[services/payments] Server API upload failed, falling back to direct client upload:', apiErr)
+    }
+
+    // 3. Fallback: Direct Client-Side upload nếu API route không khả dụng
+    const supabase = createClient()
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
     const fileName = `receipts/${teamId}_${Date.now()}.${ext}`
 
     const { error: uploadErr } = await supabase.storage
       .from('payment-receipts')
       .upload(fileName, file, {
+        contentType: file.type,
         cacheControl: '3600',
         upsert: true,
       })
@@ -284,14 +310,14 @@ export async function submitTeamPayment({
       return { ok: false, error: `Không thể tải lên ảnh biên lai: ${uploadErr.message}` }
     }
 
-    // 3. Get Public URL
+    // 4. Get Public URL
     const { data: urlData } = supabase.storage
       .from('payment-receipts')
       .getPublicUrl(fileName)
 
     const publicUrl = urlData.publicUrl
 
-    // 4. Update teams table
+    // 5. Update teams table
     const submittedAt = new Date().toISOString()
     const { error: updateErr } = await supabase
       .from('teams')
@@ -309,7 +335,7 @@ export async function submitTeamPayment({
       return { ok: false, error: `Cập nhật thông tin thất bại: ${updateErr.message}` }
     }
 
-    // 5. Create confirmation notification for Leader
+    // 6. Create confirmation notification for Leader
     try {
       await createNotification({
         userId: leaderId,

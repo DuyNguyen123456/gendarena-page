@@ -4,6 +4,8 @@ import type { TopicCategory } from '@/types/submission'
 import type { Profile } from '@/types/profile'
 export type { Profile } from '@/types/profile'
 import { dobToDbFormat, dobToUiFormat } from '@/lib/utils'
+import { isProfileComplete } from '@/lib/profile-utils'
+import { notifyProfileUpdateStatus } from '@/services/notifications'
 export { isProfileComplete, dobToDbFormat, dobToUiFormat } from '@/lib/profile-utils'
 
 const AVATAR_BUCKET = 'avatars'
@@ -139,6 +141,11 @@ export async function updateProfile(
     if (updated && updated.dob) {
       updated.dob = dobToUiFormat(updated.dob)
     }
+
+    // Gửi thông báo 'Thông tin của bạn đã được cập nhật thành công' hoặc 'Thí sinh lưu ý cập nhật đủ thông tin cá nhân'
+    notifyProfileUpdateStatus(userId, isProfileComplete(updated)).catch((err) =>
+      console.warn('[services/profile] notifyProfileUpdateStatus error:', err)
+    )
 
     return { ok: true, data: updated }
   } catch (err: any) {

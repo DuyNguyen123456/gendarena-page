@@ -1362,7 +1362,7 @@ export default function SubmissionsPage() {
           open={showPaymentModal}
           onOpenChange={setShowPaymentModal}
           team={paymentTeam as any}
-          membersCount={teamMemberCounts[paymentTeam.id] || 3}
+          membersCount={teamMemberCounts[paymentTeam.id] || 1}
           onSuccess={() => {
             loadData()
           }}
