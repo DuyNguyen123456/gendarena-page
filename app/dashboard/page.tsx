@@ -948,35 +948,90 @@ function DashboardContent() {
   // Leader Only: Kick Member
   const handleKickMember = async () => {
     if (!kickTarget || !myTeam || !isLeader) return
-    const { error } = await supabase
-      .from('team_members')
-      .delete()
-      .eq('team_id', myTeam.id)
-      .eq('user_id', kickTarget.user_id)
+    const teamId = myTeam.id
+    const targetUserId = kickTarget.user_id
 
-    if (!error) {
-      setMembers((prev) => prev.filter((m) => m.user_id !== kickTarget.user_id))
+    try {
+      const res = await fetch('/api/teams/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, userId: targetUserId }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Lỗi khi gỡ thành viên')
+      }
+
+      setMembers((prev) => prev.filter((m) => m.user_id !== targetUserId))
       setKickTarget(null)
-      if (selectedMember?.user_id === kickTarget.user_id) {
+      if (selectedMember?.user_id === targetUserId) {
         setSelectedMember(null)
       }
       setGlobalMessage({ text: 'Đã gỡ thành viên khỏi đội thi.', type: 'success' })
+    } catch (err: any) {
+      // Client fallback
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('team_id', teamId)
+        .eq('user_id', targetUserId)
+
+      if (!error) {
+        await Promise.allSettled([
+          supabase.from('team_join_requests').delete().eq('team_id', teamId).eq('requester_id', targetUserId),
+          supabase.from('team_invites').delete().eq('team_id', teamId).eq('user_id', targetUserId),
+        ])
+        setMembers((prev) => prev.filter((m) => m.user_id !== targetUserId))
+        setKickTarget(null)
+        if (selectedMember?.user_id === targetUserId) {
+          setSelectedMember(null)
+        }
+        setGlobalMessage({ text: 'Đã gỡ thành viên khỏi đội thi.', type: 'success' })
+      } else {
+        setGlobalMessage({ text: `Không thể gỡ thành viên: ${err.message || error.message}`, type: 'error' })
+      }
     }
   }
 
   // Member Only: Leave Team
   const handleLeaveTeam = async () => {
     if (!user || !myTeam || isLeader) return
-    const { error } = await supabase
-      .from('team_members')
-      .delete()
-      .eq('team_id', myTeam.id)
-      .eq('user_id', user.id)
+    const teamId = myTeam.id
+    const userId = user.id
 
-    if (!error) {
+    try {
+      const res = await fetch('/api/teams/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, userId }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Lỗi khi rời đội')
+      }
+
       setShowLeaveDialog(false)
       await loadDashboardData()
       setGlobalMessage({ text: 'Bạn đã rời đội thi.', type: 'success' })
+    } catch (err: any) {
+      // Client fallback
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+
+      if (!error) {
+        await Promise.allSettled([
+          supabase.from('team_join_requests').delete().eq('team_id', teamId).eq('requester_id', userId),
+          supabase.from('team_invites').delete().eq('team_id', teamId).eq('user_id', userId),
+        ])
+        setShowLeaveDialog(false)
+        await loadDashboardData()
+        setGlobalMessage({ text: 'Bạn đã rời đội thi.', type: 'success' })
+      } else {
+        setGlobalMessage({ text: `Không thể rời đội: ${err.message || error.message}`, type: 'error' })
+      }
     }
   }
 

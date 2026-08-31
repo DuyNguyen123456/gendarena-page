@@ -77,18 +77,42 @@ export async function sendTeamJoinRequest(
     }
   }
 
-  // 3. Kiểm tra xem user đã có đội chưa
-  const { data: memberRecord } = await supabase
-    .from('team_members')
-    .select('team_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  // 3. Gọi qua Server API Route để bypass RLS hạn chế DELETE/INSERT trên client
+  try {
+    const res = await fetch('/api/teams/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamId, userId: user.id }),
+    })
+    const data = await res.json()
+    if (!res.ok || !data.ok) {
+      return {
+        ok: false,
+        error: data.error || 'Không thể gửi yêu cầu gia nhập đội.',
+        isIncomplete: data.isIncomplete,
+      }
+    }
+    return { ok: true }
+  } catch (apiErr) {
+    console.warn('[services/teams] API /api/teams/join failed, falling back to direct Supabase client:', apiErr)
+  }
 
-  if (memberRecord) {
+  // 4. Fallback client-side nếu API route không khả dụng
+  const [{ data: memberRecord }, { data: leaderRecord }] = await Promise.all([
+    supabase.from('team_members').select('team_id').eq('user_id', user.id).maybeSingle(),
+    supabase.from('teams').select('id').eq('leader_id', user.id).maybeSingle(),
+  ])
+
+  if (memberRecord || leaderRecord) {
     return { ok: false, error: 'Bạn đã là thành viên của một đội thi khác.' }
   }
 
-  // 4. Thực hiện insert join request
+  await supabase
+    .from('team_join_requests')
+    .delete()
+    .eq('team_id', teamId)
+    .eq('requester_id', user.id)
+
   const { error } = await supabase.from('team_join_requests').insert({
     team_id: teamId,
     requester_id: user.id,
@@ -100,7 +124,7 @@ export async function sendTeamJoinRequest(
     return { ok: false, error: formatTeamJoinError(error) }
   }
 
-  // 5. Gửi thông báo cho Trưởng đội (try/catch an toàn không làm hỏng request chính)
+  // 5. Gửi thông báo cho Trưởng đội
   try {
     const { data: teamData } = await supabase
       .from('teams')

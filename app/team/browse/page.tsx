@@ -73,18 +73,16 @@ export default function BrowseTeamsPage() {
       }
       setUser(user)
 
-      // Check if user already has a team
-      const { data: memberRecord } = await supabase
-        .from('team_members')
-        .select('team_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
+      // Check if user already has a team (member or leader)
+      const [{ data: memberRecord }, { data: leaderRecord }] = await Promise.all([
+        supabase.from('team_members').select('team_id').eq('user_id', user.id).maybeSingle(),
+        supabase.from('teams').select('id').eq('leader_id', user.id).maybeSingle(),
+      ])
 
-      if (memberRecord) {
-        setUserHasTeam(true)
-      }
+      const hasTeam = Boolean(memberRecord || leaderRecord)
+      setUserHasTeam(hasTeam)
 
-      // Fetch pending requests of the user
+      // Fetch pending requests of the user (only active pending requests block new requests)
       const { data: requests } = await supabase
         .from('team_join_requests')
         .select('team_id, status')
@@ -93,7 +91,9 @@ export default function BrowseTeamsPage() {
       if (requests) {
         const reqMap: Record<string, string> = {}
         requests.forEach((r) => {
-          reqMap[r.team_id] = r.status
+          if (r.status === 'pending') {
+            reqMap[r.team_id] = 'pending'
+          }
         })
         setMyRequests(reqMap)
       }
@@ -344,6 +344,7 @@ export default function BrowseTeamsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTeams.map((team) => {
               const currentMembers = team.members?.length || 0
+              const isUserInThisTeam = user?.id ? (team.members?.some((m) => m.user_id === user.id) || team.leader_id === user.id) : false
               const requestStatus = myRequests[team.id]
 
               return (
@@ -421,20 +422,18 @@ export default function BrowseTeamsPage() {
 
                     <div className="flex-1">
                       {userHasTeam ? (
-                        <Button variant="secondary" size="sm" disabled className="w-full cursor-not-allowed text-xs">
-                          Đã có đội
-                        </Button>
+                        isUserInThisTeam ? (
+                          <Button variant="primary" size="sm" disabled className="w-full text-xs">
+                            Đã gia nhập
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" size="sm" disabled className="w-full cursor-not-allowed text-xs">
+                            Đã có đội
+                          </Button>
+                        )
                       ) : requestStatus === 'pending' ? (
                         <Button variant="secondary" size="sm" disabled className="w-full opacity-80 cursor-not-allowed text-xs">
                           Đang chờ duyệt
-                        </Button>
-                      ) : requestStatus === 'accepted' ? (
-                        <Button variant="primary" size="sm" disabled className="w-full text-xs">
-                          Đã gia nhập
-                        </Button>
-                      ) : requestStatus === 'rejected' ? (
-                        <Button variant="ghost" size="sm" disabled className="w-full text-semantic-danger text-xs">
-                          Bị từ chối
                         </Button>
                       ) : currentMembers >= team.max_members ? (
                         <Button variant="secondary" size="sm" disabled className="w-full cursor-not-allowed text-xs">
@@ -640,20 +639,18 @@ export default function BrowseTeamsPage() {
 
                 <div className="w-full sm:w-auto">
                   {userHasTeam ? (
-                    <Button variant="secondary" size="md" disabled className="w-full sm:w-auto cursor-not-allowed text-xs">
-                      Bạn đã có đội thi
-                    </Button>
+                    (selectedTeamForView.members?.some((m) => m.user_id === user?.id) || selectedTeamForView.leader_id === user?.id) ? (
+                      <Button variant="primary" size="md" disabled className="w-full sm:w-auto text-xs">
+                        Đã gia nhập đội
+                      </Button>
+                    ) : (
+                      <Button variant="secondary" size="md" disabled className="w-full sm:w-auto cursor-not-allowed text-xs">
+                        Bạn đã có đội thi
+                      </Button>
+                    )
                   ) : myRequests[selectedTeamForView.id] === 'pending' ? (
                     <Button variant="secondary" size="md" disabled className="w-full sm:w-auto opacity-80 cursor-not-allowed text-xs">
                       Đang chờ duyệt yêu cầu
-                    </Button>
-                  ) : myRequests[selectedTeamForView.id] === 'accepted' ? (
-                    <Button variant="primary" size="md" disabled className="w-full sm:w-auto text-xs">
-                      Đã gia nhập đội
-                    </Button>
-                  ) : myRequests[selectedTeamForView.id] === 'rejected' ? (
-                    <Button variant="ghost" size="md" disabled className="w-full sm:w-auto text-semantic-danger text-xs">
-                      Yêu cầu bị từ chối
                     </Button>
                   ) : selectedTeamForView.members.length >= selectedTeamForView.max_members ? (
                     <Button variant="secondary" size="md" disabled className="w-full sm:w-auto cursor-not-allowed text-xs">
