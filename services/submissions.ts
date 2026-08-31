@@ -2,8 +2,10 @@
  * Submission service — all upload/query logic lives here.
  * Uses @supabase/ssr browser client (createClient from @/lib/supabase).
  *
- * Storage path format enforced by RLS:
- *   {auth.uid()}/{phase_id}/{timestamp}-{sanitized_filename}
+ * Multi-deliverable architecture:
+ *   1. pitch_deck (File: PDF/PPTX/PPT or Link: Canva/Google Slides/Figma/Drive...)
+ *   2. report (File: PDF/DOCX/DOC or Link: Google Docs/Notion/Coda...)
+ * Total file size limit: <= 10 MB across all uploaded files in a submission.
  */
 
 import { createClient } from '@/lib/supabase'
@@ -14,28 +16,85 @@ import type {
   TeamRecord,
   ServiceResult,
   TopicCategory,
+  SubmissionAttachments,
+  DeliverableItem,
+  SubmissionKind,
 } from '@/types/submission'
+import { parseSubmissionAttachments } from '@/types/submission'
 
 const BUCKET = 'submissions'
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB in bytes
-const ALLOWED_MIME = 'application/pdf'
-const ALLOWED_EXT = '.pdf'
+export const MAX_TOTAL_FILE_SIZE = 10 * 1024 * 1024 // 10 MB total for all files combined
+
+// Allowed extensions and MIME types
+const PITCH_DECK_EXTS = ['.pdf', '.pptx', '.ppt']
+const REPORT_EXTS = ['.pdf', '.docx', '.doc']
+
+// ─── Format helper ───────────────────────────────────────────────────────────
+
+export function formatBytes(bytes: number): string {
+  if (!bytes || bytes <= 0) return '0 B'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
 
 // ─── Validation ──────────────────────────────────────────────────────────────
 
 /**
- * Client-side file validation.
- * Returns null if valid, or a Vietnamese error message string.
+ * Validate a specific deliverable file format.
+ */
+export function validateDeliverableFile(file: File, type: 'pitch_deck' | 'report'): string | null {
+  const name = file.name.toLowerCase()
+  const ext = name.slice(name.lastIndexOf('.'))
+
+  if (type === 'pitch_deck') {
+    if (!PITCH_DECK_EXTS.includes(ext)) {
+      return `Slide Pitch-deck chỉ chấp nhận file ${PITCH_DECK_EXTS.join(', ')}`
+    }
+  } else {
+    if (!REPORT_EXTS.includes(ext)) {
+      return `Báo cáo đề án bằng chữ chỉ chấp nhận file ${REPORT_EXTS.join(', ')}`
+    }
+  }
+
+  if (file.size > MAX_TOTAL_FILE_SIZE) {
+    return `File đơn vượt quá giới hạn tối đa 10 MB (${formatBytes(file.size)}). Vui lòng nén file.`
+  }
+
+  return null
+}
+
+/**
+ * Validates the combined total size of all uploaded files in a submission.
+ */
+export function validateTotalFileSize(files: (File | null | undefined)[]): {
+  valid: boolean
+  totalBytes: number
+  error: string | null
+} {
+  const activeFiles = files.filter((f): f is File => !!f)
+  const totalBytes = activeFiles.reduce((acc, f) => acc + f.size, 0)
+
+  if (totalBytes > MAX_TOTAL_FILE_SIZE) {
+    return {
+      valid: false,
+      totalBytes,
+      error: `Tổng dung lượng các file tải lên là ${formatBytes(totalBytes)}, vượt quá giới hạn 10 MB. Vui lòng nén file hoặc dùng đường dẫn trực tuyến.`,
+    }
+  }
+
+  return {
+    valid: true,
+    totalBytes,
+    error: null,
+  }
+}
+
+/**
+ * Legacy single-file validation (for backward compat).
  */
 export function validateFile(file: File): string | null {
-  const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
-  if (file.type !== ALLOWED_MIME || ext !== ALLOWED_EXT) {
-    return 'Chỉ chấp nhận file PDF'
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    return 'File tối đa 10 MB. Vui lòng nén trước khi nộp.'
-  }
-  return null
+  return validateDeliverableFile(file, 'pitch_deck')
 }
 
 const URL_REGEX = /^https?:\/\/.+\..+/
@@ -45,8 +104,10 @@ const URL_REGEX = /^https?:\/\/.+\..+/
  * Returns null if valid, or a Vietnamese error message string.
  */
 export function validateUrl(url: string): string | null {
-  if (!url.trim()) return 'Vui lòng nhập đường dẫn bài nộp.'
-  if (!URL_REGEX.test(url.trim())) return 'Đường dẫn không hợp lệ. Phải bắt đầu bằng http:// hoặc https://'
+  if (!url || !url.trim()) return 'Vui lòng nhập đường dẫn liên kết bài nộp.'
+  if (!URL_REGEX.test(url.trim())) {
+    return 'Đường dẫn không hợp lệ. Phải bắt đầu bằng http:// hoặc https://'
+  }
   return null
 }
 
@@ -60,17 +121,35 @@ function sanitizeFilename(name: string): string {
     .toLowerCase()
 }
 
-/** Build the storage path following RLS format: {uid}/{phase_id}/{ts}-{name} */
-function buildStoragePath(userId: string, phaseId: string, filename: string): string {
+/** Build the storage path following RLS format: {uid}/{phase_id}/{ts}-{prefix}-{name} */
+function buildStoragePath(userId: string, phaseId: string, filename: string, prefix = ''): string {
   const sanitized = sanitizeFilename(filename)
-  return `${userId}/${phaseId}/${Date.now()}-${sanitized}`
+  const pfx = prefix ? `${prefix}-` : ''
+  return `${userId}/${phaseId}/${Date.now()}-${pfx}${sanitized}`
+}
+
+/** Extract all storage file paths from a submission record */
+export function extractStoragePaths(sub: Submission | null | undefined): string[] {
+  if (!sub) return []
+  const paths = new Set<string>()
+
+  if (sub.file_path) {
+    paths.add(sub.file_path)
+  }
+
+  const attachments = sub.attachments || parseSubmissionAttachments(sub)
+  if (attachments) {
+    if (attachments.pitch_deck.file_path) paths.add(attachments.pitch_deck.file_path)
+    if (attachments.report.file_path) paths.add(attachments.report.file_path)
+  }
+
+  return Array.from(paths).filter(Boolean)
 }
 
 // ─── Team queries ─────────────────────────────────────────────────────────────
 
 /**
  * Get all teams the current user belongs to.
- * Returns empty array if user has no team membership.
  */
 export async function getMyTeams(userId: string): Promise<TeamRecord[]> {
   const supabase = createClient()
@@ -88,7 +167,6 @@ export async function getMyTeams(userId: string): Promise<TeamRecord[]> {
         .flatMap((m: any) => (m.teams ? (Array.isArray(m.teams) ? m.teams : [m.teams]) : []))
         .filter(Boolean)
     } else {
-      // Fallback if status column does not exist
       const { data: fallbackMemberData } = await supabase
         .from('team_members')
         .select('team_id, teams(id, name, competition_id, leader_id)')
@@ -140,7 +218,6 @@ export async function getMyTeams(userId: string): Promise<TeamRecord[]> {
 
 /**
  * Get the current active submission for a given (team_id, phase_id) pair.
- * Returns null if none exists.
  */
 export async function getCurrentSubmission(
   teamId: string,
@@ -160,12 +237,15 @@ export async function getCurrentSubmission(
     return null
   }
 
-  return data as Submission | null
+  if (!data) return null
+
+  const row = data as Submission
+  row.attachments = parseSubmissionAttachments(row)
+  return row
 }
 
 /**
- * Get submission history for a given (team_id, phase_id) pair,
- * sorted newest first.
+ * Get submission history for a given (team_id, phase_id) pair, sorted newest first.
  */
 export async function getSubmissionHistory(
   teamId: string,
@@ -185,19 +265,24 @@ export async function getSubmissionHistory(
     return []
   }
 
-  return (data ?? []) as SubmissionHistory[]
+  return (data ?? []).map((r) => {
+    const row = r as SubmissionHistory
+    row.attachments = parseSubmissionAttachments(row)
+    return row
+  })
 }
 
 /**
  * Generate a temporary signed download URL for a private storage file.
- * Valid for 60 seconds.
+ * Valid for 120 seconds.
  */
 export async function getDownloadUrl(filePath: string): Promise<string | null> {
+  if (!filePath) return null
   const supabase = createClient()
 
   const { data, error } = await supabase.storage
     .from(BUCKET)
-    .createSignedUrl(filePath, 60)
+    .createSignedUrl(filePath, 120)
 
   if (error) {
     console.error('getDownloadUrl error:', error)
@@ -207,14 +292,273 @@ export async function getDownloadUrl(filePath: string): Promise<string | null> {
   return data.signedUrl
 }
 
-// ─── Upload workflows — FILE ──────────────────────────────────────────────────
+// ─── Unified Multi-Deliverable Submission Payload ────────────────────────────
+
+export interface UnifiedSubmissionPayload {
+  userId: string
+  teamId: string
+  phaseId: string
+  topic: TopicCategory
+  pitchDeck: {
+    kind: 'file' | 'link'
+    file?: File | null
+    url?: string | null
+  }
+  report: {
+    kind: 'file' | 'link'
+    file?: File | null
+    url?: string | null
+  }
+}
 
 /**
- * INSERT flow (file) — no existing submission.
- * 1. Upload file to Storage
- * 2. INSERT row into submissions (submission_kind='file')
- * 3. On DB failure → delete uploaded file (cleanup)
+ * Unified submission workflow: handles both initial submission and replace/overwrite.
+ *
+ * Workflow steps:
+ * 1. Validates inputs & total file size (<= 10 MB).
+ * 2. Uploads any new files to Supabase Storage.
+ * 3. If replacing an existing submission:
+ *    - Archives existing submission into `submission_history` with full attachment details.
+ *    - Cleans up and deletes all old storage files of the previous submission.
+ *    - Updates the existing `submissions` row.
+ * 4. If creating a new submission:
+ *    - Inserts new row into `submissions`.
+ *    - If DB insert fails, cleans up the newly uploaded files.
+ * 5. Sends success notification to team members.
  */
+export async function submitUnifiedSubmission(
+  payload: UnifiedSubmissionPayload,
+  existing: Submission | null,
+): Promise<ServiceResult> {
+  const supabase = createClient()
+  const { userId, teamId, phaseId, topic, pitchDeck, report } = payload
+
+  // 1. Validation
+  if (!topic) {
+    return { ok: false, error: 'Vui lòng chọn 1 trong 5 nhóm chủ đề bắt buộc.' }
+  }
+
+  // Pitch-deck validation
+  if (pitchDeck.kind === 'file') {
+    if (!pitchDeck.file) return { ok: false, error: 'Vui lòng chọn file Slide Pitch-deck.' }
+    const err = validateDeliverableFile(pitchDeck.file, 'pitch_deck')
+    if (err) return { ok: false, error: err }
+  } else {
+    const err = validateUrl(pitchDeck.url || '')
+    if (err) return { ok: false, error: `Link Pitch-deck: ${err}` }
+  }
+
+  // Report validation
+  if (report.kind === 'file') {
+    if (!report.file) return { ok: false, error: 'Vui lòng chọn file Báo cáo đề án bằng chữ.' }
+    const err = validateDeliverableFile(report.file, 'report')
+    if (err) return { ok: false, error: err }
+  } else {
+    const err = validateUrl(report.url || '')
+    if (err) return { ok: false, error: `Link Báo cáo đề án: ${err}` }
+  }
+
+  // Total size validation
+  const filesToUpload: File[] = []
+  if (pitchDeck.kind === 'file' && pitchDeck.file) filesToUpload.push(pitchDeck.file)
+  if (report.kind === 'file' && report.file) filesToUpload.push(report.file)
+
+  const sizeValidation = validateTotalFileSize(filesToUpload)
+  if (!sizeValidation.valid) {
+    return { ok: false, error: sizeValidation.error! }
+  }
+
+  // 2. Upload files to Storage
+  const uploadedStoragePaths: string[] = []
+  let pitchDeckStoragePath: string | null = null
+  let reportStoragePath: string | null = null
+
+  try {
+    if (pitchDeck.kind === 'file' && pitchDeck.file) {
+      pitchDeckStoragePath = buildStoragePath(userId, phaseId, pitchDeck.file.name, 'pitchdeck')
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(pitchDeckStoragePath, pitchDeck.file, {
+          contentType: pitchDeck.file.type || 'application/octet-stream',
+          upsert: false,
+        })
+      if (upErr) {
+        throw new Error(`Upload file Pitch-deck thất bại: ${upErr.message}`)
+      }
+      uploadedStoragePaths.push(pitchDeckStoragePath)
+    }
+
+    if (report.kind === 'file' && report.file) {
+      reportStoragePath = buildStoragePath(userId, phaseId, report.file.name, 'report')
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(reportStoragePath, report.file, {
+          contentType: report.file.type || 'application/octet-stream',
+          upsert: false,
+        })
+      if (upErr) {
+        throw new Error(`Upload file Báo cáo đề án thất bại: ${upErr.message}`)
+      }
+      uploadedStoragePaths.push(reportStoragePath)
+    }
+  } catch (uploadError: any) {
+    // Cleanup any partially uploaded files
+    if (uploadedStoragePaths.length > 0) {
+      await supabase.storage.from(BUCKET).remove(uploadedStoragePaths)
+    }
+    return { ok: false, error: uploadError.message || 'Lỗi khi tải file lên hệ thống lưu trữ.' }
+  }
+
+  // 3. Prepare structured attachments and summary fields
+  const attachments: SubmissionAttachments = {
+    pitch_deck: {
+      kind: pitchDeck.kind,
+      file_name: pitchDeck.file?.name ?? null,
+      file_path: pitchDeckStoragePath,
+      file_size: pitchDeck.file?.size ?? null,
+      file_type: pitchDeck.file?.type ?? null,
+      url: pitchDeck.kind === 'link' ? pitchDeck.url?.trim() ?? null : null,
+    },
+    report: {
+      kind: report.kind,
+      file_name: report.file?.name ?? null,
+      file_path: reportStoragePath,
+      file_size: report.file?.size ?? null,
+      file_type: report.file?.type ?? null,
+      url: report.kind === 'link' ? report.url?.trim() ?? null : null,
+    },
+  }
+
+  // Summary fields for top-level columns
+  const hasFiles = filesToUpload.length > 0
+  const hasLinks = pitchDeck.kind === 'link' || report.kind === 'link'
+  const submissionKind: SubmissionKind = hasFiles && hasLinks ? 'both' : hasFiles ? 'file' : 'link'
+
+  const fileNames = [attachments.pitch_deck.file_name, attachments.report.file_name].filter(Boolean)
+  const summaryFileName = fileNames.length > 0 ? fileNames.join(' + ') : null
+  const summaryFilePath = pitchDeckStoragePath || reportStoragePath || null
+  const summaryUrl = attachments.pitch_deck.url || attachments.report.url || null
+  const totalBytes = sizeValidation.totalBytes > 0 ? sizeValidation.totalBytes : null
+  const notesJson = JSON.stringify({ version: 2, attachments })
+
+  // 4. Execute DB mutation (Replace or Insert)
+  if (existing) {
+    // ─── REPLACE FLOW ──────────────────────────────────────────────────────────
+    // Step 4.1: Archive existing submission to submission_history
+    const oldAttachments = existing.attachments || parseSubmissionAttachments(existing)
+    const historyReason = JSON.stringify({
+      reason: 'replaced',
+      attachments: oldAttachments,
+      summary: existing.file_name || existing.submission_url,
+    })
+
+    const { error: historyError } = await supabase.from('submission_history').insert({
+      team_id: existing.team_id,
+      phase_id: existing.phase_id,
+      file_name: existing.file_name,
+      file_size: existing.file_size,
+      submission_kind: existing.submission_kind,
+      submission_url: existing.submission_url,
+      uploaded_by: existing.uploaded_by,
+      uploaded_at: existing.uploaded_at,
+      deleted_at: new Date().toISOString(),
+      reason: historyReason,
+      topic: existing.topic,
+    })
+
+    if (historyError) {
+      console.error('DB history insert error:', historyError)
+      // Cleanup newly uploaded files
+      if (uploadedStoragePaths.length > 0) {
+        await supabase.storage.from(BUCKET).remove(uploadedStoragePaths)
+      }
+      return { ok: false, error: `Lưu lịch sử bài cũ thất bại: ${historyError.message}` }
+    }
+
+    // Step 4.2: Delete old files from Supabase Storage to free space
+    const oldStoragePaths = extractStoragePaths(existing)
+    if (oldStoragePaths.length > 0) {
+      const { error: delOldErr } = await supabase.storage.from(BUCKET).remove(oldStoragePaths)
+      if (delOldErr) {
+        console.warn('Could not delete old storage files (non-critical):', delOldErr)
+      }
+    }
+
+    // Step 4.3: Update existing submission row
+    const { error: updateError } = await supabase
+      .from('submissions')
+      .update({
+        file_path: summaryFilePath,
+        file_name: summaryFileName,
+        file_size: totalBytes,
+        file_type: filesToUpload[0]?.type || null,
+        submission_url: summaryUrl,
+        submission_kind: submissionKind,
+        uploaded_by: userId,
+        uploaded_at: new Date().toISOString(),
+        status: 'submitted',
+        notes: notesJson,
+        topic,
+      })
+      .eq('id', existing.id)
+
+    if (updateError) {
+      console.error('DB update error:', updateError)
+      if (uploadedStoragePaths.length > 0) {
+        await supabase.storage.from(BUCKET).remove(uploadedStoragePaths)
+      }
+      return { ok: false, error: `Cập nhật bài nộp thất bại: ${updateError.message}` }
+    }
+
+    // Notify team
+    notifySubmissionSuccess({
+      teamId,
+      submitterId: userId,
+      action: 'replace',
+      detail: `Đã thay thế bài nộp (Gồm Slide Pitch-deck & Báo cáo đề án)`,
+    }).catch((err) => console.warn('[submissions.ts] notifySubmissionSuccess error:', err))
+
+    return { ok: true, data: undefined }
+  } else {
+    // ─── INSERT FLOW ───────────────────────────────────────────────────────────
+    const { error: dbError } = await supabase.from('submissions').insert({
+      team_id: teamId,
+      phase_id: phaseId,
+      file_path: summaryFilePath,
+      file_name: summaryFileName,
+      file_size: totalBytes,
+      file_type: filesToUpload[0]?.type || null,
+      submission_url: summaryUrl,
+      submission_kind: submissionKind,
+      uploaded_by: userId,
+      uploaded_at: new Date().toISOString(),
+      status: 'submitted',
+      notes: notesJson,
+      topic,
+    })
+
+    if (dbError) {
+      console.error('DB insert error:', dbError)
+      if (uploadedStoragePaths.length > 0) {
+        await supabase.storage.from(BUCKET).remove(uploadedStoragePaths)
+      }
+      return { ok: false, error: `Lưu dữ liệu bài nộp thất bại: ${dbError.message}` }
+    }
+
+    // Notify team
+    notifySubmissionSuccess({
+      teamId,
+      submitterId: userId,
+      action: 'submit',
+      detail: `Đã nộp bài thành công (Gồm Slide Pitch-deck & Báo cáo đề án)`,
+    }).catch((err) => console.warn('[submissions.ts] notifySubmissionSuccess error:', err))
+
+    return { ok: true, data: undefined }
+  }
+}
+
+// ─── Backward compatibility wrappers ─────────────────────────────────────────
+
 export async function insertFileSubmission(
   userId: string,
   teamId: string,
@@ -222,59 +566,19 @@ export async function insertFileSubmission(
   file: File,
   topic: TopicCategory,
 ): Promise<ServiceResult> {
-  const supabase = createClient()
-  const storagePath = buildStoragePath(userId, phaseId, file.name)
-
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, file, { contentType: ALLOWED_MIME, upsert: false })
-
-  if (uploadError) {
-    console.error('Storage upload error (insert-file):', uploadError)
-    return { ok: false, error: 'Upload file thất bại: ' + uploadError.message }
-  }
-
-  const { error: dbError } = await supabase.from('submissions').insert({
-    team_id: teamId,
-    phase_id: phaseId,
-    file_path: storagePath,
-    file_name: file.name,
-    file_size: file.size,
-    file_type: file.type,
-    submission_url: null,
-    submission_kind: 'file',
-    uploaded_by: userId,
-    uploaded_at: new Date().toISOString(),
-    status: 'submitted',
-    notes: null,
-    topic,
-  })
-
-  if (dbError) {
-    console.error('DB insert error (file):', dbError)
-    await supabase.storage.from(BUCKET).remove([storagePath])
-    return { ok: false, error: 'Lưu dữ liệu thất bại: ' + dbError.message }
-  }
-
-  // Gửi thông báo 'Nộp bài thành công' cho toàn đội
-  notifySubmissionSuccess({
-    teamId,
-    submitterId: userId,
-    action: 'submit',
-    detail: `File: ${file.name}`,
-  }).catch((err) => console.warn('[submissions.ts] notifySubmissionSuccess error:', err))
-
-  return { ok: true, data: undefined }
+  return submitUnifiedSubmission(
+    {
+      userId,
+      teamId,
+      phaseId,
+      topic,
+      pitchDeck: { kind: 'file', file },
+      report: { kind: 'link', url: 'https://docs.google.com' },
+    },
+    null,
+  )
 }
 
-/**
- * REPLACE flow (file) — existing submission present.
- * Order is mandatory:
- *   1. Upload new file to Storage          → fail: abort
- *   2. INSERT old data into history        → fail: delete new file, abort
- *   3. DELETE old file from Storage        → fail: warn only, continue
- *   4. UPDATE submissions row              → fail: delete new file, abort
- */
 export async function replaceFileSubmission(
   userId: string,
   teamId: string,
@@ -283,90 +587,19 @@ export async function replaceFileSubmission(
   existing: Submission,
   topic: TopicCategory,
 ): Promise<ServiceResult> {
-  const supabase = createClient()
-  const newStoragePath = buildStoragePath(userId, phaseId, file.name)
-
-  // Step 1
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(newStoragePath, file, { contentType: ALLOWED_MIME, upsert: false })
-
-  if (uploadError) {
-    console.error('Storage upload error (replace-file):', uploadError)
-    return { ok: false, error: 'Upload file mới thất bại: ' + uploadError.message }
-  }
-
-  // Step 2
-  const { error: historyError } = await supabase.from('submission_history').insert({
-    team_id: existing.team_id,
-    phase_id: existing.phase_id,
-    file_name: existing.file_name,
-    file_size: existing.file_size,
-    submission_kind: existing.submission_kind,
-    uploaded_by: existing.uploaded_by,
-    uploaded_at: existing.uploaded_at,
-    deleted_at: new Date().toISOString(),
-    reason: 'replaced',
-    topic: existing.topic,
-  })
-
-  if (historyError) {
-    console.error('DB history insert error (replace-file):', historyError)
-    await supabase.storage.from(BUCKET).remove([newStoragePath])
-    return { ok: false, error: 'Lưu lịch sử thất bại: ' + historyError.message }
-  }
-
-  // Step 3 (non-critical)
-  if (existing.file_path) {
-    const { error: deleteStorageError } = await supabase.storage
-      .from(BUCKET)
-      .remove([existing.file_path])
-    if (deleteStorageError) {
-      console.warn('Could not delete old storage file (non-critical):', deleteStorageError)
-    }
-  }
-
-  // Step 4
-  const { error: updateError } = await supabase
-    .from('submissions')
-    .update({
-      file_path: newStoragePath,
-      file_name: file.name,
-      file_size: file.size,
-      file_type: file.type,
-      submission_url: null,
-      submission_kind: 'file',
-      uploaded_by: userId,
-      uploaded_at: new Date().toISOString(),
-      status: 'submitted',
-      notes: null,
+  return submitUnifiedSubmission(
+    {
+      userId,
+      teamId,
+      phaseId,
       topic,
-    })
-    .eq('id', existing.id)
-
-  if (updateError) {
-    console.error('DB update error (replace-file):', updateError)
-    await supabase.storage.from(BUCKET).remove([newStoragePath])
-    return { ok: false, error: 'Cập nhật bài nộp thất bại: ' + updateError.message }
-  }
-
-  // Gửi thông báo 'Thay đổi bài nộp thành công' cho toàn đội
-  notifySubmissionSuccess({
-    teamId,
-    submitterId: userId,
-    action: 'replace',
-    detail: `File mới: ${file.name}`,
-  }).catch((err) => console.warn('[submissions.ts] notifySubmissionSuccess error:', err))
-
-  return { ok: true, data: undefined }
+      pitchDeck: { kind: 'file', file },
+      report: { kind: 'link', url: 'https://docs.google.com' },
+    },
+    existing,
+  )
 }
 
-// ─── Upload workflows — LINK ──────────────────────────────────────────────────
-
-/**
- * INSERT flow (link) — no existing submission.
- * No file upload; just INSERT the row with submission_kind='link'.
- */
 export async function insertLinkSubmission(
   userId: string,
   teamId: string,
@@ -374,45 +607,19 @@ export async function insertLinkSubmission(
   url: string,
   topic: TopicCategory,
 ): Promise<ServiceResult> {
-  const supabase = createClient()
-
-  const { error } = await supabase.from('submissions').insert({
-    team_id: teamId,
-    phase_id: phaseId,
-    file_path: null,
-    file_name: null,
-    file_size: null,
-    file_type: null,
-    submission_url: url.trim(),
-    submission_kind: 'link',
-    uploaded_by: userId,
-    uploaded_at: new Date().toISOString(),
-    status: 'submitted',
-    notes: null,
-    topic,
-  })
-
-  if (error) {
-    console.error('DB insert error (link):', error)
-    return { ok: false, error: 'Lưu bài nộp thất bại: ' + error.message }
-  }
-
-  // Gửi thông báo 'Nộp bài thành công' cho toàn đội
-  notifySubmissionSuccess({
-    teamId,
-    submitterId: userId,
-    action: 'submit',
-    detail: `Liên kết: ${url.trim()}`,
-  }).catch((err) => console.warn('[submissions.ts] notifySubmissionSuccess error:', err))
-
-  return { ok: true, data: undefined }
+  return submitUnifiedSubmission(
+    {
+      userId,
+      teamId,
+      phaseId,
+      topic,
+      pitchDeck: { kind: 'link', url },
+      report: { kind: 'link', url },
+    },
+    null,
+  )
 }
 
-/**
- * REPLACE flow (link) — existing submission present.
- * 1. INSERT old data into history
- * 2. UPDATE submissions row with new link
- */
 export async function replaceLinkSubmission(
   userId: string,
   teamId: string,
@@ -421,101 +628,35 @@ export async function replaceLinkSubmission(
   existing: Submission,
   topic: TopicCategory,
 ): Promise<ServiceResult> {
-  const supabase = createClient()
-
-  // Step 1: History
-  const { error: historyError } = await supabase.from('submission_history').insert({
-    team_id: existing.team_id,
-    phase_id: existing.phase_id,
-    file_name: existing.file_name,
-    file_size: existing.file_size,
-    submission_kind: existing.submission_kind,
-    uploaded_by: existing.uploaded_by,
-    uploaded_at: existing.uploaded_at,
-    deleted_at: new Date().toISOString(),
-    reason: 'replaced',
-    topic: existing.topic,
-  })
-
-  if (historyError) {
-    console.error('DB history insert error (replace-link):', historyError)
-    return { ok: false, error: 'Lưu lịch sử thất bại: ' + historyError.message }
-  }
-
-  // If old submission was a file, try to clean up storage (non-critical)
-  if (existing.file_path) {
-    const supabaseClient = createClient()
-    const { error: delErr } = await supabaseClient.storage
-      .from(BUCKET)
-      .remove([existing.file_path])
-    if (delErr) {
-      console.warn('Could not delete old file when replacing with link (non-critical):', delErr)
-    }
-  }
-
-  const { error: updateError } = await supabase
-    .from('submissions')
-    .update({
-      file_path: null,
-      file_name: null,
-      file_size: null,
-      file_type: null,
-      submission_url: url.trim(),
-      submission_kind: 'link',
-      uploaded_by: userId,
-      uploaded_at: new Date().toISOString(),
-      status: 'submitted',
-      notes: null,
+  return submitUnifiedSubmission(
+    {
+      userId,
+      teamId,
+      phaseId,
       topic,
-    })
-    .eq('id', existing.id)
-
-  if (updateError) {
-    console.error('DB update error (replace-link):', updateError)
-    return { ok: false, error: 'Cập nhật bài nộp thất bại: ' + updateError.message }
-  }
-
-  // Gửi thông báo 'Thay đổi bài nộp thành công' cho toàn đội
-  notifySubmissionSuccess({
-    teamId,
-    submitterId: userId,
-    action: 'replace',
-    detail: `Liên kết mới: ${url.trim()}`,
-  }).catch((err) => console.warn('[submissions.ts] notifySubmissionSuccess error:', err))
-
-  return { ok: true, data: undefined }
+      pitchDeck: { kind: 'link', url },
+      report: { kind: 'link', url },
+    },
+    existing,
+  )
 }
 
-// ─── Backward compat aliases ──────────────────────────────────────────────────
-// Keep old names so any future callers don't break immediately.
 export { insertFileSubmission as insertSubmission }
 export { replaceFileSubmission as replaceSubmission }
 
 // ─── Admin helpers ────────────────────────────────────────────────────────────
 
 /**
- * Fetch ALL submissions with joined team name, phase title, and assignment info.
+ * Fetch ALL submissions with joined team name, phase title, score data, and assignment info.
  * This is the single source of truth for /admin/submissions and /admin/assign.
- *
- * IMPLEMENTATION NOTE:
- * We intentionally split this into TWO separate queries instead of one complex join.
- * The reason: PostgREST alias syntax `profiles:judge_id(full_name)` inside
- * judge_assignments requires the FK relationship to be registered by the exact
- * name in PostgREST's schema cache. If not registered, it throws PGRST200 and
- * the ENTIRE query silently returns []. Splitting avoids this fragile dependency.
- *
- * IMPORTANT: This query requires the FK constraint submissions_phase_id_fkey
- * to exist in the database. Without it, PostgREST cannot resolve
- * competition_phases(title) and will silently return null data.
- * Run fix_dataflow_and_expertise_migration.sql first if the join fails.
  */
-export async function getAllSubmissionsForAdmin() {
+export async function getAllSubmissionsForAdmin(): Promise<import('@/types/submission').AdminSubmissionRow[]> {
   const supabase = createClient()
 
   // ── Query 1: submissions with team name and phase details ──────────────────
   const { data: subData, error: subError } = await supabase
     .from('submissions')
-    .select('id, submission_kind, file_name, submission_url, file_path, uploaded_at, status, phase_id, topic, teams(name), competition_phases(title, scoring_open, scoring_opens_at, scoring_closes_at)')
+    .select('id, submission_kind, file_name, submission_url, file_path, uploaded_at, status, phase_id, topic, notes, teams(name), competition_phases(title, scoring_open, scoring_opens_at, scoring_closes_at)')
     .order('uploaded_at', { ascending: false })
 
   if (subError) {
@@ -523,7 +664,7 @@ export async function getAllSubmissionsForAdmin() {
     return []
   }
 
-  // ── Query 2: assignments (safe separate query) ─────────────────────────────
+  // ── Query 2: assignments ───────────────────────────────────────────────────
   const { data: assignData, error: assignError } = await supabase
     .from('judge_assignments')
     .select('id, judge_id, submission_id')
@@ -549,7 +690,7 @@ export async function getAllSubmissionsForAdmin() {
     }
   }
 
-  // ── Query 4: scores summary for admin view ──────────────────────────────
+  // ── Query 4: scores summary ──────────────────────────────────────────────
   const { data: scoresData, error: scoresError } = await supabase
     .from('scores')
     .select('id, submission_id, judge_id, total_score, comment, round_id, criteria_scores')
@@ -558,7 +699,7 @@ export async function getAllSubmissionsForAdmin() {
     console.error('[getAllSubmissionsForAdmin] scores query failed:', JSON.stringify(scoresError, null, 2))
   }
 
-  // Build assignment Map: submission_id -> assigned_judge info
+  // Build assignment Map
   const assignMap = new Map<string, { id: string; judge_id: string; full_name?: string }>()
   for (const r of (assignData ?? [])) {
     if (r.submission_id) {
@@ -570,7 +711,7 @@ export async function getAllSubmissionsForAdmin() {
     }
   }
 
-  // Build scores Map: submission_id -> list of scores
+  // Build scores Map
   type ScoreEntry = {
     id: string
     judge_id: string
@@ -606,6 +747,7 @@ export async function getAllSubmissionsForAdmin() {
     status: string
     phase_id: string | null
     topic: string | null
+    notes: string | null
     teams: { name: string } | { name: string }[] | null
     competition_phases: {
       title: string
@@ -633,6 +775,7 @@ export async function getAllSubmissionsForAdmin() {
       : null
 
     const subScores = scoresMap.get(r.id) ?? []
+    const parsedAttachments = parseSubmissionAttachments(r)
 
     return {
       id: r.id,
@@ -644,6 +787,8 @@ export async function getAllSubmissionsForAdmin() {
       status: r.status,
       phase_id: r.phase_id,
       topic: r.topic as import('@/types/submission').TopicCategory | null,
+      notes: r.notes,
+      attachments: parsedAttachments,
       teams,
       competition_phases,
       assigned_judge,
@@ -651,4 +796,5 @@ export async function getAllSubmissionsForAdmin() {
     }
   })
 }
+
 

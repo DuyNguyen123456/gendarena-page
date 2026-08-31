@@ -6,14 +6,14 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/loading'
 import DotGridBackground from '@/components/dot-grid-background'
-import { getDownloadUrl, getAllSubmissionsForAdmin } from '@/services/submissions'
+import { getDownloadUrl, getAllSubmissionsForAdmin, formatBytes } from '@/services/submissions'
 import {
   getScoringRounds,
   saveAdminScore,
   type ScoringRound,
 } from '@/services/scoring'
 import type { AdminSubmissionRow, TopicCategory } from '@/types/submission'
-import { TOPIC_CATEGORY_CONFIG } from '@/types/submission'
+import { TOPIC_CATEGORY_CONFIG, parseSubmissionAttachments } from '@/types/submission'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -39,6 +39,8 @@ import {
   BookOpen,
   User,
   MessageSquare,
+  Presentation,
+  FileSpreadsheet,
 } from 'lucide-react'
 
 type Phase = { id: string; title: string }
@@ -148,32 +150,40 @@ function AdminScoringModal({ submission, rounds, adminId, onClose, onSaved }: Sc
     if (!activeRound?.criteria || activeRound.criteria.length === 0) {
       const vals = Object.values(criteriaScores)
       if (vals.length === 0) return 0
-      return vals.reduce((a, b) => a + b, 0) / vals.length
+      const sum = vals.reduce((acc, v) => acc + (Number(v) || 0), 0)
+      return Math.round((sum / vals.length) * 10) / 10
     }
 
     let weightedSum = 0
     let totalWeight = 0
 
     for (const crit of activeRound.criteria) {
-      const val = criteriaScores[crit.id] ?? 0
-      const max = crit.max_score > 0 ? crit.max_score : 10
-      const weight = crit.weight > 0 ? crit.weight : 1
-      weightedSum += (val / max) * weight
+      const weight = Number(crit.weight) || 0
+      const score = Number(criteriaScores[crit.id]) || 0
+      weightedSum += score * weight
       totalWeight += weight
     }
 
-    if (totalWeight <= 0) return 0
-    const finalScore = (weightedSum / totalWeight) * 10
-    return Math.round(finalScore * 100) / 100
+    if (totalWeight === 0) return 0
+    const finalScore = weightedSum / totalWeight
+    return Math.round(finalScore * 10) / 10
   }, [activeRound, criteriaScores])
 
-  const handleScoreChange = (criterionId: string, valStr: string, maxScore: number) => {
-    const val = parseFloat(valStr)
-    const num = isNaN(val) ? 0 : Math.max(0, Math.min(maxScore, val))
-    setCriteriaScores(prev => ({
-      ...prev,
-      [criterionId]: num,
-    }))
+  const handleScoreChange = (criterionId: string, value: string, maxScore = 10) => {
+    const num = parseFloat(value)
+    if (isNaN(num)) {
+      setCriteriaScores(prev => {
+        const next = { ...prev }
+        delete next[criterionId]
+        return next
+      })
+    } else {
+      const clamped = Math.min(maxScore, Math.max(0, num))
+      setCriteriaScores(prev => ({
+        ...prev,
+        [criterionId]: clamped,
+      }))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -201,14 +211,16 @@ function AdminScoringModal({ submission, rounds, adminId, onClose, onSaved }: Sc
     }
   }
 
-  const openAttachment = async () => {
-    if (submission.submission_kind === 'link' && submission.submission_url) {
-      window.open(submission.submission_url, '_blank')
+  const attachments = submission.attachments || parseSubmissionAttachments(submission)
+
+  const openFileOrUrl = async (path?: string | null, url?: string | null) => {
+    if (url) {
+      window.open(url, '_blank')
       return
     }
-    if (submission.file_path) {
-      const url = await getDownloadUrl(submission.file_path)
-      if (url) window.open(url, '_blank')
+    if (path) {
+      const signedUrl = await getDownloadUrl(path)
+      if (signedUrl) window.open(signedUrl, '_blank')
     }
   }
 
@@ -239,24 +251,40 @@ function AdminScoringModal({ submission, rounds, adminId, onClose, onSaved }: Sc
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary pt-1 border-t border-surface-border">
+          <div className="text-xs text-text-secondary pt-1 border-t border-surface-border">
             <span>
               Vòng thi: <strong className="text-text-primary">{submission.competition_phases?.title ?? '—'}</strong>
             </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              leftIcon={<ExternalLink className="size-3.5" />}
-              onClick={openAttachment}
-              className="text-brand-cyan hover:text-brand-cyan-bright h-7 px-2"
-            >
-              {submission.submission_kind === 'file' ? (
-                <>Xem file: <span className="underline ml-1 truncate max-w-[160px]">{submission.file_name}</span></>
-              ) : (
-                <>Mở liên kết bài nộp</>
-              )}
-            </Button>
+          </div>
+
+          {/* Dual Deliverables View Buttons */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-surface-border">
+            {attachments?.pitch_deck && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                leftIcon={<Presentation className="size-3.5 text-brand-cyan" />}
+                rightIcon={<ExternalLink className="size-3" />}
+                onClick={() => openFileOrUrl(attachments.pitch_deck.file_path, attachments.pitch_deck.url)}
+                className="text-xs h-8"
+              >
+                Slide Pitch-Deck: {attachments.pitch_deck.kind === 'file' ? (attachments.pitch_deck.file_name || 'File Slide') : 'Link trực tuyến'}
+              </Button>
+            )}
+            {attachments?.report && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                leftIcon={<FileSpreadsheet className="size-3.5 text-emerald-400" />}
+                rightIcon={<ExternalLink className="size-3" />}
+                onClick={() => openFileOrUrl(attachments.report.file_path, attachments.report.url)}
+                className="text-xs h-8"
+              >
+                Báo cáo Đề án: {attachments.report.kind === 'file' ? (attachments.report.file_name || 'File Đề án') : 'Link trực tuyến'}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -301,7 +329,7 @@ function AdminScoringModal({ submission, rounds, adminId, onClose, onSaved }: Sc
               </select>
             ) : (
               <div className="p-3 rounded-lg border border-surface-border bg-surface-overlay text-xs text-text-tertiary">
-                Chưa có vòng chấm nào. Điểm sẽ được ghi nhận trực tiếp.
+                Chưa có vòng chấm nào được kích hoạt.
               </div>
             )}
           </div>
@@ -310,11 +338,9 @@ function AdminScoringModal({ submission, rounds, adminId, onClose, onSaved }: Sc
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                Tiêu chí chấm điểm
+                Barem tiêu chí đánh giá
               </span>
-              <span className="text-xs text-text-secondary font-mono">
-                Thang điểm: 0 - 10
-              </span>
+              <span className="text-xs text-text-secondary font-mono">Thang điểm 0 - 10</span>
             </div>
 
             {activeRound?.criteria && activeRound.criteria.length > 0 ? (
@@ -329,7 +355,7 @@ function AdminScoringModal({ submission, rounds, adminId, onClose, onSaved }: Sc
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                         <div>
                           <p className="font-medium text-sm text-text-primary">{crit.name}</p>
-                          <p className="text-xs text-text-tertiary">
+                          <p className="text-xs text-text-tertiary mt-1">
                             Trọng số: <span className="text-brand-cyan font-mono font-semibold">{crit.weight}%</span> · Tối đa: <span className="text-text-secondary font-mono">{crit.max_score}đ</span>
                           </p>
                         </div>
@@ -339,7 +365,6 @@ function AdminScoringModal({ submission, rounds, adminId, onClose, onSaved }: Sc
                             min={0}
                             max={crit.max_score}
                             step={0.1}
-                            required
                             value={currentScore}
                             onChange={(e) => handleScoreChange(crit.id, e.target.value, crit.max_score)}
                             placeholder="0.0"
@@ -465,38 +490,43 @@ export default function AdminSubmissions() {
   const [submissions, setSubmissions] = useState<AdminSubmissionRow[]>([])
   const [phases, setPhases] = useState<Phase[]>([])
   const [rounds, setRounds] = useState<ScoringRound[]>([])
+  const [activeTab, setActiveTab] = useState<TabKey>('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [successToast, setSuccessToast] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<TabKey>('all')
   const [currentUid, setCurrentUid] = useState<string>('')
+  const [successToast, setSuccessToast] = useState<string | null>(null)
   const [scoringSubmission, setScoringSubmission] = useState<AdminSubmissionRow | null>(null)
 
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const loadData = useCallback(async () => {
     try {
       setError(null)
-      const [subs, roundsData, { data: phaseData }] = await Promise.all([
+      const [subs, roundsData, phasesRes] = await Promise.all([
         getAllSubmissionsForAdmin(),
         getScoringRounds(),
-        supabase.from('competition_phases').select('id, title').order('display_order', { ascending: true }),
+        supabase.from('competition_phases').select('id, title').order('phase_number'),
       ])
-
       setSubmissions(subs)
       setRounds(roundsData)
-      setPhases((phaseData as Phase[]) || [])
-    } catch (err) {
+      setPhases(phasesRes.data ?? [])
+    } catch (err: any) {
       console.error('Failed to load submissions:', err)
-      setError('Không thể tải dữ liệu bài nộp. Vui lòng thử lại.')
+      setError(err?.message || 'Không thể tải danh sách bài nộp.')
     }
   }, [supabase])
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        router.push('/login?redirect=/admin/submissions')
+        return
+      }
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -516,14 +546,14 @@ export default function AdminSubmissions() {
     init()
   }, [supabase, router, loadData])
 
-  const openAttachment = async (sub: AdminSubmissionRow) => {
-    if (sub.submission_kind === 'link' && sub.submission_url) {
-      window.open(sub.submission_url, '_blank')
+  const openFileOrUrl = async (path?: string | null, url?: string | null) => {
+    if (url) {
+      window.open(url, '_blank')
       return
     }
-    if (sub.file_path) {
-      const url = await getDownloadUrl(sub.file_path)
-      if (url) window.open(url, '_blank')
+    if (path) {
+      const signedUrl = await getDownloadUrl(path)
+      if (signedUrl) window.open(signedUrl, '_blank')
     }
   }
 
@@ -675,6 +705,7 @@ export default function AdminSubmissions() {
               const scoreRecord = sub.scores?.[0]
               const hasScore = typeof scoreRecord?.total_score === 'number'
               const parsedJudge = parseCommentAndJudge(scoreRecord?.comment)
+              const attachments = sub.attachments || parseSubmissionAttachments(sub)
 
               return (
                 <Card key={sub.id} className="p-5 hover:border-surface-border-strong transition-colors duration-150">
@@ -707,22 +738,45 @@ export default function AdminSubmissions() {
                         {sub.competition_phases?.title ?? phases.find(p => p.id === sub.phase_id)?.title ?? '—'}
                         {' · '}
                         {new Date(sub.uploaded_at).toLocaleString('vi-VN')}
-                      </p>
-
-                      {/* File / Link info */}
-                      <p className="text-sm text-text-secondary flex items-center gap-1.5">
-                        {sub.submission_kind === 'file' ? (
-                          <>
-                            <FileText className="size-3.5 text-text-tertiary shrink-0" />
-                            <span className="truncate max-w-sm">{sub.file_name}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Link2 className="size-3.5 text-text-tertiary shrink-0" />
-                            <span className="truncate max-w-sm">{sub.submission_url}</span>
-                          </>
+                        {sub.file_size && (
+                          <span className="font-mono ml-2">
+                            · Tổng file: {formatBytes(sub.file_size)}
+                          </span>
                         )}
                       </p>
+
+                      {/* Dual Deliverables View Buttons */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {attachments?.pitch_deck && (
+                          <button
+                            type="button"
+                            onClick={() => openFileOrUrl(attachments.pitch_deck.file_path, attachments.pitch_deck.url)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-overlay hover:bg-surface-raised border border-surface-border text-xs text-text-secondary hover:text-text-primary transition group"
+                          >
+                            <Presentation className="size-3.5 text-brand-cyan shrink-0" />
+                            <span className="text-text-tertiary">Slide:</span>
+                            <span className="font-medium text-text-primary truncate max-w-[130px] sm:max-w-[180px]">
+                              {attachments.pitch_deck.file_name || attachments.pitch_deck.url || 'Pitch-Deck'}
+                            </span>
+                            <ExternalLink className="size-3 text-text-tertiary group-hover:text-brand-cyan" />
+                          </button>
+                        )}
+
+                        {attachments?.report && (
+                          <button
+                            type="button"
+                            onClick={() => openFileOrUrl(attachments.report.file_path, attachments.report.url)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-overlay hover:bg-surface-raised border border-surface-border text-xs text-text-secondary hover:text-text-primary transition group"
+                          >
+                            <FileSpreadsheet className="size-3.5 text-emerald-400 shrink-0" />
+                            <span className="text-text-tertiary">Đề án:</span>
+                            <span className="font-medium text-text-primary truncate max-w-[130px] sm:max-w-[180px]">
+                              {attachments.report.file_name || attachments.report.url || 'Báo cáo'}
+                            </span>
+                            <ExternalLink className="size-3 text-text-tertiary group-hover:text-emerald-400" />
+                          </button>
+                        )}
+                      </div>
 
                       {/* Offline Judge & Comment Note if present */}
                       {(parsedJudge.judgeName || parsedJudge.comment) && (
@@ -746,14 +800,6 @@ export default function AdminSubmissions() {
                     {/* Actions */}
                     <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                       <Button
-                        variant="secondary"
-                        size="sm"
-                        leftIcon={<ExternalLink className="size-3.5" />}
-                        onClick={() => openAttachment(sub)}
-                      >
-                        Xem bài
-                      </Button>
-                      <Button
                         variant={hasScore ? 'secondary' : 'primary'}
                         size="sm"
                         leftIcon={hasScore ? <Pencil className="size-3.5" /> : <Scale className="size-3.5" />}
@@ -776,12 +822,11 @@ export default function AdminSubmissions() {
           submission={scoringSubmission}
           rounds={rounds}
           adminId={currentUid}
-          onClose={() => setScoringSubmission(null)}
-          onSaved={async () => {
-            await loadData()
-            setSuccessToast('Đã lưu điểm bài thi thành công!')
-            setTimeout(() => setSuccessToast(null), 4000)
+          onSaved={() => {
+            setSuccessToast('Đã lưu kết quả chấm điểm thành công!')
+            loadData()
           }}
+          onClose={() => setScoringSubmission(null)}
         />
       )}
     </div>

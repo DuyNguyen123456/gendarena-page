@@ -18,23 +18,29 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { getPhases } from '@/services/phases'
 import {
-  validateFile,
+  validateDeliverableFile,
+  validateTotalFileSize,
   validateUrl,
   getMyTeams,
   getCurrentSubmission,
   getSubmissionHistory,
   getDownloadUrl,
-  insertFileSubmission,
-  replaceFileSubmission,
-  insertLinkSubmission,
-  replaceLinkSubmission,
+  submitUnifiedSubmission,
+  formatBytes,
+  MAX_TOTAL_FILE_SIZE,
 } from '@/services/submissions'
-import type { Submission, SubmissionHistory, TeamRecord, TopicCategory } from '@/types/submission'
-import { TOPIC_CATEGORIES } from '@/types/submission'
+import type {
+  Submission,
+  SubmissionHistory,
+  TeamRecord,
+  TopicCategory,
+  SubmissionAttachments,
+} from '@/types/submission'
+import { TOPIC_CATEGORIES, parseSubmissionAttachments } from '@/types/submission'
 import { CompetitionPhase } from '@/types/phase'
 import { getSubmissionGate } from '@/types/phase'
+import { getPhases } from '@/services/phases'
 import { siteConfig } from '@/config/site'
 import PaymentModal from '@/components/team/PaymentModal'
 import {
@@ -64,15 +70,14 @@ import {
   ShieldAlert,
   BadgeCheck,
   CreditCard,
+  Presentation,
+  FileSpreadsheet,
+  HardDrive,
+  Sparkles,
+  Layers,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('vi-VN', {
@@ -192,19 +197,109 @@ function GateBanner({ phase }: { phase: CompetitionPhase }) {
   )
 }
 
-// ─── Dropzone (file upload) ───────────────────────────────────────────────────
+// ─── Total Capacity Meter ─────────────────────────────────────────────────────
 
-function FileDropzone({
-  file,
-  error,
-  onFile,
-  onClear,
-}: {
+function TotalCapacityMeter({ totalBytes }: { totalBytes: number }) {
+  const percent = Math.min(100, (totalBytes / MAX_TOTAL_FILE_SIZE) * 100)
+  const isOver = totalBytes > MAX_TOTAL_FILE_SIZE
+  const isWarning = !isOver && percent > 80
+  const remaining = Math.max(0, MAX_TOTAL_FILE_SIZE - totalBytes)
+
+  return (
+    <div
+      className={`p-3.5 rounded-xl border transition-all duration-300 ${
+        isOver
+          ? 'bg-semantic-danger/10 border-semantic-danger/40 text-semantic-danger'
+          : isWarning
+          ? 'bg-semantic-warning/10 border-semantic-warning/30 text-semantic-warning'
+          : 'bg-surface-overlay/80 border-surface-border text-text-secondary'
+      }`}
+    >
+      <div className="flex items-center justify-between text-xs font-semibold mb-2">
+        <span className="flex items-center gap-1.5">
+          <HardDrive className="size-4 text-brand-cyan" />
+          <span>Tổng dung lượng file tải lên:</span>
+          <span className="font-mono text-text-primary">
+            {formatBytes(totalBytes)} / 10.0 MB
+          </span>
+        </span>
+        <span
+          className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+            isOver
+              ? 'bg-semantic-danger/20 text-semantic-danger'
+              : isWarning
+              ? 'bg-semantic-warning/20 text-semantic-warning'
+              : 'bg-brand-cyan/15 text-brand-cyan'
+          }`}
+        >
+          {isOver
+            ? 'Vượt quá 10 MB!'
+            : totalBytes > 0
+            ? `Còn trống ${formatBytes(remaining)}`
+            : 'Tối đa 10 MB'}
+        </span>
+      </div>
+
+      <div className="h-2 w-full bg-surface-base rounded-full overflow-hidden border border-surface-border/60">
+        <div
+          className={`h-full transition-all duration-300 rounded-full ${
+            isOver
+              ? 'bg-semantic-danger shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+              : isWarning
+              ? 'bg-semantic-warning shadow-[0_0_10px_rgba(245,158,11,0.5)]'
+              : 'bg-brand-cyan shadow-[0_0_8px_rgba(0,212,255,0.4)]'
+          }`}
+          style={{ width: `${Math.max(percent > 0 ? 3 : 0, percent)}%` }}
+        />
+      </div>
+      <p className="mt-1.5 text-[11px] text-text-tertiary leading-relaxed">
+        * Đội thi có thể nộp bằng File, Link hoặc kết hợp cả hai. Dung lượng chỉ tính trên các file tải lên trực tiếp.
+      </p>
+    </div>
+  )
+}
+
+// ─── Deliverable Dropzone & Link Input Component ─────────────────────────────
+
+interface DeliverableInputProps {
+  title: string
+  subtitle: string
+  icon: React.ReactNode
+  templateUrl?: string
+  mode: 'file' | 'link'
+  onModeChange: (m: 'file' | 'link') => void
   file: File | null
-  error: string | null
   onFile: (f: File) => void
-  onClear: () => void
-}) {
+  onClearFile: () => void
+  fileError: string | null
+  acceptedFormats: string
+  acceptTypes: string
+  linkValue: string
+  onLinkChange: (v: string) => void
+  linkError: string | null
+  linkPlaceholder: string
+  linkHelper: string
+}
+
+function DeliverableInputBox({
+  title,
+  subtitle,
+  icon,
+  templateUrl,
+  mode,
+  onModeChange,
+  file,
+  onFile,
+  onClearFile,
+  fileError,
+  acceptedFormats,
+  acceptTypes,
+  linkValue,
+  onLinkChange,
+  linkError,
+  linkPlaceholder,
+  linkHelper,
+}: DeliverableInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
@@ -219,144 +314,176 @@ function FileDropzone({
     pick(e.dataTransfer.files)
   }
 
-  if (file && !error) {
-    return (
-      <div className="flex items-center gap-4 p-4 bg-semantic-success/10 border border-semantic-success/30 rounded-xl">
-        <FileText className="size-8 text-semantic-success shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-text-primary text-sm break-all">{file.name}</p>
-          <p className="text-xs text-text-secondary mt-0.5 font-mono">{formatBytes(file.size)}</p>
+  return (
+    <div className="p-4 sm:p-5 rounded-2xl border border-surface-border bg-surface-overlay/70 space-y-3.5 shadow-sm">
+      {/* Header & Mode switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-surface-border">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <span className="text-brand-cyan">{icon}</span>
+            <h4 className="font-display font-semibold text-text-primary text-sm sm:text-base">
+              {title}
+            </h4>
+            <span className="text-semantic-danger font-bold text-xs">*</span>
+          </div>
+          <p className="text-xs text-text-secondary">{subtitle}</p>
         </div>
-        <Button
-          onClick={onClear}
+
+        {/* Template shortcut button if provided */}
+        {templateUrl && (
+          <a
+            href={templateUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-cyan/10 hover:bg-brand-cyan/20 border border-brand-cyan/35 text-brand-cyan text-xs font-semibold shadow-sm transition shrink-0 self-start sm:self-center group"
+          >
+            <FileText className="size-3.5" />
+            <span>Mẫu đề án chuẩn của BTC</span>
+            <ExternalLink className="size-3 opacity-75 group-hover:translate-x-0.5 transition-transform" />
+          </a>
+        )}
+      </div>
+
+      {/* Mode Switch Tabs */}
+      <div className="flex rounded-lg border border-surface-border bg-surface-base p-1 max-w-xs">
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
-          className="text-semantic-danger hover:bg-semantic-danger/10"
+          onClick={() => onModeChange('file')}
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition flex items-center justify-center gap-1.5 ${
+            mode === 'file'
+              ? 'bg-brand-cyan/15 border border-brand-cyan/40 text-brand-cyan shadow-sm font-bold'
+              : 'text-text-tertiary hover:text-text-primary'
+          }`}
         >
-          Gỡ file
-        </Button>
+          <Upload className="size-3.5" /> Tải lên File
+        </button>
+        <button
+          type="button"
+          onClick={() => onModeChange('link')}
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition flex items-center justify-center gap-1.5 ${
+            mode === 'link'
+              ? 'bg-brand-cyan/15 border border-brand-cyan/40 text-brand-cyan shadow-sm font-bold'
+              : 'text-text-tertiary hover:text-text-primary'
+          }`}
+        >
+          <LinkIcon className="size-3.5" /> Dán Link trực tuyến
+        </button>
       </div>
-    )
-  }
 
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault()
-          setDragging(true)
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        className={`w-full p-8 rounded-xl border-2 border-dashed transition-all duration-200 text-center cursor-pointer ${
-          dragging
-            ? 'border-brand-cyan bg-brand-cyan/10 shadow-[0_0_20px_rgba(0,212,255,0.15)]'
-            : error
-            ? 'border-semantic-danger/50 bg-semantic-danger/10'
-            : 'border-surface-border bg-surface-overlay hover:border-brand-cyan/40 hover:bg-surface-raised'
-        }`}
-      >
-        <FileText className="size-10 text-brand-cyan mx-auto mb-3" />
-        <p className="text-text-primary font-semibold text-sm">Kéo thả file PDF đề án vào đây</p>
-        <p className="text-text-tertiary text-xs mt-1">hoặc click để chọn từ thiết bị</p>
-        <div className="mt-4 space-y-1 text-xs text-text-secondary">
-          <p className="flex items-center justify-center gap-1.5">
-            <Check className="size-3.5 text-brand-cyan" /> Định dạng chấp nhận: PDF (.pdf)
-          </p>
-          <p className="flex items-center justify-center gap-1.5">
-            <Check className="size-3.5 text-brand-cyan" /> Dung lượng tối đa: 10 MB
-          </p>
+      {/* Mode Body: File Dropzone */}
+      {mode === 'file' && (
+        <div>
+          {file && !fileError ? (
+            <div className="flex items-center gap-3.5 p-3.5 bg-semantic-success/10 border border-semantic-success/30 rounded-xl">
+              <div className="size-9 rounded-lg bg-semantic-success/20 flex items-center justify-center text-semantic-success shrink-0">
+                <Check className="size-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-text-primary text-xs sm:text-sm truncate">
+                  {file.name}
+                </p>
+                <p className="text-[11px] text-text-secondary font-mono mt-0.5">
+                  Dung lượng: {formatBytes(file.size)}
+                </p>
+              </div>
+              <Button
+                onClick={onClearFile}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-semantic-danger hover:bg-semantic-danger/10 text-xs shrink-0"
+              >
+                Gỡ file
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setDragging(true)
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+                className={`w-full p-6 rounded-xl border-2 border-dashed transition-all duration-200 text-center cursor-pointer ${
+                  dragging
+                    ? 'border-brand-cyan bg-brand-cyan/10 shadow-[0_0_15px_rgba(0,212,255,0.15)]'
+                    : fileError
+                    ? 'border-semantic-danger/50 bg-semantic-danger/10'
+                    : 'border-surface-border bg-surface-base hover:border-brand-cyan/40 hover:bg-surface-raised/70'
+                }`}
+              >
+                <Upload className="size-7 text-brand-cyan mx-auto mb-2 opacity-80" />
+                <p className="text-text-primary font-semibold text-xs sm:text-sm">
+                  Kéo thả file vào đây hoặc <span className="text-brand-cyan underline">chọn từ thiết bị</span>
+                </p>
+                <p className="text-text-tertiary text-[11px] mt-1">
+                  Định dạng hỗ trợ: <strong className="text-text-secondary">{acceptedFormats}</strong>
+                </p>
+              </button>
+              <input
+                ref={inputRef}
+                type="file"
+                accept={acceptTypes}
+                className="hidden"
+                onChange={(e) => pick(e.target.files)}
+              />
+              {fileError && (
+                <p className="mt-2 text-xs text-semantic-danger font-medium flex items-center gap-1.5">
+                  <AlertTriangle className="size-3.5" /> {fileError}
+                </p>
+              )}
+            </div>
+          )}
         </div>
-      </button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="application/pdf,.pdf"
-        className="hidden"
-        onChange={(e) => pick(e.target.files)}
-      />
-      {error && (
-        <p className="mt-2 text-xs text-semantic-danger font-medium flex items-center gap-1.5">
-          <AlertTriangle className="size-3.5" /> {error}
-        </p>
+      )}
+
+      {/* Mode Body: Link Input */}
+      {mode === 'link' && (
+        <div>
+          <div
+            className={`border rounded-xl overflow-hidden transition bg-surface-base ${
+              linkError ? 'border-semantic-danger/50' : 'border-surface-border focus-within:border-brand-cyan'
+            }`}
+          >
+            <div className="px-3.5 py-3">
+              <label className="block text-[11px] font-semibold text-text-tertiary mb-1.5 flex items-center gap-1.5">
+                <LinkIcon className="size-3.5 text-brand-cyan" />
+                <span>Nhập đường dẫn trực tuyến (Public Link)</span>
+              </label>
+              <input
+                type="url"
+                value={linkValue}
+                onChange={(e) => onLinkChange(e.target.value)}
+                placeholder={linkPlaceholder}
+                className="w-full bg-transparent text-text-primary text-xs sm:text-sm placeholder:text-text-tertiary focus:outline-none"
+              />
+            </div>
+            <div className="px-3.5 py-2 bg-surface-overlay/80 border-t border-surface-border text-[11px] text-text-tertiary flex flex-wrap items-center justify-between gap-2">
+              <span className="flex items-center gap-1">
+                <Info className="size-3 text-brand-cyan shrink-0" />
+                {linkHelper}
+              </span>
+              <span className="text-semantic-warning flex items-center gap-1">
+                <AlertTriangle className="size-3 text-semantic-warning shrink-0" />
+                Vui lòng mở quyền xem công khai
+              </span>
+            </div>
+          </div>
+          {linkError && (
+            <p className="mt-2 text-xs text-semantic-danger font-medium flex items-center gap-1.5">
+              <AlertTriangle className="size-3.5" /> {linkError}
+            </p>
+          )}
+        </div>
       )}
     </div>
   )
 }
 
-// ─── Link Input ───────────────────────────────────────────────────────────────
-
-function LinkInput({
-  value,
-  error,
-  onChange,
-}: {
-  value: string
-  error: string | null
-  onChange: (v: string) => void
-}) {
-  return (
-    <div>
-      <div
-        className={`border rounded-xl overflow-hidden transition ${
-          error ? 'border-semantic-danger/50' : 'border-surface-border focus-within:border-brand-cyan'
-        }`}
-      >
-        <div className="px-4 py-3 bg-surface-overlay">
-          <label className="block text-xs font-semibold text-text-secondary mb-2 flex items-center gap-1.5">
-            <LinkIcon className="size-4 text-brand-cyan" />
-            <span>Đường dẫn tài liệu / đề án trực tuyến</span>
-          </label>
-          <input
-            id="link-submission-input"
-            type="url"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="https://drive.google.com/..."
-            className="w-full bg-transparent text-text-primary text-sm placeholder:text-text-tertiary focus:outline-none"
-          />
-        </div>
-        <div className="px-4 py-2.5 bg-surface-base border-t border-surface-border text-xs text-text-tertiary space-y-1">
-          <p className="flex items-center gap-1.5">
-            <Info className="size-3.5 text-brand-cyan shrink-0" /> Hỗ trợ: Google Drive, GitHub, Figma, Notion, v.v.
-          </p>
-          <p className="text-semantic-warning flex items-center gap-1.5">
-            <AlertTriangle className="size-3.5 text-semantic-warning shrink-0" /> Vui lòng mở quyền truy cập CÔNG KHAI để Ban giám khảo có thể xem
-          </p>
-        </div>
-      </div>
-      {error && (
-        <p className="mt-2 text-xs text-semantic-danger font-medium flex items-center gap-1.5">
-          <AlertTriangle className="size-3.5" /> {error}
-        </p>
-      )}
-    </div>
-  )
-}
-
-// ─── Progress Bar ─────────────────────────────────────────────────────────────
-
-function UploadProgress({ progress }: { progress: number }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-xs font-semibold text-text-secondary">
-        <span>Đang nộp bài...</span>
-        <span className="font-mono">{progress}%</span>
-      </div>
-      <div className="h-1.5 bg-surface-overlay rounded-full overflow-hidden">
-        <div
-          className="h-full bg-brand-cyan rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(0,212,255,0.5)]"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-    </div>
-  )
-}
-
-// ─── Submit Form (per-phase) ──────────────────────────────────────────────────
+// ─── Submit Form (Dual Deliverable + Capacity Check) ─────────────────────────
 
 function SubmitForm({
   phase,
@@ -371,36 +498,67 @@ function SubmitForm({
   onSuccess: () => void
   onCancel: () => void
 }) {
-  const type = phase.submission_type ?? 'file'
-  const [activeTab, setActiveTab] = useState<'file' | 'link'>(type === 'link' ? 'link' : 'file')
-
   const [topic, setTopic] = useState<TopicCategory | ''>('')
   const [topicError, setTopicError] = useState<string | null>(null)
 
-  const [file, setFile] = useState<File | null>(null)
-  const [fileError, setFileError] = useState<string | null>(null)
-  const [linkValue, setLinkValue] = useState('')
-  const [linkError, setLinkError] = useState<string | null>(null)
+  // Pitch Deck state
+  const [pitchMode, setPitchMode] = useState<'file' | 'link'>('file')
+  const [pitchFile, setPitchFile] = useState<File | null>(null)
+  const [pitchFileError, setPitchFileError] = useState<string | null>(null)
+  const [pitchLink, setPitchLink] = useState('')
+  const [pitchLinkError, setPitchLinkError] = useState<string | null>(null)
+
+  // Report state
+  const [reportMode, setReportMode] = useState<'file' | 'link'>('file')
+  const [reportFile, setReportFile] = useState<File | null>(null)
+  const [reportFileError, setReportFileError] = useState<string | null>(null)
+  const [reportLink, setReportLink] = useState('')
+  const [reportLinkError, setReportLinkError] = useState<string | null>(null)
+
+  // Process & UI state
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [showConfirm, setShowConfirm] = useState(false)
   const [pendingExisting, setPendingExisting] = useState<Submission | null>(null)
   const { toasts, add: addToast, dismiss: dismissToast } = useToast()
 
-  function handleFileSet(f: File) {
-    setFile(f)
-    setFileError(validateFile(f))
+  // Pitch-deck handlers
+  function handlePitchFileSet(f: File) {
+    setPitchFile(f)
+    setPitchFileError(validateDeliverableFile(f, 'pitch_deck'))
+  }
+  function handlePitchFileClear() {
+    setPitchFile(null)
+    setPitchFileError(null)
+  }
+  function handlePitchLinkChange(v: string) {
+    setPitchLink(v)
+    setPitchLinkError(v ? validateUrl(v) : null)
   }
 
-  function handleFileClear() {
-    setFile(null)
-    setFileError(null)
+  // Report handlers
+  function handleReportFileSet(f: File) {
+    setReportFile(f)
+    setReportFileError(validateDeliverableFile(f, 'report'))
+  }
+  function handleReportFileClear() {
+    setReportFile(null)
+    setReportFileError(null)
+  }
+  function handleReportLinkChange(v: string) {
+    setReportLink(v)
+    setReportLinkError(v ? validateUrl(v) : null)
   }
 
-  function handleLinkChange(v: string) {
-    setLinkValue(v)
-    setLinkError(v ? validateUrl(v) : null)
-  }
+  // Total file size calculation
+  const totalUploadedBytes = useMemo(() => {
+    let sum = 0
+    if (pitchMode === 'file' && pitchFile) sum += pitchFile.size
+    if (reportMode === 'file' && reportFile) sum += reportFile.size
+    return sum
+  }, [pitchMode, pitchFile, reportMode, reportFile])
+
+  const isOverCapacity = totalUploadedBytes > MAX_TOTAL_FILE_SIZE
 
   async function doSubmit(existing: Submission | null) {
     if (!topic) {
@@ -409,7 +567,7 @@ function SubmitForm({
     }
 
     setUploading(true)
-    setUploadProgress(10)
+    setUploadProgress(15)
 
     const supabase = createClient()
     const {
@@ -421,20 +579,27 @@ function SubmitForm({
       return
     }
 
-    setUploadProgress(30)
-    let result
+    setUploadProgress(35)
 
-    if (activeTab === 'file' && file) {
-      setUploadProgress(50)
-      result = existing
-        ? await replaceFileSubmission(user.id, teamId, phase.id, file, existing, topic)
-        : await insertFileSubmission(user.id, teamId, phase.id, file, topic)
-    } else {
-      setUploadProgress(60)
-      result = existing
-        ? await replaceLinkSubmission(user.id, teamId, phase.id, linkValue, existing, topic)
-        : await insertLinkSubmission(user.id, teamId, phase.id, linkValue, topic)
-    }
+    const result = await submitUnifiedSubmission(
+      {
+        userId: user.id,
+        teamId,
+        phaseId: phase.id,
+        topic,
+        pitchDeck: {
+          kind: pitchMode,
+          file: pitchMode === 'file' ? pitchFile : null,
+          url: pitchMode === 'link' ? pitchLink : null,
+        },
+        report: {
+          kind: reportMode,
+          file: reportMode === 'file' ? reportFile : null,
+          url: reportMode === 'link' ? reportLink : null,
+        },
+      },
+      existing,
+    )
 
     setUploadProgress(100)
     setUploading(false)
@@ -446,7 +611,12 @@ function SubmitForm({
       return
     }
 
-    addToast('success', 'Nộp bài thành công! Hệ thống đã ghi nhận đề án.')
+    addToast(
+      'success',
+      existing
+        ? 'Đã thay thế bài nộp thành công! Bài cũ đã được lưu vào lịch sử.'
+        : 'Nộp bài thành công! Hệ thống đã ghi nhận đề án dự thi của đội.',
+    )
     setTimeout(() => onSuccess(), 800)
   }
 
@@ -458,22 +628,48 @@ function SubmitForm({
       return
     }
 
-    if (activeTab === 'file') {
-      if (!file) {
-        addToast('error', 'Vui lòng chọn file PDF.')
+    // Validate Pitch Deck
+    if (pitchMode === 'file') {
+      if (!pitchFile) {
+        addToast('error', 'Vui lòng chọn file Slide Pitch-Deck.')
         return
       }
-      const err = validateFile(file)
+      const err = validateDeliverableFile(pitchFile, 'pitch_deck')
       if (err) {
-        setFileError(err)
+        setPitchFileError(err)
         return
       }
     } else {
-      const err = validateUrl(linkValue)
+      const err = validateUrl(pitchLink)
       if (err) {
-        setLinkError(err)
+        setPitchLinkError(err)
         return
       }
+    }
+
+    // Validate Report
+    if (reportMode === 'file') {
+      if (!reportFile) {
+        addToast('error', 'Vui lòng chọn file Báo cáo đề án bằng chữ.')
+        return
+      }
+      const err = validateDeliverableFile(reportFile, 'report')
+      if (err) {
+        setReportFileError(err)
+        return
+      }
+    } else {
+      const err = validateUrl(reportLink)
+      if (err) {
+        setReportLinkError(err)
+        return
+      }
+    }
+
+    // Check capacity limit
+    if (isOverCapacity) {
+      addToast('error', 'Tổng dung lượng các file tải lên vượt quá 10 MB. Vui lòng nén file.')
+      return
     }
 
     // Check existing submission
@@ -496,8 +692,13 @@ function SubmitForm({
               <AlertTriangle className="size-6" />
             </div>
             <DialogTitle>Xác nhận nộp lại đề án</DialogTitle>
-            <DialogDescription>
-              Nộp bài mới sẽ <span className="font-semibold text-text-primary">thay thế bài cũ</span>. Bài cũ sẽ được chuyển vào lịch sử lưu trữ của đội.
+            <DialogDescription className="space-y-2 text-xs sm:text-sm">
+              <p>
+                Lượt nộp mới sẽ <strong className="text-text-primary">thay thế hoàn toàn bài nộp hiện tại</strong> của đội.
+              </p>
+              <p className="text-text-tertiary">
+                Hệ thống sẽ chuyển phiên bản cũ vào Lịch sử nộp bài và tự động giải phóng các file lưu trữ cũ.
+              </p>
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 justify-end pt-4 border-t border-surface-border">
@@ -528,23 +729,6 @@ function SubmitForm({
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Template Báo Cáo Shortcut */}
-        <div className="p-3 rounded-xl bg-surface-overlay/80 border border-brand-cyan/25 flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-text-secondary min-w-0">
-            <FileText className="size-4 text-brand-cyan shrink-0" />
-            <span className="truncate">Thí sinh cần định dạng theo khung mẫu báo cáo chuẩn của BTC?</span>
-          </div>
-          <a
-            href={siteConfig.resources.reportTemplate}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-brand-cyan/10 hover:bg-brand-cyan/20 border border-brand-cyan/30 text-brand-cyan font-semibold text-[11px] transition shrink-0"
-          >
-            <span>Mở Template</span>
-            <ExternalLink className="size-3" />
-          </a>
-        </div>
-
         {/* Topic Category Selector */}
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold text-text-secondary flex items-center gap-1.5">
@@ -558,12 +742,12 @@ function SubmitForm({
               setTopic(e.target.value as TopicCategory)
               setTopicError(null)
             }}
-            className={`w-full bg-surface-overlay border rounded-lg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand-cyan transition ${
+            className={`w-full bg-surface-overlay border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-brand-cyan transition ${
               topicError ? 'border-semantic-danger/60 bg-semantic-danger/10' : 'border-surface-border'
             }`}
           >
             <option value="" disabled>
-              -- Chọn 1 trong 5 nhóm chủ đề --
+              -- Chọn 1 trong 5 nhóm chủ đề bắt buộc --
             </option>
             {TOPIC_CATEGORIES.map((cat) => (
               <option key={cat} value={cat} className="bg-surface-raised text-text-primary">
@@ -578,53 +762,75 @@ function SubmitForm({
           )}
         </div>
 
-        {/* Tab selector for 'both' */}
-        {type === 'both' && (
-          <div className="flex rounded-lg border border-surface-border overflow-hidden bg-surface-overlay p-1">
-            {(['file', 'link'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 text-xs font-semibold uppercase tracking-wider rounded-md transition flex items-center justify-center gap-1.5 ${
-                  activeTab === tab
-                    ? 'bg-surface-raised text-brand-cyan shadow-sm'
-                    : 'text-text-tertiary hover:text-text-primary'
-                }`}
-              >
-                {tab === 'file' ? (
-                  <>
-                    <FileText className="size-3.5" /> Nộp File PDF
-                  </>
-                ) : (
-                  <>
-                    <LinkIcon className="size-3.5" /> Nộp Link trực tuyến
-                  </>
-                )}
-              </button>
-            ))}
+        {/* Deliverable 1: Slide Pitch-Deck */}
+        <DeliverableInputBox
+          title="1. Slide báo cáo (Pitch-Deck)"
+          subtitle="Slide thuyết trình tổng quan đề án khởi nghiệp và mô hình giải pháp"
+          icon={<Presentation className="size-4" />}
+          mode={pitchMode}
+          onModeChange={(m) => {
+            setPitchMode(m)
+            setPitchFileError(null)
+            setPitchLinkError(null)
+          }}
+          file={pitchFile}
+          onFile={handlePitchFileSet}
+          onClearFile={handlePitchFileClear}
+          fileError={pitchFileError}
+          acceptedFormats="PDF (.pdf), PowerPoint (.pptx, .ppt)"
+          acceptTypes="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,.pptx,application/vnd.ms-powerpoint,.ppt"
+          linkValue={pitchLink}
+          onLinkChange={handlePitchLinkChange}
+          linkError={pitchLinkError}
+          linkPlaceholder="https://www.canva.com/design/... hoặc Google Slides, Figma"
+          linkHelper="Hỗ trợ: Canva, Google Slides, Figma, Pitch.com, Drive, v.v."
+        />
+
+        {/* Deliverable 2: Written Report */}
+        <DeliverableInputBox
+          title="2. Báo cáo đề án bằng chữ"
+          subtitle="Thuyết minh đề án chi tiết và phân tích thị trường theo khung mẫu chuẩn của BTC"
+          icon={<FileSpreadsheet className="size-4" />}
+          templateUrl={siteConfig.resources.reportTemplate}
+          mode={reportMode}
+          onModeChange={(m) => {
+            setReportMode(m)
+            setReportFileError(null)
+            setReportLinkError(null)
+          }}
+          file={reportFile}
+          onFile={handleReportFileSet}
+          onClearFile={handleReportFileClear}
+          fileError={reportFileError}
+          acceptedFormats="PDF (.pdf), Word (.docx, .doc)"
+          acceptTypes="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,application/msword,.doc"
+          linkValue={reportLink}
+          onLinkChange={handleReportLinkChange}
+          linkError={reportLinkError}
+          linkPlaceholder="https://docs.google.com/document/d/... hoặc Notion"
+          linkHelper="Hỗ trợ: Google Docs, Notion, Coda, Google Drive, v.v."
+        />
+
+        {/* Total File Capacity Meter */}
+        <TotalCapacityMeter totalBytes={totalUploadedBytes} />
+
+        {/* Progress Bar while uploading */}
+        {uploading && (
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs font-semibold text-text-secondary">
+              <span>Đang tải lên hệ thống và xử lý dữ liệu...</span>
+              <span className="font-mono">{uploadProgress}%</span>
+            </div>
+            <div className="h-1.5 bg-surface-overlay rounded-full overflow-hidden">
+              <div
+                className="h-full bg-brand-cyan rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(0,212,255,0.5)]"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
           </div>
         )}
 
-        {/* File input */}
-        {(type === 'file' || (type === 'both' && activeTab === 'file')) && (
-          <FileDropzone
-            file={file}
-            error={fileError}
-            onFile={handleFileSet}
-            onClear={handleFileClear}
-          />
-        )}
-
-        {/* Link input */}
-        {(type === 'link' || (type === 'both' && activeTab === 'link')) && (
-          <LinkInput value={linkValue} error={linkError} onChange={handleLinkChange} />
-        )}
-
-        {/* Progress */}
-        {uploading && <UploadProgress progress={uploadProgress} />}
-
-        {/* Actions */}
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-2">
           <Button
             id={`submit-btn-${phase.id}`}
@@ -633,16 +839,17 @@ function SubmitForm({
             size="md"
             isLoading={uploading}
             leftIcon={<Upload className="size-4" />}
-            disabled={uploading || (activeTab === 'file' ? !!fileError : !!linkError)}
+            disabled={uploading || isOverCapacity}
             className="w-full sm:w-auto justify-center"
           >
-            Nộp bài
+            Xác nhận nộp bài
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="md"
             onClick={onCancel}
+            disabled={uploading}
             className="w-full sm:w-auto justify-center"
           >
             Hủy bỏ
@@ -653,7 +860,7 @@ function SubmitForm({
   )
 }
 
-// ─── Current Submission Card ──────────────────────────────────────────────────
+// ─── Current Submission Card (Dual Document Display) ──────────────────────────
 
 function CurrentSubmissionCard({
   submission,
@@ -664,86 +871,187 @@ function CurrentSubmissionCard({
   phase: CompetitionPhase
   onResubmit: () => void
 }) {
-  const [loadingUrl, setLoadingUrl] = useState(false)
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
   const status = STATUS_BADGES[submission.status] ?? STATUS_BADGES['submitted']
   const gate = getSubmissionGate(phase)
-  const isFile = submission.submission_kind === 'file'
 
-  async function handleDownload() {
-    if (!submission.file_path) return
-    setLoadingUrl(true)
-    const url = await getDownloadUrl(submission.file_path)
-    setLoadingUrl(false)
-    if (url) window.open(url, '_blank', 'noopener,noreferrer')
-    else alert('Không thể tạo link tải. Vui lòng thử lại.')
+  const attachments = submission.attachments || parseSubmissionAttachments(submission)
+
+  async function handleDownload(filePath: string, key: string) {
+    if (!filePath) return
+    setDownloadingKey(key)
+    const url = await getDownloadUrl(filePath)
+    setDownloadingKey(null)
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } else {
+      alert('Không thể tạo link tải. Vui lòng thử lại.')
+    }
   }
 
   return (
-    <Card className="p-5 sm:p-6 border-brand-cyan/30 bg-surface-overlay/60 space-y-4">
+    <Card className="p-5 sm:p-6 border-brand-cyan/35 bg-surface-overlay/70 space-y-4 shadow-elevation-1">
+      {/* Card Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-        <div className="space-y-2.5 flex-1 min-w-0">
-          <div className="flex items-center gap-2.5">
-            <span className="shrink-0 text-brand-cyan">
-              {isFile ? <FileText className="size-5" /> : <LinkIcon className="size-5" />}
-            </span>
-            <span className="font-display font-semibold text-text-primary text-base break-all">
-              {isFile ? submission.file_name : 'Bài nộp bằng link trực tuyến'}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="space-y-2 flex-1 min-w-0">
+          <div className="flex items-center gap-2">
             <Badge variant="brand" size="sm">
               <Tag className="size-3 mr-1" />
               {submission.topic || 'Chưa chọn chủ đề'}
             </Badge>
-            {isFile && submission.file_size && (
-              <span className="text-xs text-text-tertiary font-mono flex items-center gap-1">
-                <Package className="size-3.5" /> {formatBytes(submission.file_size)}
+            <Badge variant={status.variant} size="sm">
+              {status.label}
+            </Badge>
+          </div>
+          <p className="text-xs text-text-tertiary flex items-center gap-1.5 pt-0.5">
+            <Clock className="size-3.5 text-brand-cyan" />
+            <span>Nộp lúc: <strong className="text-text-secondary">{formatDate(submission.uploaded_at)}</strong></span>
+            {submission.file_size && (
+              <span className="font-mono text-text-tertiary">
+                · Tổng file: {formatBytes(submission.file_size)}
               </span>
             )}
-            <span className="text-xs text-text-tertiary flex items-center gap-1">
-              <Clock className="size-3.5" /> Nộp lúc: {formatDate(submission.uploaded_at)}
-            </span>
-          </div>
+          </p>
         </div>
 
-        <Badge variant={status.variant} size="md">
-          {status.label}
-        </Badge>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-2 border-t border-surface-border">
-        {isFile && submission.file_path && (
-          <Button
-            id={`download-btn-${submission.id}`}
-            onClick={handleDownload}
-            variant="secondary"
-            size="sm"
-            isLoading={loadingUrl}
-            leftIcon={<Download className="size-4" />}
-            className="w-full sm:w-auto justify-center text-xs"
-          >
-            Tải xuống bài thi
-          </Button>
-        )}
-        {!isFile && submission.submission_url && (
-          <a href={submission.submission_url} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-            <Button variant="secondary" size="sm" rightIcon={<ExternalLink className="size-4" />} className="w-full justify-center text-xs">
-              Mở link bài nộp
-            </Button>
-          </a>
-        )}
         {gate === 'open' && (
           <Button
             id={`resubmit-btn-${submission.id}`}
             onClick={onResubmit}
-            variant="ghost"
+            variant="secondary"
             size="sm"
-            leftIcon={<RefreshCw className="size-4" />}
-            className="w-full sm:w-auto justify-center text-xs"
+            leftIcon={<RefreshCw className="size-3.5" />}
+            className="text-xs w-full sm:w-auto shrink-0 justify-center"
           >
             Nộp lại đề án
           </Button>
+        )}
+      </div>
+
+      {/* 2 Deliverable Preview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+        {/* Pitch Deck Preview */}
+        {attachments?.pitch_deck && (
+          <div className="p-3.5 rounded-xl border border-surface-border bg-surface-base flex flex-col justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="size-9 rounded-lg bg-brand-cyan/15 border border-brand-cyan/30 text-brand-cyan flex items-center justify-center shrink-0">
+                <Presentation className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-text-primary text-xs truncate">
+                    1. Slide Pitch-Deck
+                  </span>
+                  <Badge variant={attachments.pitch_deck.kind === 'file' ? 'brand' : 'default'} size="sm" className="text-[10px] py-0 px-1.5">
+                    {attachments.pitch_deck.kind === 'file' ? 'File Slide' : 'Link trực tuyến'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-text-secondary truncate font-medium">
+                  {attachments.pitch_deck.kind === 'file'
+                    ? attachments.pitch_deck.file_name || 'Slide báo cáo'
+                    : attachments.pitch_deck.url || 'Đường dẫn liên kết'}
+                </p>
+                {attachments.pitch_deck.kind === 'file' && attachments.pitch_deck.file_size && (
+                  <p className="text-[11px] text-text-tertiary font-mono">
+                    {formatBytes(attachments.pitch_deck.file_size)}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-surface-border/60">
+              {attachments.pitch_deck.kind === 'file' && attachments.pitch_deck.file_path ? (
+                <Button
+                  onClick={() => handleDownload(attachments.pitch_deck.file_path!, 'pitch')}
+                  variant="ghost"
+                  size="sm"
+                  isLoading={downloadingKey === 'pitch'}
+                  leftIcon={<Download className="size-3.5" />}
+                  className="w-full text-brand-cyan hover:bg-brand-cyan/10 text-xs justify-center h-8"
+                >
+                  Tải Slide về máy
+                </Button>
+              ) : attachments.pitch_deck.url ? (
+                <a
+                  href={attachments.pitch_deck.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full"
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    rightIcon={<ExternalLink className="size-3.5" />}
+                    className="w-full text-brand-cyan hover:bg-brand-cyan/10 text-xs justify-center h-8"
+                  >
+                    Mở Slide trực tuyến
+                  </Button>
+                </a>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        {/* Written Report Preview */}
+        {attachments?.report && (
+          <div className="p-3.5 rounded-xl border border-surface-border bg-surface-base flex flex-col justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="size-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                <FileSpreadsheet className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-text-primary text-xs truncate">
+                    2. Báo cáo đề án
+                  </span>
+                  <Badge variant={attachments.report.kind === 'file' ? 'brand' : 'default'} size="sm" className="text-[10px] py-0 px-1.5">
+                    {attachments.report.kind === 'file' ? 'File Đề án' : 'Link trực tuyến'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-text-secondary truncate font-medium">
+                  {attachments.report.kind === 'file'
+                    ? attachments.report.file_name || 'Báo cáo đề án'
+                    : attachments.report.url || 'Đường dẫn liên kết'}
+                </p>
+                {attachments.report.kind === 'file' && attachments.report.file_size && (
+                  <p className="text-[11px] text-text-tertiary font-mono">
+                    {formatBytes(attachments.report.file_size)}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-surface-border/60">
+              {attachments.report.kind === 'file' && attachments.report.file_path ? (
+                <Button
+                  onClick={() => handleDownload(attachments.report.file_path!, 'report')}
+                  variant="ghost"
+                  size="sm"
+                  isLoading={downloadingKey === 'report'}
+                  leftIcon={<Download className="size-3.5" />}
+                  className="w-full text-brand-cyan hover:bg-brand-cyan/10 text-xs justify-center h-8"
+                >
+                  Tải Báo cáo về máy
+                </Button>
+              ) : attachments.report.url ? (
+                <a
+                  href={attachments.report.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full"
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    rightIcon={<ExternalLink className="size-3.5" />}
+                    className="w-full text-brand-cyan hover:bg-brand-cyan/10 text-xs justify-center h-8"
+                  >
+                    Mở Báo cáo trực tuyến
+                  </Button>
+                </a>
+              ) : null}
+            </div>
+          </div>
         )}
       </div>
     </Card>
@@ -753,33 +1061,62 @@ function CurrentSubmissionCard({
 // ─── History Item ─────────────────────────────────────────────────────────────
 
 function HistoryItem({ item }: { item: SubmissionHistory }) {
-  const isFile = item.submission_kind === 'file'
+  const attachments = item.attachments || parseSubmissionAttachments(item)
+
   return (
-    <div className="flex items-start gap-3.5 p-3.5 bg-surface-overlay border border-surface-border rounded-xl text-xs">
-      <span className="shrink-0 mt-0.5 text-text-tertiary">
-        {isFile ? <FileText className="size-4" /> : <LinkIcon className="size-4" />}
-      </span>
-      <div className="flex-1 min-w-0 space-y-1">
-        <p className="font-semibold text-text-secondary break-all">
-          {isFile && item.file_name ? item.file_name : 'Nộp bằng link'}
-        </p>
-        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-text-tertiary">
-          {isFile && item.file_size && <span>Dung lượng: {formatBytes(item.file_size)}</span>}
-          <span>Nộp: {formatDate(item.uploaded_at)}</span>
-          <span>Thay thế: {formatDate(item.deleted_at)}</span>
-          {item.profiles?.email && (
-            <span className="flex items-center gap-1">
-              <UserIcon className="size-3 text-text-tertiary" /> {item.profiles.email}
-            </span>
+    <div className="p-3.5 bg-surface-overlay/80 border border-surface-border rounded-xl text-xs space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Badge variant="default" size="sm" className="bg-surface-raised border-surface-border text-text-tertiary">
+            Lượt nộp cũ
+          </Badge>
+          {item.topic && (
+            <Badge variant="brand" size="sm">
+              {item.topic}
+            </Badge>
           )}
         </div>
+        <span className="text-text-tertiary text-[11px]">
+          Thay thế: {formatDate(item.deleted_at)}
+        </span>
       </div>
-      <Badge variant="default" size="sm">
-        Bản cũ
-      </Badge>
+
+      {/* Deliverables summary in history */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+        <div className="p-2 rounded-lg bg-surface-base border border-surface-border/60 flex items-center gap-2">
+          <Presentation className="size-3.5 text-brand-cyan shrink-0" />
+          <div className="min-w-0 flex-1 truncate">
+            <span className="text-text-tertiary">Pitch-Deck: </span>
+            <span className="text-text-secondary font-medium truncate">
+              {attachments?.pitch_deck?.file_name || attachments?.pitch_deck?.url || item.file_name || 'Nộp bằng link'}
+            </span>
+          </div>
+        </div>
+
+        <div className="p-2 rounded-lg bg-surface-base border border-surface-border/60 flex items-center gap-2">
+          <FileSpreadsheet className="size-3.5 text-emerald-400 shrink-0" />
+          <div className="min-w-0 flex-1 truncate">
+            <span className="text-text-tertiary">Báo cáo chữ: </span>
+            <span className="text-text-secondary font-medium truncate">
+              {attachments?.report?.file_name || attachments?.report?.url || item.submission_url || 'Nộp bằng link'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-text-tertiary pt-1 border-t border-surface-border/40">
+        <span>Nộp lúc: {formatDate(item.uploaded_at)}</span>
+        {item.file_size && <span>Tổng file: {formatBytes(item.file_size)}</span>}
+        {item.profiles?.email && (
+          <span className="flex items-center gap-1">
+            <UserIcon className="size-3 text-text-tertiary" /> {item.profiles.email}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
+
 
 // ─── Expired Unsubmitted Phase Card ───────────────────────────────────────────
 
@@ -1173,7 +1510,7 @@ export default function SubmissionsPage() {
 
       const counts: Record<string, number> = {}
       await Promise.all(
-        teams.map(async (t) => {
+        teams.map(async (t: TeamRecord) => {
           const { count } = await supabase
             .from('team_members')
             .select('id', { count: 'exact', head: true })
