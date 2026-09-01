@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cẩm Nang Vận Hành & Hướng Dẫn Sử Dụng Website — GenD Arena 2026</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --bg-base: #050814;
+      --bg-raised: #0A1120;
+      --bg-overlay: #111B2E;
+      --bg-elevated: #182338;
+      --border: #1E2A44;
+      --border-strong: #2A3B5C;
+      --brand-cyan: #00D4FF;
+      --brand-cyan-bright: #33E0FF;
+      --brand-cyan-dim: rgba(0, 212, 255, 0.12);
+      --brand-navy: #0F1F3D;
+      --accent-violet: #7C5CFF;
+      --accent-magenta: #FF3B8B;
+      --success: #22D07A;
+      --warning: #FFB020;
+      --danger: #FF4D6D;
+      --text-primary: #F0F4FA;
+      --text-secondary: #A8B4C8;
+      --text-tertiary: #6B7A94;
+      --font-display: 'Inter', sans-serif;
+      --font-body: 'Be Vietnam Pro', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      line-height: 1.65;
+      font-size: 15px;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    /* Grid Background Effect */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(0, 212, 255, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 100% 50%, rgba(124, 92, 255, 0.05) 0%, transparent 50%),
+        linear-gradient(rgba(30, 42, 68, 0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30, 42, 68, 0.2) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 320px;
+      background: rgba(10, 17, 32, 0.85);
+      backdrop-filter: blur(16px);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      padding: 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--brand-cyan-dim);
+      color: var(--brand-cyan);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .sidebar-search {
+      padding: 16px 20px 8px 20px;
+    }
+
+    .search-input-wrapper {
+      position: relative;
+    }
+
+    .search-input-wrapper i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-tertiary);
+      width: 16px;
+      height: 16px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 9px 12px 9px 36px;
+      background: var(--bg-overlay);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--font-body);
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+      border-color: var(--brand-cyan);
+      box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+    }
+
+    .sidebar-nav {
+      padding: 12px 12px 40px 12px;
+      flex: 1;
+    }
+
+    .nav-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      padding: 16px 12px 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      margin-bottom: 2px;
+    }
+
+    .nav-link i {
+      width: 16px;
+      height: 16px;
+      color: var(--text-tertiary);
+      transition: color 0.15s;
+    }
+
+    .nav-link:hover {
+      background: var(--bg-raised);
+      color: var(--text-primary);
+    }
+
+    .nav-link:hover i {
+      color: var(--brand-cyan);
+    }
+
+    .nav-link.active {
+      background: var(--brand-cyan-dim);
+      color: var(--brand-cyan-bright);
+      font-weight: 600;
+      border: 1px solid rgba(0, 212, 255, 0.3);
+    }
+
+    .nav-link.active i {
+      color: var(--brand-cyan-bright);
+    }
+
+    /* Main Content Area */
+    .main-content {
+      margin-left: 320px;
+      flex: 1;
+      padding: 40px 60px 100px 60px;
+      max-width: 1200px;
+    }
+
+    /* Header Banner */
+    .hero-doc-banner {
+      background: linear-gradient(135deg, rgba(15, 31, 61, 0.8) 0%, rgba(10, 17, 32, 0.9) 100%);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 36px 40px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 48px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .hero-doc-banner::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(0, 212, 255, 0.15) 0%, transparent 70%);
+      filter: blur(40px);
+    }
+
+    .doc-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .doc-tag {
+      background: var(--brand-cyan-dim);
+      color: var(--brand-cyan);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .doc-tag.gold {
+      background: rgba(255, 176, 32, 0.12);
+      color: var(--warning);
+      border-color: rgba(255, 176, 32, 0.3);
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      line-height: 1.25;
+    }
+
+    .hero-subtitle {
+      color: var(--text-secondary);
+      font-size: 15.5px;
+      max-width: 800px;
+      line-height: 1.6;
+    }
+
+    .banner-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--brand-cyan);
+      color: #050814;
+    }
+
+    .btn-primary:hover {
+      background: var(--brand-cyan-bright);
+      box-shadow: 0 0 16px rgba(0, 212, 255, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--bg-overlay);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-strong);
+    }
+
+    /* Section Styling */
+    .doc-section {
+      margin-bottom: 56px;
+      scroll-margin-top: 30px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+      margin-bottom: 24px;
+    }
+
+    .section-icon-box {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--bg-overlay);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-cyan);
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .section-desc {
+      color: var(--text-secondary);
+      font-size: 14.5px;
+      margin-bottom: 20px;
+    }
+
+    /* Cards & Grids */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 16.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .card-badge.cyan { background: var(--brand-cyan-dim); color: var(--brand-cyan); border: 1px solid rgba(0, 212, 255, 0.3); }
+    .card-badge.green { background: rgba(34, 208, 122, 0.12); color: var(--success); border: 1px solid rgba(34, 208, 122, 0.3); }
+    .card-badge.orange { background: rgba(255, 176, 32, 0.12); color: var(--warning); border: 1px solid rgba(255, 176, 32, 0.3); }
+    .card-badge.purple { background: rgba(124, 92, 255, 0.12); color: var(--accent-violet); border: 1px solid rgba(124, 92, 255, 0.3); }
+
+    .card-desc {
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+
+    .card-list {
+      list-style: none;
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card-list li {
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .card-list li i {
+      width: 14px;
+      height: 14px;
+      color: var(--brand-cyan);
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    /* Steps Component */
+    .steps-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .step-box {
+      display: flex;
+      gap: 18px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      transition: all 0.2s ease;
+    }
+
+    .step-box:hover {
+      border-color: var(--brand-cyan);
+      background: rgba(15, 31, 61, 0.4);
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--brand-cyan-dim);
+      border: 1px solid rgba(0, 212, 255, 0.4);
+      color: var(--brand-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      flex: 1;
+    }
+
+    .step-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .step-desc {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    /* Callout Alerts */
+    .callout {
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 14px;
+      margin: 18px 0;
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+
+    .callout.tip {
+      background: rgba(0, 212, 255, 0.08);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      color: #99eeff;
+    }
+
+    .callout.tip i { color: var(--brand-cyan); }
+
+    .callout.warning {
+      background: rgba(255, 176, 32, 0.08);
+      border: 1px solid rgba(255, 176, 32, 0.3);
+      color: #ffe099;
+    }
+
+    .callout.warning i { color: var(--warning); }
+
+    .callout.important {
+      background: rgba(124, 92, 255, 0.08);
+      border: 1px solid rgba(124, 92, 255, 0.3);
+      color: #d1c4ff;
+    }
+
+    .callout.important i { color: var(--accent-violet); }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin: 18px 0;
+      background: var(--bg-raised);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      text-align: left;
+    }
+
+    th {
+      background: var(--bg-overlay);
+      color: var(--text-primary);
+      font-weight: 600;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-display);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .url-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--brand-cyan);
+      background: var(--brand-cyan-dim);
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 212, 255, 0.2);
+    }
+
+    /* Accordion FAQ */
+    .accordion-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 12px;
+      background: var(--bg-raised);
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .accordion-item:hover {
+      border-color: var(--border-strong);
+    }
+
+    .accordion-header {
+      padding: 16px 20px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 14.5px;
+      user-select: none;
+    }
+
+    .accordion-header i {
+      transition: transform 0.2s ease;
+      color: var(--text-tertiary);
+    }
+
+    .accordion-item.open .accordion-header i {
+      transform: rotate(180deg);
+      color: var(--brand-cyan);
+    }
+
+    .accordion-content {
+      display: none;
+      padding: 0 20px 18px 20px;
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      line-height: 1.6;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .accordion-item.open .accordion-content {
+      display: block;
+    }
+
+    /* Print View */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      .sidebar, .grid-bg, .banner-actions {
+        display: none !important;
+      }
+      .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .card, .step-box, .hero-doc-banner, .table-container {
+        background: #fff !important;
+        border: 1px solid #ccc !important;
+        color: #000 !important;
+        box-shadow: none !important;
+      }
+      .section-title, .hero-title, .step-title, .card-title {
+        color: #000 !important;
+      }
+      .accordion-content {
+        display: block !important;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        display: none;
+      }
+      .main-content {
+        margin-left: 0;
+        padding: 24px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-title">
+          <i data-lucide="trophy" style="color: var(--brand-cyan)"></i>
+          <span>GenD Arena 2026</span>
+          <span class="brand-badge">Guide</span>
+        </div>
+      </div>
+
+      <div class="sidebar-search">
+        <div class="search-input-wrapper">
+          <i data-lucide="search"></i>
+          <input type="text" id="docSearch" class="search-input" placeholder="Tìm kiếm tính năng..." onkeyup="filterNav()" />
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebarNav">
+        <div class="nav-group-title">
+          <i data-lucide="compass"></i>
+          <span>Bắt Đầu</span>
+        </div>
+        <a href="#tong-quan" class="nav-link active">
+          <i data-lucide="info"></i>
+          <span>1. Tổng quan & Định vị</span>
+        </a>
+        <a href="#luong-hoat-dong" class="nav-link">
+          <i data-lucide="git-branch"></i>
+          <span>2. Sơ đồ quy trình</span>
+        </a>
+
+        <div class="nav-group-title">
+          <i data-lucide="users"></i>
+          <span>Phân Hệ Thí Sinh</span>
+        </div>
+        <a href="#landing-page" class="nav-link">
+          <i data-lucide="layout"></i>
+          <span>3. Trang chủ & Landing</span>
+        </a>
+        <a href="#auth-profile" class="nav-link">
+          <i data-lucide="user-check"></i>
+          <span>4. Auth & Hồ sơ cá nhân</span>
+        </a>
+        <a href="#team-dashboard" class="nav-link">
+          <i data-lucide="shield"></i>
+          <span>5. Bảng điều khiển Đội thi</span>
+        </a>
+        <a href="#vietqr-payment" class="nav-link">
+          <i data-lucide="credit-card"></i>
+          <span>6. Đóng lệ phí VietQR</span>
+        </a>
+        <a href="#submissions-portal" class="nav-link">
+          <i data-lucide="upload-cloud"></i>
+          <span>7. Cổng nộp bài dự thi</span>
+        </a>
+        <a href="#events-tickets" class="nav-link">
+          <i data-lucide="ticket"></i>
+          <span>8. Sự kiện & Vé QR</span>
+        </a>
+
+        <div class="nav-group-title">
+          <i data-lucide="settings"></i>
+          <span>Ban Tổ Chức (Admin)</span>
+        </div>
+        <a href="#admin-overview" class="nav-link">
+          <i data-lucide="layout-grid"></i>
+          <span>9. Admin Hub tổng quan</span>
+        </a>
+        <a href="#admin-payments" class="nav-link">
+          <i data-lucide="badge-check"></i>
+          <span>10. Duyệt lệ phí thi</span>
+        </a>
+        <a href="#admin-events" class="nav-link">
+          <i data-lucide="calendar-check"></i>
+          <span>11. Quản lý sự kiện & Vé</span>
+        </a>
+        <a href="#admin-phases" class="nav-link">
+          <i data-lucide="calendar"></i>
+          <span>12. Lịch trình & Mở cổng</span>
+        </a>
+        <a href="#admin-scoring" class="nav-link">
+          <i data-lucide="scale"></i>
+          <span>13. Cấu hình Barem điểm</span>
+        </a>
+        <a href="#admin-reviews" class="nav-link">
+          <i data-lucide="file-check"></i>
+          <span>14. Chấm bài & Xếp hạng</span>
+        </a>
+        <a href="#admin-entities" class="nav-link">
+          <i data-lucide="mic"></i>
+          <span>15. Diễn giả & Nhà tài trợ</span>
+        </a>
+
+        <div class="nav-group-title">
+          <i data-lucide="book-open"></i>
+          <span>Cẩm Nang Vận Hành</span>
+        </div>
+        <a href="#playbook-media" class="nav-link">
+          <i data-lucide="clapperboard"></i>
+          <span>16. Kịch bản vận hành Media</span>
+        </a>
+        <a href="#troubleshooting-faq" class="nav-link">
+          <i data-lucide="help-circle"></i>
+          <span>17. Xử lý sự cố & FAQ</span>
+        </a>
+        <a href="#sitemap-urls" class="nav-link">
+          <i data-lucide="link"></i>
+          <span>18. Danh mục URLs sitemap</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Hero Doc Banner -->
+      <div class="hero-doc-banner">
+        <div class="doc-meta">
+          <span class="doc-tag"><i data-lucide="shield-check"></i> TÀI LIỆU NỘI BỘ BTC</span>
+          <span class="doc-tag gold"><i data-lucide="sparkles"></i> GIẢI THƯỞNG 100 TRIỆU VNĐ</span>
+          <span class="doc-tag"><i data-lucide="clock"></i> MÙA GIẢI 2026</span>
+        </div>
+        <h1 class="hero-title">Cẩm Nang Vận Hành & Hướng Dẫn Sử Dụng Website GenD Arena 2026</h1>
+        <p class="hero-subtitle">
+          Tài liệu chuẩn hoá quy trình vận hành nền tảng, thiết kế cho Team Media, Ban Chuyên môn, Ban Vận hành và Đội ngũ Hỗ trợ Thí sinh để thực hiện các chiến dịch truyền thông, video demo và giải đáp thí sinh mượt mà nhất.
+        </p>
+        <div class="banner-actions">
+          <button class="btn btn-primary" onclick="window.print()">
+            <i data-lucide="printer"></i>
+            <span>In / Xuất file PDF</span>
+          </button>
+          <a href="#playbook-media" class="btn btn-secondary">
+            <i data-lucide="play-circle"></i>
+            <span>Xem Kịch bản Vận hành</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Section 1: Tổng quan -->
+      <section id="tong-quan" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="info"></i></div>
+          <h2 class="section-title">1. Tổng Quan Dự Án & Định Vị Nền Tảng</h2>
+        </div>
+        <p class="section-desc">
+          GenD Arena 2026 là đấu trường khởi nghiệp công nghệ dành cho thế hệ trẻ Việt Nam. Nền tảng website được xây dựng nhằm số hoá toàn diện mọi hoạt động từ đăng ký, ghép đội, thanh toán lệ phí, nộp đề án, chấm điểm theo barem đến phát hành vé sự kiện.
+        </p>
+
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-header-row">
+              <span class="card-title"><i data-lucide="user"></i> Khách Vãng Lai (Guest)</span>
+              <span class="card-badge cyan">Public</span>
+            </div>
+            <p class="card-desc">Người dùng chưa đăng nhập, tiếp cận thông tin giới thiệu, thể lệ, danh sách diễn giả, nhà tài trợ và đăng ký vé tham dự sự kiện/webinar.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-header-row">
+              <span class="card-title"><i data-lucide="users"></i> Thí Sinh (Participant)</span>
+              <span class="card-badge green">Contestant</span>
+            </div>
+            <p class="card-desc">Thành viên đội thi: Tạo/gia nhập nhóm, cập nhật hồ sơ cá nhân nhận tích xanh Verified, quét mã VietQR đóng lệ phí và nộp đề án qua từng vòng.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-header-row">
+              <span class="card-title"><i data-lucide="shield-alert"></i> Ban Tổ Chức (Admin)</span>
+              <span class="card-badge orange">BTC Admin</span>
+            </div>
+            <p class="card-desc">Bộ máy vận hành: Duyệt lệ phí, quản lý sự kiện và điểm danh QR, đóng/mở cổng nộp bài, cài đặt tiêu chí chấm điểm và nhập điểm giám khảo.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Luồng hoạt động -->
+      <section id="luong-hoat-dong" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="git-branch"></i></div>
+          <h2 class="section-title">2. Sơ Đồ Quy Trình Vận Hành Thí Sinh</h2>
+        </div>
+        <p class="section-desc">Toàn bộ hành trình của một thí sinh trên hệ thống trải qua 6 bước khép kín và tự động:</p>
+
+        <div class="steps-container">
+          <div class="step-box">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <div class="step-title">Đăng ký & Cập nhật Hồ sơ 100% (Profile Verification)</div>
+              <div class="step-desc">Thí sinh tạo tài khoản bằng Email hoặc Google 1 chạm. Điền đầy đủ trường học, khoa, chuyên ngành, số điện thoại, ngày sinh để nhận huy hiệu Verified.</div>
+            </div>
+          </div>
+
+          <div class="step-box">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <div class="step-title">Tạo Đội Mới hoặc Tìm Đội Thi (Team Matchmaking)</div>
+              <div class="step-desc">Trưởng nhóm tạo đội và gửi link mời. Thí sinh tự do có thể duyệt danh sách các đội đang tuyển thành viên tại <code>/team/browse</code> và gửi yêu cầu gia nhập.</div>
+            </div>
+          </div>
+
+          <div class="step-box">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <div class="step-title">Đóng Lệ Phí Dự Thi Thông Minh (VietQR & Minh Chứng)</div>
+              <div class="step-desc">Trưởng nhóm quét mã VietQR tự sinh chuẩn cú pháp và số tiền, tải ảnh biên lai thành công lên hệ thống để Admin duyệt cấp quyền Verified Team.</div>
+            </div>
+          </div>
+
+          <div class="step-box">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <div class="step-title">Tham Gia Webinar & Chuỗi Workshop (Event Ticket)</div>
+              <div class="step-desc">Nhận vé điện tử kèm mã QR Code độc quyền để tham gia chuỗi webinar cố vấn kỹ năng làm đề án và pitch deck từ các chuyên gia.</div>
+            </div>
+          </div>
+
+          <div class="step-box">
+            <div class="step-number">5</div>
+            <div class="step-content">
+              <div class="step-title">Nộp Đề Án & Pitch Deck Các Vòng (Submissions Portal)</div>
+              <div class="step-desc">Nộp tài liệu đề án (PDF/ZIP tới 50MB) cùng các đường link Pitch Deck Canva, Figma Prototype, Demo Video YouTube và Repo GitHub.</div>
+            </div>
+          </div>
+
+          <div class="step-box">
+            <div class="step-number">6</div>
+            <div class="step-content">
+              <div class="step-title">Theo Dõi Kết Quả Chấm Điểm & Leaderboard</div>
+              <div class="step-desc">Ban giám khảo chấm điểm trực tiếp trên hệ thống theo barem đa tiêu chí. Thí sinh theo dõi kết quả và vinh danh trên Bảng xếp hạng trực tiếp.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Landing Page -->
+      <section id="landing-page" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="layout"></i></div>
+          <h2 class="section-title">3. Khám Phá Trang Chủ & Landing Page</h2>
+        </div>
+        <div class="card-grid">
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="clock"></i> Đồng Hồ Đếm Ngược Động</h3>
+            <p class="card-desc">Đồng bộ tự động theo thời gian thực với mốc mở cổng nộp bài hoặc vòng thi gần nhất trong cơ sở dữ liệu.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="trending-up"></i> Bộ Đếm Số Liệu (Stats Counter)</h3>
+            <p class="card-desc">100M+ VNĐ giải thưởng, 500+ thí sinh, 20+ mentor chuyên gia, 15+ đối tác đầu tư bảo chứng uy tín.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="layers"></i> Phân Khu Chủ Đề (Tracks)</h3>
+            <p class="card-desc">Hiển thị các chủ đề đề tài thi: AI & Big Data, FinTech, EdTech, Green & Sustainability, Smart City.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="message-circle"></i> Bong Bóng Hỗ Trợ Facebook</h3>
+            <p class="card-desc">Nút nổi ở góc phải màn hình, nhấp vào dẫn thẳng đến Fanpage chính thức để tư vấn trực tiếp 24/7.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Auth & Profile -->
+      <section id="auth-profile" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="user-check"></i></div>
+          <h2 class="section-title">4. Xác Thực Tài Khoản & Quản Lý Hồ Sơ Cá Nhân</h2>
+        </div>
+
+        <div class="callout tip">
+          <i data-lucide="lightbulb"></i>
+          <div>
+            <strong>Mẹo Media:</strong> Hãy nhắc nhở thí sinh hoàn thiện hồ sơ đạt 100% để hiển thị huy hiệu tích xanh <code>Verified</code> bên cạnh tên tài khoản trên thanh điều hướng.
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Trường Thông Tin</th>
+                <th>Mục Đích Sử Dụng</th>
+                <th>Bắt Buộc?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Họ và tên</strong></td>
+                <td>In trên giấy chứng nhận (Certificate) và danh sách thi đấu chính thức.</td>
+                <td><span class="card-badge green">Bắt buộc</span></td>
+              </tr>
+              <tr>
+                <td><strong>Số điện thoại</strong></td>
+                <td>BTC liên hệ khẩn cấp khi đội lọt vào vòng trong hoặc thông báo kết quả.</td>
+                <td><span class="card-badge green">Bắt buộc</span></td>
+              </tr>
+              <tr>
+                <td><strong>Trường / Khoa / Chuyên ngành</strong></td>
+                <td>Thống kê cơ cấu trường đại học và hỗ trợ kết nối đồng đội phù hợp.</td>
+                <td><span class="card-badge green">Bắt buộc</span></td>
+              </tr>
+              <tr>
+                <td><strong>Ngày tháng năm sinh</strong></td>
+                <td>Xác thực độ tuổi thế hệ trẻ (Gen Z) theo quy chế cuộc thi.</td>
+                <td><span class="card-badge green">Bắt buộc</span></td>
+              </tr>
+              <tr>
+                <td><strong>Lĩnh vực thế mạnh</strong></td>
+                <td>Gắn tag chuyên môn: AI/Dev, Business/Pitching, UI/UX Design, Marketing.</td>
+                <td><span class="card-badge cyan">Khuyên dùng</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 5: Team Dashboard -->
+      <section id="team-dashboard" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="shield"></i></div>
+          <h2 class="section-title">5. Bảng Điều Khiển Đội Thi (Team Dashboard)</h2>
+        </div>
+        <p class="section-desc">Đường dẫn: <code>/dashboard</code> — Đây là trung tâm tác vụ của thí sinh.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="user-plus"></i> Tạo Đội Mới (Leader)</h3>
+            <ul class="card-list">
+              <li><i data-lucide="check"></i> Đặt tên đội thi độc nhất và chọn bảng đấu.</li>
+              <li><i data-lucide="check"></i> Cấu hình số thành viên tối đa (3–5 người).</li>
+              <li><i data-lucide="check"></i> Bật/tắt chế độ tuyển thêm người (<code>is_open</code>).</li>
+              <li><i data-lucide="check"></i> Lấy Link mời thành viên gửi trực tiếp cho bạn bè.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="search"></i> Khám Phá & Ghép Đội</h3>
+            <ul class="card-list">
+              <li><i data-lucide="check"></i> Truy cập danh sách các đội đang mở tại <code>/team/browse</code>.</li>
+              <li><i data-lucide="check"></i> Xem thông tin các thành viên đã có trong đội.</li>
+              <li><i data-lucide="check"></i> Bấm "Gửi yêu cầu gia nhập" và đợi Trưởng nhóm duyệt.</li>
+              <li><i data-lucide="check"></i> Có thể chủ động huỷ yêu cầu nếu muốn chọn đội khác.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 6: VietQR Payment -->
+      <section id="vietqr-payment" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="credit-card"></i></div>
+          <h2 class="section-title">6. Đóng Lệ Phí Dự Thi & Nhận Huy Hiệu Verified (VietQR)</h2>
+        </div>
+        
+        <div class="callout important">
+          <i data-lucide="info"></i>
+          <div>
+            <strong>Cơ chế bảo mật & Cam kết:</strong> Đội thi chỉ được nộp đề án các vòng khi đã hoàn tất đóng lệ phí và được Ban Tổ Chức duyệt minh chứng.
+          </div>
+        </div>
+
+        <div class="steps-container">
+          <div class="step-box">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <div class="step-title">Mở Cửa Sổ Thanh Toán Lệ Phí (Payment Modal)</div>
+              <div class="step-desc">Trưởng nhóm bấm nút <strong>"Đóng lệ phí dự thi"</strong> tại Dashboard hoặc cổng Submissions.</div>
+            </div>
+          </div>
+          <div class="step-box">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <div class="step-title">Quét Mã VietQR Chuẩn Hóa Tự Động</div>
+              <div class="step-desc">Mã QR sinh tự động chứa sẵn số tài khoản MBBank, số tiền và nội dung chuyển khoản: <code>GENDARENA &lt;TÊN_ĐỘI&gt; &lt;SĐT&gt;</code>.</div>
+            </div>
+          </div>
+          <div class="step-box">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <div class="step-title">Tải Ảnh Chụp Màn Hình Minh Chứng</div>
+              <div class="step-desc">Tải ảnh biên lai giao dịch thành công lên mục <em>"Tải lên minh chứng"</em> và bấm gửi xác thực.</div>
+            </div>
+          </div>
+          <div class="step-box">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <div class="step-title">Admin Duyệt & Cấp Tích Xanh "Verified Team"</div>
+              <div class="step-desc">BTC đối soát và duyệt trong vòng 2–4 giờ. Đội thi nhận huy hiệu Verified và mở quyền nộp bài thi.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 7: Submissions Portal -->
+      <section id="submissions-portal" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="upload-cloud"></i></div>
+          <h2 class="section-title">7. Cổng Nộp Bài Dự Thi Các Vòng (Submissions Portal)</h2>
+        </div>
+        <p class="section-desc">Đường dẫn: <code>/submissions</code> hoặc nút "Nộp bài" trên thanh Navbar.</p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Mục Bàn Giao</th>
+                <th>Định Dạng Hỗ Trợ</th>
+                <th>Ghi Chú Quan Trọng</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Tệp Tài Liệu Đề Án</strong></td>
+                <td><code>.PDF</code>, <code>.ZIP</code>, <code>.PPTX</code>, <code>.DOCX</code></td>
+                <td>Dung lượng tối đa lên đến <strong>50MB</strong>.</td>
+              </tr>
+              <tr>
+                <td><strong>Pitch Deck Link</strong></td>
+                <td>Canva, Google Slides, Pitch.com</td>
+                <td>Đặt quyền <em>"Bất kỳ ai có liên kết đều có thể xem"</em>.</td>
+              </tr>
+              <tr>
+                <td><strong>Demo Link / Video</strong></td>
+                <td>YouTube, Loom, Google Drive, Web URL</td>
+                <td>Video giới thiệu sản phẩm / đề án trong 3–5 phút.</td>
+              </tr>
+              <tr>
+                <td><strong>Source Code / Prototype</strong></td>
+                <td>GitHub Repository, Figma Prototype</td>
+                <td>Dành cho các đề án công nghệ, phần mềm, AI model.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 8: Events & Tickets -->
+      <section id="events-tickets" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="ticket"></i></div>
+          <h2 class="section-title">8. Sự Kiện, Webinar & Vé Điện Tử QR Code</h2>
+        </div>
+        <p class="section-desc">Đường dẫn: <code>/events</code> (Danh sách) & <code>/events/[id]</code> (Chi tiết sự kiện).</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="qr-code"></i> Vé Điện Tử QR Độc Quyền</h3>
+            <p class="card-desc">Khi đăng ký giữ chỗ, hệ thống cấp ngay mã vé định danh và mã QR Code để quét check-in tại bàn lễ tân hoặc phòng webinar.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="calendar-plus"></i> Đồng Bộ Lịch Cá Nhân</h3>
+            <p class="card-desc">Hỗ trợ 1 chạm thêm sự kiện vào Google Calendar, Outlook và Apple Calendar (.ics) kèm link Google Meet/Zoom.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 9: Admin Hub -->
+      <section id="admin-overview" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="layout-grid"></i></div>
+          <h2 class="section-title">9. Phân Hệ Quản Trị Toàn Diện (Admin BTC Hub)</h2>
+        </div>
+        <p class="section-desc">Đường dẫn: <code>/admin</code> — Dành riêng cho tài khoản có quyền Quản trị viên (BTC).</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="credit-card"></i> Duyệt Lệ Phí (/admin/payments)</h3>
+            <p class="card-desc">Kiểm tra ảnh chụp biên lai, đối soát tài khoản và phê duyệt cấp huy hiệu Verified 1 chạm.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="calendar-check"></i> Quản Lý Sự Kiện (/admin/events)</h3>
+            <p class="card-desc">Tạo webinar, giới hạn số vé, xuất danh sách người tham dự ra Excel và điểm danh bằng QR.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="calendar"></i> Lịch Trình Vòng Thi (/admin/phases)</h3>
+            <p class="card-desc">Bật/tắt công tắc mở cổng nhận bài thi và cổng chấm điểm, hẹn giờ đóng cổng tự động.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="scale"></i> Cấu Hình Barem (/admin/scoring)</h3>
+            <p class="card-desc">Thiết lập vòng chấm, danh sách tiêu chí, tỷ lệ trọng số (%) và link tài liệu Rubric.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="file-text"></i> Chấm Bài Thi (/admin/submissions)</h3>
+            <p class="card-desc">Tải đề án, mở link Pitch Deck/Demo và nhập điểm số theo từng tiêu chí kèm lời nhận xét của BGK.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title"><i data-lucide="bar-chart-2"></i> Bảng Xếp Hạng (/admin/leaderboard)</h3>
+            <p class="card-desc">Theo dõi bảng tổng sắp điểm số trung bình các đội thi thời gian thực kèm cúp vàng, huy chương.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 10: Playbook Media -->
+      <section id="playbook-media" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="clapperboard"></i></div>
+          <h2 class="section-title">16. Kịch Bản Vận Hành Mẫu Cho Team Media</h2>
+        </div>
+        <p class="section-desc">Cẩm nang tác nghiệp từng bước trong 5 giai đoạn trọng yếu của mùa giải:</p>
+
+        <div class="steps-container">
+          <div class="step-box">
+            <div class="step-number">G1</div>
+            <div class="step-content">
+              <div class="step-title">Giai đoạn Mở đơn Đăng ký & Ghép Đội (Tuần 1–3)</div>
+              <div class="step-desc">Đăng bài phát động kèm link <code>/register</code>. Điều phối thí sinh tìm bạn ghép nhóm tại <code>/team/browse</code>. Trực hòm thư duyệt lệ phí tại <code>/admin/payments</code> cam kết duyệt trong 2–4 giờ.</div>
+            </div>
+          </div>
+          <div class="step-box">
+            <div class="step-number">G2</div>
+            <div class="step-content">
+              <div class="step-title">Giai đoạn Chuỗi Webinar & Workshop (Tuần 4–5)</div>
+              <div class="step-desc">Tạo sự kiện tại <code>/admin/events</code>, giới hạn 300 vé để kích thích đăng ký sớm. Trước giờ diễn ra 60 phút: xuất data danh sách để gửi email nhắc lịch kèm link phòng họp.</div>
+            </div>
+          </div>
+          <div class="step-box">
+            <div class="step-number">G3</div>
+            <div class="step-content">
+              <div class="step-title">Giai đoạn Đóng/Mở Cổng Nộp Bài Sơ Loại (Tuần 6)</div>
+              <div class="step-desc">Vào <code>/admin/phases</code> bật <strong>Submission Open = ON</strong> và đặt giờ đóng cổng 23:59. Đăng bài đếm ngược (Countdown) nhắc các đội kiểm tra file trước giờ đóng cổng.</div>
+            </div>
+          </div>
+          <div class="step-box">
+            <div class="step-number">G4</div>
+            <div class="step-content">
+              <div class="step-title">Giai đoạn Chấm Điểm & Công Bố Kết Quả (Tuần 7)</div>
+              <div class="step-desc">Bật cổng chấm tại <code>/admin/scoring</code>. Nhập điểm giám khảo tại <code>/admin/submissions</code>. Xuất kết quả Top các đội từ <code>/admin/leaderboard</code> để thiết kế ấn phẩm vinh danh.</div>
+            </div>
+          </div>
+          <div class="step-box">
+            <div class="step-number">G5</div>
+            <div class="step-content">
+              <div class="step-title">Đêm Chung Kết & Gala Trao Giải (Tuần 8)</div>
+              <div class="step-desc">Phát hành vé QR Code sự kiện Chung kết. Trực tiếp chiếu màn hình Live Leaderboard trên sân khấu để công bố Quán quân và Á quân mùa giải 2026.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 11: Troubleshooting & FAQ -->
+      <section id="troubleshooting-faq" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="help-circle"></i></div>
+          <h2 class="section-title">17. Xử Lý Sự Cố & Câu Hỏi Thường Gặp (FAQ)</h2>
+        </div>
+
+        <div class="accordion-item open">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>Thí sinh không nhận được email khôi phục mật khẩu?</span>
+            <i data-lucide="chevron-down"></i>
+          </div>
+          <div class="accordion-content">
+            <p>1. Hướng dẫn thí sinh kiểm tra kỹ mục <strong>Thư rác (Spam)</strong> hoặc tab <strong>Quảng cáo (Promotions)</strong> trong Gmail.<br />
+            2. Nếu email là Gmail, thí sinh có thể dùng trực tiếp nút <strong>"Đăng nhập bằng Google"</strong> để vào tài khoản ngay lập tức.<br />
+            3. Admin có thể tra cứu tại <code>/admin/users</code> để kiểm tra tài khoản đã tồn tại chưa.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>Đã chuyển khoản nhưng hệ thống vẫn báo "Chờ duyệt" (Pending)?</span>
+            <i data-lucide="chevron-down"></i>
+          </div>
+          <div class="accordion-content">
+            <p>Admin chỉ cần vào <code>/admin/payments</code>, tìm kiếm tên đội hoặc số điện thoại trưởng nhóm, xem ảnh biên lai và bấm nút <strong>"Phê duyệt"</strong>. Sau khi duyệt, thí sinh chỉ cần tải lại trang (F5) là sẽ thấy huy hiệu Verified.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>File bài nộp báo lỗi quá dung lượng cho phép (>50MB)?</span>
+            <i data-lucide="chevron-down"></i>
+          </div>
+          <div class="accordion-content">
+            <p>Hướng dẫn thí sinh nén dung lượng file PDF qua công cụ iLovePDF hoặc tải toàn bộ tệp nặng lên <strong>Google Drive</strong> (đặt quyền ai có liên kết đều xem được), sau đó dán link Drive vào ô <em>"Liên kết đề án / Sản phẩm demo"</em>.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>Làm thế nào để lấy vé QR Code tham gia webinar / sự kiện?</span>
+            <i data-lucide="chevron-down"></i>
+          </div>
+          <div class="accordion-content">
+            <p>Sau khi bấm đăng ký tại <code>/events/[id]</code>, màn hình sẽ tự động hiển thị tấm vé điện tử cùng mã QR Code. Thí sinh chỉ cần chụp màn hình hoặc mở lại trang để BTC quét mã check-in tại cửa.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 12: Sitemap URLs -->
+      <section id="sitemap-urls" class="doc-section">
+        <div class="section-header">
+          <div class="section-icon-box"><i data-lucide="link"></i></div>
+          <h2 class="section-title">18. Danh Mục Đường Dẫn Tra Cứu Nhanh (Sitemap)</h2>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Tên Phân Hệ</th>
+                <th>Đường Dẫn URL</th>
+                <th>Đối Tượng Sử Dụng</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Trang chủ</td><td><span class="url-badge">/</span></td><td>Tất cả người dùng</td></tr>
+              <tr><td>Đăng ký tài khoản</td><td><span class="url-badge">/register</span></td><td>Thí sinh mới</td></tr>
+              <tr><td>Đăng nhập</td><td><span class="url-badge">/login</span></td><td>Tất cả người dùng</td></tr>
+              <tr><td>Hồ sơ cá nhân</td><td><span class="url-badge">/profile</span></td><td>Thí sinh & Admin</td></tr>
+              <tr><td>Bảng điều khiển đội thi</td><td><span class="url-badge">/dashboard</span></td><td>Thí sinh đã đăng nhập</td></tr>
+              <tr><td>Khám phá & Tìm đội</td><td><span class="url-badge">/team/browse</span></td><td>Thí sinh chưa có đội</td></tr>
+              <tr><td>Cổng nộp bài dự thi</td><td><span class="url-badge">/submissions</span></td><td>Đội thi đã Verified</td></tr>
+              <tr><td>Sự kiện & Vé điện tử</td><td><span class="url-badge">/events</span></td><td>Tất cả người dùng</td></tr>
+              <tr><td>Ban tổ chức</td><td><span class="url-badge">/organizers</span></td><td>Tất cả người dùng</td></tr>
+              <tr><td>Admin Hub tổng thể</td><td><span class="url-badge">/admin</span></td><td>Ban Tổ Chức (Admin)</td></tr>
+              <tr><td>Admin Duyệt lệ phí</td><td><span class="url-badge">/admin/payments</span></td><td>Ban Tổ Chức (Admin)</td></tr>
+              <tr><td>Admin Quản lý sự kiện</td><td><span class="url-badge">/admin/events</span></td><td>Ban Tổ Chức (Admin)</td></tr>
+              <tr><td>Admin Lịch trình & Cổng thi</td><td><span class="url-badge">/admin/phases</span></td><td>Ban Tổ Chức (Admin)</td></tr>
+              <tr><td>Admin Cấu hình barem điểm</td><td><span class="url-badge">/admin/scoring</span></td><td>Ban Tổ Chức (Admin)</td></tr>
+              <tr><td>Admin Chấm bài thi</td><td><span class="url-badge">/admin/submissions</span></td><td>Ban Tổ Chức & BGK</td></tr>
+              <tr><td>Admin Bảng xếp hạng</td><td><span class="url-badge">/admin/leaderboard</span></td><td>Ban Tổ Chức & BGK</td></tr>
+              <tr><td>Admin Người dùng & Phân quyền</td><td><span class="url-badge">/admin/users</span></td><td>Ban Tổ Chức (Admin)</td></tr>
+              <tr><td>Admin Diễn giả & Cố vấn</td><td><span class="url-badge">/admin/speakers</span></td><td>Ban Tổ Chức (Admin)</td></tr>
+              <tr><td>Admin Nhà tài trợ</td><td><span class="url-badge">/admin/sponsors</span></td><td>Ban Tổ Chức (Admin)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Toggle FAQ Accordion
+    function toggleAccordion(el) {
+      const item = el.parentElement;
+      item.classList.toggle('open');
+    }
+
+    // Filter Navigation by search
+    function filterNav() {
+      const input = document.getElementById('docSearch').value.toLowerCase();
+      const links = document.querySelectorAll('.sidebar-nav .nav-link');
+      links.forEach(link => {
+        const text = link.textContent.toLowerCase();
+        if (text.includes(input)) {
+          link.style.display = 'flex';
+        } else {
+          link.style.display = 'none';
+        }
+      });
+    }
+
+    // Scroll spy for sidebar links
+    window.addEventListener('scroll', () => {
+      const sections = document.querySelectorAll('.doc-section');
+      const navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
+      let currentSection = '';
+
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 100;
+        if (window.pageYOffset >= sectionTop) {
+          currentSection = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSection) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

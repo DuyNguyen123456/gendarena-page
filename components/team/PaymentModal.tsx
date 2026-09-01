@@ -259,17 +259,17 @@ export default function PaymentModal({
 
             {/* Transfer & QR Code Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-              {/* VietinBank QR Code Card */}
+              {/* MoMo / VietQR Code Card */}
               <div className="p-5 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col items-center text-center space-y-3">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
                   <QrCode className="size-4 text-brand-cyan" />
-                  <span>Quét mã VietQR VietinBank</span>
+                  <span>Quét mã QR MoMo / VietQR</span>
                 </div>
 
                 <div className="relative p-1 rounded-2xl bg-gradient-to-b from-brand-cyan/30 via-slate-800 to-slate-900 shadow-xl max-w-[250px] w-full overflow-hidden group">
                   <img
                     src={qrImageSrc}
-                    alt={`Mã VietQR thanh toán - ${BANK_CONFIG.ACCOUNT_NAME}`}
+                    alt={`Mã QR thanh toán - ${BANK_CONFIG.ACCOUNT_NAME}`}
                     className="w-full h-auto rounded-xl object-contain cursor-pointer transition group-hover:opacity-95"
                     onClick={() => setShowFullQR(true)}
                   />
@@ -296,7 +296,7 @@ export default function PaymentModal({
                   </Button>
                   <a
                     href={qrImageSrc}
-                    download="vietinbank-qr-gendarena.jpg"
+                    download="qr-thanhtoan-gendarena.jpg"
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -312,7 +312,7 @@ export default function PaymentModal({
                 </div>
 
                 <p className="text-[11px] text-text-tertiary max-w-xs">
-                  Mở ứng dụng Ngân hàng (VietinBank iPay hoặc bất kỳ ngân hàng nào) để quét mã QR chuyển khoản nhanh.
+                  Mở ứng dụng MoMo hoặc bất kỳ ứng dụng Ngân hàng nào để quét mã QR chuyển khoản nhanh.
                 </p>
               </div>
 
@@ -326,7 +326,7 @@ export default function PaymentModal({
                 {/* Bank Name */}
                 <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800/80 space-y-0.5">
                   <span className="text-[10px] uppercase font-semibold text-text-tertiary">
-                    Ngân hàng thụ hưởng
+                    Ngân hàng / Ví thụ hưởng
                   </span>
                   <p className="font-medium text-text-primary">{BANK_CONFIG.BANK_NAME}</p>
                 </div>
@@ -335,7 +335,7 @@ export default function PaymentModal({
                 <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800/80 flex items-center justify-between gap-2">
                   <div className="space-y-0.5 min-w-0">
                     <span className="text-[10px] uppercase font-semibold text-text-tertiary">
-                      Số tài khoản
+                      Số tài khoản / Mã ví
                     </span>
                     <p className="font-mono font-bold text-sm text-brand-cyan truncate">
                       {BANK_CONFIG.ACCOUNT_NO}
@@ -565,17 +565,17 @@ export default function PaymentModal({
           <DialogHeader className="text-left space-y-1 border-b border-slate-800/80 pb-3">
             <DialogTitle className="text-base font-bold text-text-primary flex items-center gap-2">
               <QrCode className="size-5 text-brand-cyan" />
-              <span>Mã VietQR Chuyển Khoản</span>
+              <span>Mã QR Chuyển Khoản</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-text-secondary">
-              VietinBank - {BANK_CONFIG.ACCOUNT_NAME} - {BANK_CONFIG.ACCOUNT_NO}
+              {BANK_CONFIG.BANK_NAME} - {BANK_CONFIG.ACCOUNT_NAME} - {BANK_CONFIG.ACCOUNT_NO}
             </DialogDescription>
           </DialogHeader>
 
           <div className="p-2 flex items-center justify-center">
             <img
               src={qrImageSrc}
-              alt="Mã VietQR"
+              alt="Mã QR Thanh Toán"
               className="max-h-[65vh] w-auto rounded-xl object-contain shadow-2xl border border-slate-800"
             />
           </div>
@@ -583,7 +583,7 @@ export default function PaymentModal({
           <DialogFooter className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
             <a
               href={qrImageSrc}
-              download="vietinbank-qr-gendarena.jpg"
+              download="qr-thanhtoan-gendarena.jpg"
               target="_blank"
               rel="noreferrer"
               className="w-full sm:w-auto"

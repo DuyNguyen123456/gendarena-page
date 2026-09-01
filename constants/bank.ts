@@ -1,7 +1,7 @@
 export const BANK_CONFIG = {
-  BANK_ID: process.env.NEXT_PUBLIC_BANK_ID || 'ICB',
-  BANK_NAME: 'VietinBank - CN Vĩnh Long - PGD Phước Thọ',
-  ACCOUNT_NO: process.env.NEXT_PUBLIC_BANK_ACCOUNT || '107882670096',
+  BANK_ID: process.env.NEXT_PUBLIC_BANK_ID || 'MOMO',
+  BANK_NAME: 'Ví MoMo',
+  ACCOUNT_NO: process.env.NEXT_PUBLIC_BANK_ACCOUNT || 'PSG2624319000000029',
   ACCOUNT_NAME: process.env.NEXT_PUBLIC_BANK_NAME || 'NGUYEN NHAT HAO',
   QR_IMAGE_URL: '/images/payment-qr.jpg',
 }
