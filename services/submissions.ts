@@ -29,6 +29,26 @@ export const MAX_TOTAL_FILE_SIZE = 10 * 1024 * 1024 // 10 MB total for all files
 const PITCH_DECK_EXTS = ['.pdf', '.pptx', '.ppt']
 const REPORT_EXTS = ['.pdf', '.docx', '.doc']
 
+const EXTENSION_MIME_MAP: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.ppt': 'application/vnd.ms-powerpoint',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.doc': 'application/msword',
+}
+
+/**
+ * Resolves canonical MIME type for a file if browser detection is missing or generic.
+ */
+export function resolveMimeType(file: File): string {
+  if (file.type && file.type !== 'application/octet-stream') {
+    return file.type
+  }
+  const name = file.name.toLowerCase()
+  const ext = name.slice(name.lastIndexOf('.'))
+  return EXTENSION_MIME_MAP[ext] || file.type || 'application/octet-stream'
+}
+
 // ─── Format helper ───────────────────────────────────────────────────────────
 
 export function formatBytes(bytes: number): string {
@@ -292,6 +312,76 @@ export async function getDownloadUrl(filePath: string): Promise<string | null> {
   return data.signedUrl
 }
 
+/**
+ * Helper to upload a file to Supabase Storage with smart fallback strategies.
+ * Tries:
+ *  1. Canonical MIME type (e.g. application/vnd.openxmlformats-officedocument.presentationml.presentation)
+ *  2. Generic application/octet-stream (if bucket blocks specific MIME type)
+ *  3. Omitted contentType (let storage engine infer or accept)
+ */
+async function uploadToStorageWithFallback(
+  supabase: ReturnType<typeof createClient>,
+  storagePath: string,
+  file: File,
+  deliverableLabel: string,
+): Promise<string> {
+  const primaryMime = resolveMimeType(file)
+
+  // 1. Primary upload attempt
+  const { error: firstErr } = await supabase.storage
+    .from(BUCKET)
+    .upload(storagePath, file, {
+      contentType: primaryMime,
+      upsert: true,
+    })
+
+  if (!firstErr) {
+    return storagePath
+  }
+
+  const errMsg = firstErr.message || ''
+  const isMimeError =
+    errMsg.toLowerCase().includes('mime type') ||
+    errMsg.toLowerCase().includes('not supported') ||
+    errMsg.toLowerCase().includes('content-type') ||
+    (firstErr as any).statusCode === '415' ||
+    (firstErr as any).status === 415
+
+  if (isMimeError) {
+    console.warn(`[submissions] Upload with '${primaryMime}' failed (${errMsg}). Retrying with 'application/octet-stream'...`)
+
+    // 2. Retry with generic binary octet-stream
+    const { error: retryErr } = await supabase.storage
+      .from(BUCKET)
+      .upload(storagePath, file, {
+        contentType: 'application/octet-stream',
+        upsert: true,
+      })
+
+    if (!retryErr) {
+      return storagePath
+    }
+
+    // 3. Retry without specifying contentType header
+    console.warn(`[submissions] Retry with octet-stream failed (${retryErr.message}). Retrying without explicit contentType...`)
+    const { error: thirdErr } = await supabase.storage
+      .from(BUCKET)
+      .upload(storagePath, file, {
+        upsert: true,
+      })
+
+    if (!thirdErr) {
+      return storagePath
+    }
+
+    throw new Error(
+      `Upload file ${deliverableLabel} thất bại: Bucket 'submissions' trên Supabase đang giới hạn MIME type (${firstErr.message}). Vui lòng cập nhật cấu hình bucket 'submissions' trong Supabase SQL Editor bằng script fix_submissions_storage_bucket.sql.`
+    )
+  }
+
+  throw new Error(`Upload file ${deliverableLabel} thất bại: ${errMsg}`)
+}
+
 // ─── Unified Multi-Deliverable Submission Payload ────────────────────────────
 
 export interface UnifiedSubmissionPayload {
@@ -368,7 +458,7 @@ export async function submitUnifiedSubmission(
     return { ok: false, error: sizeValidation.error! }
   }
 
-  // 2. Upload files to Storage
+  // 2. Upload files to Storage with resilient fallback handling
   const uploadedStoragePaths: string[] = []
   let pitchDeckStoragePath: string | null = null
   let reportStoragePath: string | null = null
@@ -376,29 +466,23 @@ export async function submitUnifiedSubmission(
   try {
     if (pitchDeck.kind === 'file' && pitchDeck.file) {
       pitchDeckStoragePath = buildStoragePath(userId, phaseId, pitchDeck.file.name, 'pitchdeck')
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(pitchDeckStoragePath, pitchDeck.file, {
-          contentType: pitchDeck.file.type || 'application/octet-stream',
-          upsert: false,
-        })
-      if (upErr) {
-        throw new Error(`Upload file Pitch-deck thất bại: ${upErr.message}`)
-      }
+      await uploadToStorageWithFallback(
+        supabase,
+        pitchDeckStoragePath,
+        pitchDeck.file,
+        'Slide Pitch-deck'
+      )
       uploadedStoragePaths.push(pitchDeckStoragePath)
     }
 
     if (report.kind === 'file' && report.file) {
       reportStoragePath = buildStoragePath(userId, phaseId, report.file.name, 'report')
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(reportStoragePath, report.file, {
-          contentType: report.file.type || 'application/octet-stream',
-          upsert: false,
-        })
-      if (upErr) {
-        throw new Error(`Upload file Báo cáo đề án thất bại: ${upErr.message}`)
-      }
+      await uploadToStorageWithFallback(
+        supabase,
+        reportStoragePath,
+        report.file,
+        'Báo cáo đề án'
+      )
       uploadedStoragePaths.push(reportStoragePath)
     }
   } catch (uploadError: any) {

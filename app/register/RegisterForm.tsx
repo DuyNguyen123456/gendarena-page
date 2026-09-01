@@ -25,6 +25,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton'
+import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter'
+import DobPicker from '@/components/ui/dob-picker'
 import { formatDob, dobToDbFormat } from '@/lib/utils'
 
 const registerSchema = z
@@ -44,8 +46,8 @@ const registerSchema = z
     university: z.string().trim().optional().or(z.literal('')),
     faculty: z.string().trim().optional().or(z.literal('')),
     major: z.string().trim().optional().or(z.literal('')),
-    password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
-    confirmPassword: z.string().min(6, 'Mật khẩu xác nhận phải có ít nhất 6 ký tự'),
+    password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
+    confirmPassword: z.string().min(8, 'Mật khẩu xác nhận phải có ít nhất 8 ký tự'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Mật khẩu xác nhận không khớp',
@@ -56,6 +58,7 @@ export default function RegisterForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [passwordInput, setPasswordInput] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [dob, setDob] = useState('')
@@ -288,14 +291,11 @@ export default function RegisterForm() {
                 <label className="block text-xs font-semibold text-text-secondary">
                   Ngày sinh (DD/MM/YYYY)
                 </label>
-                <Input
+                <DobPicker
                   name="dob"
-                  type="text"
                   value={dob}
-                  onChange={handleDobChange}
-                  maxLength={10}
-                  placeholder="DD/MM/YYYY (VD: 15/08/2002)"
-                  leftIcon={<Calendar className="size-4" />}
+                  onChange={(val) => setDob(val)}
+                  placeholder="Chọn ngày sinh (DD/MM/YYYY)"
                 />
               </div>
             </div>
@@ -347,8 +347,10 @@ export default function RegisterForm() {
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   required
-                  minLength={6}
-                  placeholder="Ít nhất 6 ký tự"
+                  minLength={8}
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Tối thiểu 8 ký tự"
                   leftIcon={<Lock className="size-4" />}
                   rightIcon={
                     <button
@@ -361,6 +363,7 @@ export default function RegisterForm() {
                     </button>
                   }
                 />
+                <PasswordStrengthMeter password={passwordInput} />
               </div>
 
               <div className="space-y-1.5">
@@ -371,6 +374,7 @@ export default function RegisterForm() {
                   name="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   required
+                  minLength={8}
                   placeholder="Nhập lại mật khẩu"
                   leftIcon={<Lock className="size-4" />}
                   rightIcon={

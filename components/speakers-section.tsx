@@ -14,7 +14,7 @@ type Speaker = {
   bio: string | null
   avatar_url: string | null
   linkedin_url: string | null
-  category: 'speaker' | 'judge' | 'mentor' | 'ambassador'
+  category: 'speaker' | 'judge' | 'mentor'
   display_order: number
 }
 
@@ -22,7 +22,6 @@ const TABS: { key: Speaker['category']; label: string }[] = [
   { key: 'judge', label: 'Giám khảo' },
   { key: 'speaker', label: 'Diễn giả' },
   { key: 'mentor', label: 'Cố vấn' },
-  { key: 'ambassador', label: 'Đại sứ' },
 ]
 
 function getCategoryBadge(category: Speaker['category']) {
@@ -31,9 +30,6 @@ function getCategoryBadge(category: Speaker['category']) {
   }
   if (category === 'mentor') {
     return <Badge variant="warning" size="sm">Cố vấn</Badge>
-  }
-  if (category === 'ambassador') {
-    return <Badge variant="success" size="sm">Đại sứ truyền thông</Badge>
   }
   return <Badge variant="info" size="sm">Diễn giả</Badge>
 }

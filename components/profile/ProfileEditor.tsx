@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import DobPicker from '@/components/ui/dob-picker'
 import {
   updateProfile,
   uploadAvatar,
@@ -267,14 +268,14 @@ export default function ProfileEditor({
             <label className="block text-xs font-semibold text-text-secondary">
               Ngày sinh (DD/MM/YYYY) <span className="text-semantic-danger">*</span>
             </label>
-            <Input
-              type="text"
-              required
+            <DobPicker
               value={form.dob}
-              onChange={(e) => setForm((prev) => ({ ...prev, dob: formatDob(e.target.value) }))}
-              maxLength={10}
-              placeholder="DD/MM/YYYY (VD: 15/08/2002)"
-              leftIcon={<Calendar className="size-4" />}
+              onChange={(val) => {
+                setForm((prev) => ({ ...prev, dob: val }))
+                if (formErrors.dob) setFormErrors((prev) => ({ ...prev, dob: undefined }))
+              }}
+              placeholder="Chọn ngày sinh (DD/MM/YYYY)"
+              error={!!formErrors.dob}
             />
           </div>
         </div>

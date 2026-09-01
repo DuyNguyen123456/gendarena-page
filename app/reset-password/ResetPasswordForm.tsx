@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter'
 
 export default function ResetPasswordForm() {
   const [password, setPassword] = useState('')
@@ -81,8 +82,8 @@ export default function ResetPasswordForm() {
       return
     }
 
-    if (password.length < 6) {
-      setError('Mật khẩu mới phải có tối thiểu 6 ký tự.')
+    if (password.length < 8) {
+      setError('Mật khẩu mới phải có tối thiểu 8 ký tự.')
       return
     }
 
@@ -225,14 +226,15 @@ export default function ResetPasswordForm() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-text-secondary">
-                    Mật khẩu mới (tối thiểu 6 ký tự)
+                    Mật khẩu mới (tối thiểu 8 ký tự)
                   </label>
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     required
+                    minLength={8}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Tối thiểu 8 ký tự"
                     leftIcon={<Lock className="size-4" />}
                     rightIcon={
                       <button
@@ -245,6 +247,7 @@ export default function ResetPasswordForm() {
                       </button>
                     }
                   />
+                  <PasswordStrengthMeter password={password} />
                 </div>
 
                 <div className="space-y-1.5">
@@ -254,9 +257,10 @@ export default function ResetPasswordForm() {
                   <Input
                     type={showConfirmPassword ? 'text' : 'password'}
                     required
+                    minLength={8}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Nhập lại mật khẩu"
                     leftIcon={<Lock className="size-4" />}
                     rightIcon={
                       <button

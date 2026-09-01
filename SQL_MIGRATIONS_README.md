@@ -1,4 +1,4 @@
-﻿# SQL Migrations — GenD Arena 2026
+# SQL Migrations — GenD Arena 2026
 
 > **Tài liệu này dành cho bất kỳ ai cần chạy hoặc hiểu các file SQL trong repo.**
 > Đọc tài liệu này trước khi mở bất kỳ file `.sql` nào.
@@ -90,6 +90,7 @@ Cac file duoi day co the chay doc lap va chay lai nhieu lan ma khong gay tac dun
 | fix_scores_updated_at_migration.sql | Them cot updated_at vao bang scores |
 | speakers_sync_migration.sql | Them organization, linkedin_url, category vao bang speakers (sync schema voi codebase, 2026-07-03) |
 | submissions_rls_migration.sql | Reset va tao lai toan bo RLS cho submissions va scores (hotfix) |
+| fix_submissions_storage_bucket.sql | Cap nhat allowed_mime_types (PPTX, PPT, DOCX, DOC, PDF) va policies cho bucket submissions |
 
 ---
 

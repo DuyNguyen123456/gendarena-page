@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import ParticleField from '@/components/particle-field'
@@ -44,9 +45,11 @@ const heroItem = {
 interface HeroProps {
   targetDate: string
   phaseTitle: string
+  phases: any[]
+  onUpdatePhase?: (updated: { phaseId?: string; title: string; targetDate: string }) => void
 }
 
-function HeroSection({ targetDate, phaseTitle }: HeroProps) {
+function HeroSection({ targetDate, phaseTitle, phases, onUpdatePhase }: HeroProps) {
   return (
     <section className="relative min-h-[calc(100vh-4rem)] flex items-center px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 lg:py-28 overflow-hidden">
       {/* Background layers (back to front) */}
@@ -144,24 +147,12 @@ function HeroSection({ targetDate, phaseTitle }: HeroProps) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, delay: 0.3, ease: EASE_OUT }}
           >
-            <Countdown targetDate={targetDate} phaseTitle={phaseTitle} />
-
-            {/* Live Phase Indicator */}
-            <div className="mt-3 sm:mt-4 flex flex-wrap items-center justify-between gap-2 px-3.5 sm:px-4 py-2.5 bg-surface-raised/80 border border-surface-border rounded-lg text-xs">
-              <div className="flex items-center gap-2">
-                <span className="relative flex size-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-semantic-success opacity-75" />
-                  <span className="relative inline-flex rounded-full size-2 bg-semantic-success" />
-                </span>
-                <span className="text-text-secondary">
-                  Vòng hiện tại:{' '}
-                  <span className="text-text-primary font-medium">{phaseTitle}</span>
-                </span>
-              </div>
-              <span className="font-display font-medium text-brand-cyan shrink-0">
-                Đang nhận đề án
-              </span>
-            </div>
+            <Countdown
+              targetDate={targetDate}
+              phaseTitle={phaseTitle}
+              phases={phases}
+              onUpdate={onUpdatePhase}
+            />
           </motion.div>
 
         </div>
@@ -191,19 +182,55 @@ const CORE_VALUES = [
 
 // ─── CLIENT WRAPPER (framer-motion requires 'use client') ─────────────────
 export default function LandingClient({
-  targetDate,
-  phaseTitle,
-  phases,
+  targetDate: initialTargetDate,
+  phaseTitle: initialPhaseTitle,
+  phases: initialPhases,
 }: {
   targetDate: string
   phaseTitle: string
   phases: any[]
 }) {
+  const [targetDate, setTargetDate] = useState(initialTargetDate)
+  const [phaseTitle, setPhaseTitle] = useState(initialPhaseTitle)
+  const [phases, setPhases] = useState(initialPhases)
+
+  const handleUpdatePhase = ({
+    phaseId,
+    title,
+    targetDate: newDate,
+  }: {
+    phaseId?: string
+    title: string
+    targetDate: string
+  }) => {
+    setTargetDate(newDate)
+    setPhaseTitle(title)
+    if (phaseId) {
+      setPhases((prev) =>
+        prev.map((p) =>
+          p.id === phaseId
+            ? {
+                ...p,
+                title,
+                submission_opens_at: newDate,
+                start_date: newDate.slice(0, 10),
+              }
+            : p
+        )
+      )
+    }
+  }
+
   return (
     <div className="min-h-screen bg-surface-base text-text-primary relative overflow-hidden pb-0">
 
       {/* ─── SECTION 1: HERO ───────────────────────────────────────────────── */}
-      <HeroSection targetDate={targetDate} phaseTitle={phaseTitle} />
+      <HeroSection
+        targetDate={targetDate}
+        phaseTitle={phaseTitle}
+        phases={phases}
+        onUpdatePhase={handleUpdatePhase}
+      />
 
       {/* ─── SECTION 2: CORE VALUES ─────────────────────────────────────── */}
       <section className="relative py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-surface-border/60">
