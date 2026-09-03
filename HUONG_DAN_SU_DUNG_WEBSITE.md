@@ -16,17 +16,15 @@
   - [3.3. Bảng điều khiển Đội thi & Ghép đội](#33-bảng-điều-khiển-đội-thi--ghép-đội)
   - [3.4. Đóng lệ phí dự thi VietQR & Cấp quyền Verified Team](#34-đóng-lệ-phí-dự-thi-vietqr--cấp-quyền-verified-team)
   - [3.5. Cổng nộp đề án & Pitch Deck các vòng](#35-cổng-nộp-đề-án--pitch-deck-các-vòng)
-  - [3.6. Đăng ký sự kiện & Nhận vé QR Code](#36-đăng-ký-sự-kiện--nhận-vé-qr-code)
-  - [3.7. Trung tâm thông báo & Fanpage hỗ trợ](#37-trung-tâm-thông-báo--fanpage-hỗ-trợ)
+  - [3.6. Trung tâm thông báo & Fanpage hỗ trợ](#36-trung-tâm-thông-báo--fanpage-hỗ-trợ)
 - [4. Phân Hệ Quản Trị Hệ Thống (Admin BTC Hub)](#-4-phân-hệ-quản-trị-hệ-thống-admin-btc-hub)
   - [4.1. Bảng điều khiển Tổng quan (Admin Hub)](#41-bảng-điều-khiển-tổng-quan-admin-hub)
   - [4.2. Quản lý & Phê duyệt Lệ phí dự thi](#42-quản-lý--phê-duyệt-lệ-phí-dự-thi)
-  - [4.3. Quản lý Sự kiện, Webinar & Điểm danh QR](#43-quản-lý-sự-kiện-webinar--điểm-danh-qr)
-  - [4.4. Cấu hình Lịch trình Vòng thi & Đóng/Mở cổng](#44-cấu-hình-lịch-trình-vòng-thi--đóngmở-cổng)
-  - [4.5. Cấu hình Barem điểm & Trọng số chấm](#45-cấu-hình-barem-điểm--trọng-số-chấm)
-  - [4.6. Quản lý Bài thi & Nhập điểm Giám khảo](#46-quản-lý-bài-thi--nhập-điểm-giám-khảo)
-  - [4.7. Bảng tổng sắp xếp hạng Live Leaderboard](#47-bảng-tổng-sắp-xếp-hạng-live-leaderboard)
-  - [4.8. Quản lý Người dùng, Diễn giả & Nhà tài trợ](#48-quản-lý-người-dùng-diễn-giả--nhà-tài-trợ)
+  - [4.3. Cấu hình Lịch trình Vòng thi & Đóng/Mở cổng](#43-cấu-hình-lịch-trình-vòng-thi--đóngmở-cổng)
+  - [4.4. Cấu hình Barem điểm & Trọng số chấm](#44-cấu-hình-barem-điểm--trọng-số-chấm)
+  - [4.5. Quản lý Bài thi & Nhập điểm Giám khảo](#45-quản-lý-bài-thi--nhập-điểm-giám-khảo)
+  - [4.6. Bảng tổng sắp xếp hạng Live Leaderboard](#46-bảng-tổng-sắp-xếp-hạng-live-leaderboard)
+  - [4.7. Quản lý Người dùng, Diễn giả & Nhà tài trợ](#47-quản-lý-người-dùng-diễn-giả--nhà-tài-trợ)
 - [5. Kịch Bản Vận Hành 5 Giai Đoạn Cuộc Thi (Playbook)](#-5-kịch-bản-vận-hành-5-giai-đoạn-cuộc-thi-playbook)
 - [6. Cẩm Nang Xử Lý Sự Cố & Câu Hỏi Thường Gặp (FAQ)](#-6-cẩm-nang-xử-lý-sự-cố--câu-hỏi-thường-gặp-faq)
 - [7. Bảng Tra Cứu Đường Dẫn (Sitemap URLs)](#-7-bảng-tra-cứu-đường-dẫn-sitemap-urls)
@@ -41,9 +39,9 @@
 ### 👥 1.2. Ba đối tượng người dùng chính
 | Vai trò | Ký hiệu | Đối tượng | Quyền hạn & Trải nghiệm chính |
 | :--- | :---: | :--- | :--- |
-| **Khách Vãng Lai** | `Guest` | Sinh viên, khách tham quan | Xem thể lệ, timeline, diễn giả, đối tác; đăng ký vé tham gia chuỗi Webinar/Workshop. |
+| **Khách Vãng Lai** | `Guest` | Sinh viên, khách tham quan | Xem thể lệ, timeline, diễn giả, đối tác cuộc thi. |
 | **Thí Sinh / Đội Thi** | `TS` | Sinh viên tham dự giải | Tạo/ghép đội, xác thực hồ sơ, đóng phí VietQR, nộp đề án & Pitch Deck qua các vòng. |
-| **Ban Tổ Chức** | `BTC` | Ban điều hành, Giám khảo | Duyệt lệ phí, xuất data sự kiện, điểm danh QR, mở/đóng cổng thi, chấm điểm barem. |
+| **Ban Tổ Chức** | `BTC` | Ban điều hành, Giám khảo | Duyệt lệ phí, mở/đóng cổng thi, chấm điểm barem. |
 
 > [!NOTE]
 > Hệ thống áp dụng phong cách thiết kế **Cyberpunk Refined** tinh tế với gam màu Dark Navy (`#050814`, `#0F1F3D`) và điểm nhấn Cyan ánh sáng (`#00D4FF`, `#33E0FF`), mang lại trải nghiệm công nghệ vượt trội và hiện đại.
@@ -138,18 +136,8 @@ graph LR
 
 ---
 
-### 3.6. Đăng ký sự kiện & Nhận vé QR Code
-* 🔗 **Đường dẫn:** `/events` (Danh sách) và `/events/[id]` (Chi tiết sự kiện).
-* **Quy trình nhận vé giữ chỗ:**
-  - Xem thông tin diễn giả, khung giờ, địa điểm / link phòng họp Google Meet.
-  - Bấm **"Đăng ký tham gia ngay"** $\rightarrow$ Hệ thống tự động phát hành **Vé điện tử (E-Ticket)**.
-  - Mỗi vé có **Mã vé định danh** và **Mã QR Code độc quyền** phục vụ check-in tại cửa.
-  - Hỗ trợ nút **"Thêm vào lịch"** để đồng bộ vào Google Calendar, Apple Calendar (.ics).
-
----
-
-### 3.7. Trung tâm thông báo & Fanpage hỗ trợ
-* 🔔 **Chuông thông báo (Navbar):** Nhận thông báo tự động khi được duyệt vào đội, lệ phí được xác thực, có kết quả chấm điểm hoặc có sự kiện mới.
+### 3.6. Trung tâm thông báo & Fanpage hỗ trợ
+* 🔔 **Chuông thông báo (Navbar):** Nhận thông báo tự động khi được duyệt vào đội, lệ phí được xác thực, có kết quả chấm điểm.
 * 💬 **Bong bóng Fanpage Facebook:** Nút tròn cố định góc phải màn hình, bấm vào dẫn ngay đến Fanpage chính thức để được hỗ trợ 24/7.
 
 ---
@@ -162,7 +150,7 @@ graph LR
 ### 4.1. Bảng điều khiển Tổng quan (Admin Hub)
 * 🔗 **Đường dẫn:** `/admin`
 * **Chỉ số thời gian thực (Live Metrics):** Tổng số người dùng đăng ký, Số đội thi khởi tạo, Tổng số bài nộp, Số bài chờ chấm điểm.
-* **Menu điều hướng 10 phân khu chức năng** giúp vận hành toàn diện cuộc thi.
+* **Menu điều hướng các phân khu chức năng** giúp vận hành toàn diện cuộc thi.
 
 ---
 
@@ -176,16 +164,7 @@ graph LR
 
 ---
 
-### 4.3. Quản lý Sự kiện, Webinar & Điểm danh QR
-* 🔗 **Đường dẫn:** `/admin/events`
-* **Thao tác nghiệp vụ:**
-  - Khởi tạo sự kiện mới: Đặt tên, phân loại (Webinar, Kickoff, Finale), thời gian, địa điểm/link online, số lượng vé tối đa.
-  - Bấm **"Xuất danh sách đăng ký"** để tải file Excel/CSV gửi email nhắc lịch.
-  - **Điểm danh (Check-in):** Quét mã QR trên vé của người tham dự hoặc tích chọn thủ công.
-
----
-
-### 4.4. Cấu hình Lịch trình Vòng thi & Đóng/Mở cổng
+### 4.3. Cấu hình Lịch trình Vòng thi & Đóng/Mở cổng
 * 🔗 **Đường dẫn:** `/admin/phases`
 * **Thao tác nghiệp vụ:**
   - Tạo và sắp xếp các vòng thi (Sơ loại, Bán kết, Chung kết).
@@ -195,7 +174,7 @@ graph LR
 
 ---
 
-### 4.5. Cấu hình Barem điểm & Trọng số chấm
+### 4.4. Cấu hình Barem điểm & Trọng số chấm
 * 🔗 **Đường dẫn:** `/admin/scoring`
 * **Thao tác nghiệp vụ:**
   - Tạo Vòng chấm điểm (Scoring Round).
@@ -205,7 +184,7 @@ graph LR
 
 ---
 
-### 4.6. Quản lý Bài thi & Nhập điểm Giám khảo
+### 4.5. Quản lý Bài thi & Nhập điểm Giám khảo
 * 🔗 **Đường dẫn:** `/admin/submissions`
 * **Thao tác nghiệp vụ:**
   - Lọc bài thi theo Vòng thi, Chủ đề và Trạng thái chấm.
@@ -215,7 +194,7 @@ graph LR
 
 ---
 
-### 4.7. Bảng tổng sắp xếp hạng Live Leaderboard
+### 4.6. Bảng tổng sắp xếp hạng Live Leaderboard
 * 🔗 **Đường dẫn:** `/admin/leaderboard`
 * **Thao tác nghiệp vụ:**
   - Bảng tổng sắp xếp hạng thời gian thực dựa trên điểm số trung bình của Giám khảo.
@@ -224,7 +203,7 @@ graph LR
 
 ---
 
-### 4.8. Quản lý Người dùng, Diễn giả & Nhà tài trợ
+### 4.7. Quản lý Người dùng, Diễn giả & Nhà tài trợ
 * 🔗 **Người dùng (`/admin/users`):** Tra cứu tài khoản theo tên/email/trường học; nâng quyền Admin hoặc chuyển về Thí sinh.
 * 🔗 **Diễn giả & Cố vấn (`/admin/speakers`):** Thêm ảnh avatar, chức danh, đơn vị công tác, tiểu sử và link LinkedIn của Mentor/Judge.
 * 🔗 **Nhà tài trợ & Đối tác (`/admin/sponsors`):** Quản lý logo và phân cấp tài trợ: Kim Cương (Platinum), Vàng (Gold), Bạc (Silver), Đồng hành (Partner).
@@ -246,10 +225,10 @@ graph LR
 | Giai đoạn | Nhiệm vụ của Team Media & Ban Vận Hành |
 | :--- | :--- |
 | **G1: Mở đơn & Ghép đội** | • Đăng bài phát động kèm link `/register`.<br>• Điều phối thí sinh tìm bạn ghép nhóm tại `/team/browse`.<br>• Trực hòm thư duyệt lệ phí tại `/admin/payments` (duyệt trong vòng 2–4h). |
-| **G2: Chuỗi Webinar** | • Tạo sự kiện tại `/admin/events`, giới hạn 300 vé để tạo hiệu ứng đăng ký sớm.<br>• Xuất data người đăng ký trước 60 phút để gửi email nhắc lịch phòng họp. |
+| **G2: Chuỗi Workshop & Mentoring** | • Cập nhật lịch trình các buổi đào tạo cố vấn tại `/admin/phases`.<br>• Đăng bài truyền thông và gửi tài liệu hướng dẫn cho các đội thi. |
 | **G3: Nộp bài Sơ loại** | • Vào `/admin/phases` bật `Submission Open = ON` và hẹn giờ đóng cổng 23:59.<br>• Đăng bài đếm ngược (Countdown) nhắc các đội kiểm tra file trước hạn chót. |
 | **G4: Chấm điểm & Bán kết**| • Bật cổng chấm điểm tại `/admin/scoring`.<br>• Nhập điểm giám khảo tại `/admin/submissions`.<br>• Lấy kết quả Top đội từ `/admin/leaderboard` để thiết kế ấn phẩm vinh danh. |
-| **G5: Chung kết & Gala** | • Phát hành vé QR Code sự kiện Chung kết cho khách mời và cổ động viên.<br>• Chiếu trực tiếp màn hình Live Leaderboard trên sân khấu công bố Quán quân. |
+| **G5: Chung kết & Gala** | • Vận hành vòng thi Chung kết và công bố giải thưởng.<br>• Chiếu trực tiếp màn hình Live Leaderboard trên sân khấu công bố Quán quân. |
 
 ---
 
@@ -267,9 +246,6 @@ graph LR
 ### ❓ 4. File bài nộp báo lỗi quá dung lượng cho phép (>50MB)?
 > **Giải pháp:** Nén file PDF qua công cụ iLovePDF hoặc tải file nặng lên **Google Drive** (đặt quyền *Ai có liên kết đều xem được*), sau đó dán link Drive vào ô *Liên kết đề án*.
 
-### ❓ 5. Làm thế nào để lấy vé QR Code tham gia webinar / sự kiện?
-> **Giải pháp:** Truy cập trang chi tiết sự kiện tại `/events/[id]`, màn hình sẽ hiển thị ngay tấm vé điện tử kèm mã QR Code để thí sinh chụp lại màn hình check-in.
-
 ---
 
 ## 🗺️ 7. BẢNG TRA CỨU ĐƯỜNG DẪN (SITEMAP URLS)
@@ -284,12 +260,10 @@ graph LR
 | **Bảng điều khiển đội** | `/dashboard` | Thí sinh có tài khoản |
 | **Khám phá & Tìm đội** | `/team/browse` | Thí sinh tìm nhóm |
 | **Cổng nộp bài dự thi** | `/submissions` | Đội thi đã Verified |
-| **Sự kiện & Vé điện tử** | `/events` | Khách & Thí sinh |
 | **Ban tổ chức** | `/organizers` | Khách & Thí sinh |
 | **Chính sách bảo mật** | `/privacy-policy` | Khách & Thí sinh |
 | **Admin Hub tổng thể** | `/admin` | Ban Tổ Chức (BTC) |
 | **Admin Duyệt lệ phí** | `/admin/payments` | Ban Tổ Chức (BTC) |
-| **Admin Quản lý sự kiện** | `/admin/events` | Ban Tổ Chức (BTC) |
 | **Admin Lịch trình & Cổng thi** | `/admin/phases` | Ban Tổ Chức (BTC) |
 | **Admin Cấu hình barem** | `/admin/scoring` | Ban Tổ Chức (BTC) |
 | **Admin Chấm bài thi** | `/admin/submissions` | Ban Tổ Chức & BGK |

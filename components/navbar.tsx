@@ -14,7 +14,6 @@ import {
   Upload,
   Settings,
   Calendar,
-  CalendarCheck,
   Scale,
   User as UserIcon,
   Menu,
@@ -174,15 +173,6 @@ export default function Navbar() {
           </Link>
 
           <Link
-            href="/events"
-            className={getIconLinkClass('/events')}
-            title="Sự kiện & Webinar"
-            aria-label="Sự kiện & Webinar"
-          >
-            <Calendar className="size-4" />
-          </Link>
-
-          <Link
             href="/organizers"
             className={getIconLinkClass('/organizers')}
             title="Ban tổ chức"
@@ -213,14 +203,6 @@ export default function Navbar() {
                 aria-label="Quản trị hệ thống"
               >
                 <Settings className="size-4" />
-              </Link>
-              <Link
-                href="/admin/events"
-                className={getIconLinkClass('/admin/events', 'warning')}
-                title="Quản lý sự kiện"
-                aria-label="Quản lý sự kiện"
-              >
-                <CalendarCheck className="size-4" />
               </Link>
               <Link
                 href="/admin/payments"
@@ -356,11 +338,6 @@ export default function Navbar() {
             <span>Trang chủ</span>
           </Link>
 
-          <Link href="/events" className={getMobileLinkClass('/events')}>
-            <Calendar className="size-4 text-brand-cyan" />
-            <span>Sự kiện &amp; Webinar</span>
-          </Link>
-
           <Link href="/organizers" className={getMobileLinkClass('/organizers')}>
             <Award className="size-4 text-brand-cyan" />
             <span>Ban tổ chức</span>
@@ -398,17 +375,6 @@ export default function Navbar() {
               >
                 <Settings className="size-4" />
                 <span>Quản trị hệ thống</span>
-              </Link>
-              <Link
-                href="/admin/events"
-                className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  pathname === '/admin/events'
-                    ? 'text-semantic-warning bg-semantic-warning/10 font-semibold'
-                    : 'text-text-secondary hover:text-semantic-warning hover:bg-surface-raised'
-                }`}
-              >
-                <CalendarCheck className="size-4" />
-                <span>Quản lý sự kiện</span>
               </Link>
               <Link
                 href="/admin/payments"

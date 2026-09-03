@@ -14,7 +14,6 @@ import {
   Settings,
   Scale,
   Calendar,
-  CalendarCheck,
   Mic,
   Handshake,
   BarChart2,
@@ -106,7 +105,6 @@ export default function AdminDashboard() {
   ]
 
   const navItems = [
-    { href: '/admin/events', icon: CalendarCheck, title: 'Quản lý sự kiện & Đăng ký', desc: 'Tạo webinar, kickoff, chung kết, kiểm soát số lượng vé và xuất danh sách' },
     { href: '/admin/payments', icon: CreditCard, title: 'Duyệt lệ phí dự thi', desc: 'Kiểm tra biên lai chuyển khoản và cấp trạng thái Verified cho đội thi' },
     { href: '/admin/competitions', icon: Trophy, title: 'Quản lý cuộc thi', desc: 'Thiết lập, hiệu chỉnh thông số các phân khu đấu trường' },
     { href: '/admin/users', icon: Users, title: 'Quản lý người dùng', desc: 'Giám sát tài khoản và phân quyền quản trị viên, thí sinh' },
