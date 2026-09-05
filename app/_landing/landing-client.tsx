@@ -45,11 +45,12 @@ const heroItem = {
 interface HeroProps {
   targetDate: string
   phaseTitle: string
+  label?: string
   phases: any[]
-  onUpdatePhase?: (updated: { phaseId?: string; title: string; targetDate: string }) => void
+  onUpdatePhase?: (updated: { phaseId?: string; title: string; targetDate: string; label?: string }) => void
 }
 
-function HeroSection({ targetDate, phaseTitle, phases, onUpdatePhase }: HeroProps) {
+function HeroSection({ targetDate, phaseTitle, label, phases, onUpdatePhase }: HeroProps) {
   return (
     <section className="relative min-h-[calc(100vh-4rem)] flex items-center px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 lg:py-28 overflow-hidden">
       {/* Background layers (back to front) */}
@@ -150,6 +151,7 @@ function HeroSection({ targetDate, phaseTitle, phases, onUpdatePhase }: HeroProp
             <Countdown
               targetDate={targetDate}
               phaseTitle={phaseTitle}
+              label={label}
               phases={phases}
               onUpdate={onUpdatePhase}
             />
@@ -184,27 +186,33 @@ const CORE_VALUES = [
 export default function LandingClient({
   targetDate: initialTargetDate,
   phaseTitle: initialPhaseTitle,
+  label: initialLabel,
   phases: initialPhases,
 }: {
   targetDate: string
   phaseTitle: string
+  label?: string
   phases: any[]
 }) {
   const [targetDate, setTargetDate] = useState(initialTargetDate)
   const [phaseTitle, setPhaseTitle] = useState(initialPhaseTitle)
+  const [label, setLabel] = useState(initialLabel)
   const [phases, setPhases] = useState(initialPhases)
 
   const handleUpdatePhase = ({
     phaseId,
     title,
     targetDate: newDate,
+    label: newLabel,
   }: {
     phaseId?: string
     title: string
     targetDate: string
+    label?: string
   }) => {
     setTargetDate(newDate)
     setPhaseTitle(title)
+    if (newLabel) setLabel(newLabel)
     if (phaseId) {
       setPhases((prev) =>
         prev.map((p) =>
@@ -228,6 +236,7 @@ export default function LandingClient({
       <HeroSection
         targetDate={targetDate}
         phaseTitle={phaseTitle}
+        label={label}
         phases={phases}
         onUpdatePhase={handleUpdatePhase}
       />

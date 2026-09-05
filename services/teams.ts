@@ -149,6 +149,8 @@ export async function sendTeamJoinRequest(
   return { ok: true }
 }
 
+import type { PublicProfileFields } from '@/types/profile'
+
 export type TeamMemberProfile = {
   id: string
   full_name: string | null
@@ -156,6 +158,14 @@ export type TeamMemberProfile = {
   faculty: string | null
   major: string | null
   avatar_url: string | null
+  role?: string | null
+  uid?: string | null
+  phone?: string | null
+  email?: string | null
+  facebook_url?: string | null
+  achievements?: string | null
+  is_profile_public?: boolean | null
+  public_fields?: PublicProfileFields | null
 }
 
 export type TeamMemberDetail = {
@@ -191,7 +201,7 @@ export async function getTeamWithMembers(teamId: string): Promise<BrowseTeam | n
       .from('teams')
       .select(`
         id, name, description, max_members, is_open, leader_id, competition_id,
-        leader:profiles!leader_id(id, full_name, university, faculty, major, avatar_url),
+        leader:profiles!leader_id(id, full_name, university, faculty, major, avatar_url, role, uid, phone, email, facebook_url, achievements, is_profile_public, public_fields),
         competitions(title),
         team_members(id, role, user_id, joined_at)
       `)
@@ -203,7 +213,7 @@ export async function getTeamWithMembers(teamId: string): Promise<BrowseTeam | n
     const memberUserIds = (teamData.team_members || []).map((m: any) => m.user_id)
     const { data: profilesData } = await supabase
       .from('profiles')
-      .select('id, full_name, university, faculty, major, avatar_url')
+      .select('id, full_name, university, faculty, major, avatar_url, role, uid, phone, email, facebook_url, achievements, is_profile_public, public_fields')
       .in('id', memberUserIds)
 
     const profileMap: Record<string, TeamMemberProfile> = {}

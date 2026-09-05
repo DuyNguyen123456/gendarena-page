@@ -1,3 +1,5 @@
+import fs from 'fs'
+import path from 'path'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { siteConfig } from '@/config/site'
 import LandingClient from '@/app/_landing/landing-client'
@@ -15,6 +17,20 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+function getSavedCountdownConfig() {
+  try {
+    const filePath = path.join(process.cwd(), 'data', 'countdown_config.json')
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8')
+      const data = JSON.parse(raw)
+      if (data?.targetDate) return data
+    }
+  } catch (err) {
+    console.error('Error reading countdown_config.json:', err)
+  }
+  return null
+}
+
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient()
   const { data: phases } = await supabase
@@ -22,11 +38,11 @@ export default async function HomePage() {
     .select('*')
     .order('display_order', { ascending: true })
 
+  const savedConfig = getSavedCountdownConfig()
+
   // Find the active countdown phase dynamically
-  // 1. Look for phase with status active
-  // 2. Or phase with open submission
-  // 3. Or registration / sơ loại / dream / earliest phase
   const targetPhase =
+    (savedConfig?.phaseId ? phases?.find((p) => p.id === savedConfig.phaseId) : null) ||
     phases?.find((p) => p.status === 'active') ||
     phases?.find((p) => p.submission_open) ||
     phases?.find(
@@ -38,21 +54,33 @@ export default async function HomePage() {
     ) ||
     phases?.[0]
 
-  // Priority: 1. submission_opens_at (exact ISO datetime with hours/mins), 2. start_date, 3. default fallback
-  const targetDate =
-    targetPhase?.submission_opens_at ||
-    (targetPhase?.start_date
-      ? targetPhase.start_date.includes('T')
-        ? targetPhase.start_date
-        : `${targetPhase.start_date}T00:00:00+07:00`
-      : '2026-09-01T00:00:00+07:00')
+  const now = new Date().getTime()
+  const opensAt = targetPhase?.submission_opens_at ? new Date(targetPhase.submission_opens_at).getTime() : 0
+  const closesAt = targetPhase?.submission_closes_at ? new Date(targetPhase.submission_closes_at).getTime() : 0
 
-  const phaseTitle = targetPhase?.title || 'Vòng Sơ Loại'
+  let computedDate = '2026-09-20T23:59:00+07:00'
+  let computedLabel = 'Đếm ngược đóng cổng nộp bài'
+
+  if (opensAt && now < opensAt) {
+    computedDate = targetPhase.submission_opens_at
+    computedLabel = 'Đếm ngược mở đơn'
+  } else if (closesAt && now < closesAt) {
+    computedDate = targetPhase.submission_closes_at
+    computedLabel = 'Đếm ngược đóng cổng nộp bài'
+  } else if (targetPhase?.end_date) {
+    computedDate = `${targetPhase.end_date}T23:59:00+07:00`
+    computedLabel = 'Đếm ngược kết thúc vòng'
+  }
+
+  const targetDate = savedConfig?.targetDate || computedDate
+  const phaseTitle = savedConfig?.phaseTitle || targetPhase?.title || 'Kết thúc Vòng sơ loại GenD Arena: Dream'
+  const label = savedConfig?.label || computedLabel
 
   return (
     <LandingClient
       targetDate={targetDate}
       phaseTitle={phaseTitle}
+      label={label}
       phases={phases || []}
     />
   )

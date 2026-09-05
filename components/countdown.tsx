@@ -23,7 +23,8 @@ export interface CountdownProps {
   targetDate: string
   phaseTitle?: string
   phases?: any[]
-  onUpdate?: (updated: { phaseId?: string; title: string; targetDate: string }) => void
+  label?: string
+  onUpdate?: (updated: { phaseId?: string; title: string; targetDate: string; label?: string }) => void
 }
 
 function AnimatedNumber({ value }: { value: number }) {
@@ -81,11 +82,13 @@ export default function Countdown({
   targetDate: initialTargetDate,
   phaseTitle: initialPhaseTitle = 'Vòng Sơ Loại',
   phases = [],
+  label: initialLabel = 'Đếm ngược',
   onUpdate,
 }: CountdownProps) {
   const router = useRouter()
   const [targetDate, setTargetDate] = useState(initialTargetDate)
   const [phaseTitle, setPhaseTitle] = useState(initialPhaseTitle)
+  const [label, setLabel] = useState(initialLabel)
 
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
@@ -103,6 +106,8 @@ export default function Countdown({
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>('')
   const [modalTitle, setModalTitle] = useState(initialPhaseTitle)
+  const [modalMilestone, setModalMilestone] = useState<'close' | 'open' | 'custom'>('close')
+  const [modalLabel, setModalLabel] = useState(initialLabel)
   const [modalDateTime, setModalDateTime] = useState(() => toDatetimeLocal(initialTargetDate))
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -112,7 +117,32 @@ export default function Countdown({
   useEffect(() => {
     setTargetDate(initialTargetDate)
     setPhaseTitle(initialPhaseTitle)
-  }, [initialTargetDate, initialPhaseTitle])
+    if (initialLabel) setLabel(initialLabel)
+  }, [initialTargetDate, initialPhaseTitle, initialLabel])
+
+  // Sync fresh config from persistent API on mount
+  useEffect(() => {
+    async function syncLatestCountdown() {
+      try {
+        const res = await fetch('/api/countdown')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.config?.targetDate) {
+            setTargetDate(data.config.targetDate)
+          }
+          if (data.config?.phaseTitle) {
+            setPhaseTitle(data.config.phaseTitle)
+          }
+          if (data.config?.label) {
+            setLabel(data.config.label)
+          }
+        }
+      } catch (err) {
+        console.error('Error syncing countdown from API:', err)
+      }
+    }
+    syncLatestCountdown()
+  }, [])
 
   // Check admin role
   useEffect(() => {
@@ -171,11 +201,16 @@ export default function Countdown({
 
     if (matched) {
       setModalTitle(matched.title || phaseTitle)
-      const dateStr = matched.submission_opens_at || matched.start_date || targetDate
+      // Prioritize closes_at if available or targetDate
+      const dateStr = matched.submission_closes_at || matched.submission_opens_at || matched.start_date || targetDate
       setModalDateTime(toDatetimeLocal(dateStr))
+      setModalMilestone(matched.submission_closes_at ? 'close' : 'open')
+      setModalLabel(label || (matched.submission_closes_at ? 'Đếm ngược đóng cổng nộp bài' : 'Đếm ngược mở đơn'))
     } else {
       setModalTitle(phaseTitle)
       setModalDateTime(toDatetimeLocal(targetDate))
+      setModalMilestone('close')
+      setModalLabel(label || 'Đếm ngược đóng cổng nộp bài')
     }
 
     setSaveSuccess(false)
@@ -188,8 +223,29 @@ export default function Countdown({
     const found = phases.find((p) => p.id === phaseId)
     if (found) {
       setModalTitle(found.title)
-      const dateStr = found.submission_opens_at || found.start_date || targetDate
+      const dateStr =
+        modalMilestone === 'open'
+          ? (found.submission_opens_at || found.start_date || targetDate)
+          : (found.submission_closes_at || found.end_date || targetDate)
       setModalDateTime(toDatetimeLocal(dateStr))
+    }
+  }
+
+  const handleMilestoneChange = (milestone: 'close' | 'open' | 'custom') => {
+    setModalMilestone(milestone)
+    const found = phases.find((p) => p.id === selectedPhaseId)
+    if (milestone === 'close') {
+      setModalLabel('Đếm ngược đóng cổng nộp bài')
+      if (found?.submission_closes_at || found?.end_date) {
+        setModalDateTime(toDatetimeLocal(found.submission_closes_at || `${found.end_date}T23:59:00+07:00`))
+      }
+    } else if (milestone === 'open') {
+      setModalLabel('Đếm ngược mở đơn')
+      if (found?.submission_opens_at || found?.start_date) {
+        setModalDateTime(toDatetimeLocal(found.submission_opens_at || `${found.start_date}T00:00:00+07:00`))
+      }
+    } else {
+      setModalLabel('Đếm ngược thời gian')
     }
   }
 
@@ -209,62 +265,39 @@ export default function Countdown({
 
     try {
       const isoString = new Date(modalDateTime).toISOString()
-      const dateOnly = modalDateTime.slice(0, 10)
 
-      const supabase = createClient()
+      // Call persistent server endpoint using Service Role (never blocked by RLS!)
+      const res = await fetch('/api/countdown', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phaseId: selectedPhaseId || undefined,
+          title: modalTitle.trim(),
+          targetDate: isoString,
+          milestone: modalMilestone,
+          label: modalLabel.trim() || undefined,
+        }),
+      })
 
-      // Resolve the phase ID to update
-      let targetIdToUpdate = selectedPhaseId
-      if (!targetIdToUpdate && phases.length > 0) {
-        const found =
-          phases.find((p) => p.title === phaseTitle || (p.title && phaseTitle.includes(p.title))) ||
-          phases[0]
-        targetIdToUpdate = found?.id || phases[0]?.id
-      }
+      const data = await res.json()
 
-      if (targetIdToUpdate) {
-        // Update the existing phase in competition_phases table
-        const { error: dbError } = await supabase
-          .from('competition_phases')
-          .update({
-            title: modalTitle.trim(),
-            start_date: dateOnly,
-            submission_opens_at: isoString,
-            status: 'active',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', targetIdToUpdate)
-
-        if (dbError) throw new Error(dbError.message)
-      } else {
-        // Fallback: If no phases exist at all, create a new phase
-        const { data: newPhase, error: insertError } = await supabase
-          .from('competition_phases')
-          .insert({
-            title: modalTitle.trim(),
-            description: 'Vòng thi chính thức',
-            start_date: dateOnly,
-            submission_opens_at: isoString,
-            status: 'active',
-            icon: 'target',
-            display_order: 1,
-          })
-          .select('id')
-          .single()
-
-        if (insertError) throw new Error(insertError.message)
-        if (newPhase) targetIdToUpdate = newPhase.id
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Lỗi khi lưu đồng hồ đếm ngược')
       }
 
       // Update local state immediately
       setTargetDate(isoString)
       setPhaseTitle(modalTitle.trim())
+      setLabel(modalLabel.trim() || label)
 
       if (onUpdate) {
         onUpdate({
-          phaseId: targetIdToUpdate || undefined,
+          phaseId: selectedPhaseId || undefined,
           title: modalTitle.trim(),
           targetDate: isoString,
+          label: modalLabel.trim() || label,
         })
       }
 
@@ -318,7 +351,7 @@ export default function Countdown({
               </button>
             ) : (
               <span className="text-[11px] sm:text-xs font-medium text-text-tertiary">
-                Đếm ngược mở đơn
+                {label || 'Đếm ngược'}
               </span>
             )}
           </div>
@@ -349,14 +382,14 @@ export default function Countdown({
               { value: timeLeft.hours, label: 'Giờ' },
               { value: timeLeft.minutes, label: 'Phút' },
               { value: timeLeft.seconds, label: 'Giây' },
-            ].map(({ value, label }) => (
+            ].map(({ value, label: itemLabel }) => (
               <div
-                key={label}
+                key={itemLabel}
                 className="flex flex-col items-center justify-center p-2 sm:p-3 md:p-4 bg-surface-overlay border border-surface-border rounded-lg"
               >
                 <AnimatedNumber value={value} />
                 <span className="text-[10px] sm:text-[11px] md:text-xs font-medium text-text-tertiary uppercase tracking-wider mt-1.5 sm:mt-2 font-display">
-                  {label}
+                  {itemLabel}
                 </span>
               </div>
             ))}
@@ -374,7 +407,7 @@ export default function Countdown({
             </div>
             <DialogTitle>Cài đặt đồng hồ đếm ngược & Lịch trình vòng</DialogTitle>
             <DialogDescription>
-              Chỉnh sửa tên vòng, ngày và giờ đếm ngược hiển thị trực tiếp trên trang chủ.
+              Chỉnh sửa tên vòng, mốc thời gian và ngày giờ đếm ngược. Cài đặt được lưu vĩnh viễn và không bị mất khi deploy mới.
             </DialogDescription>
           </DialogHeader>
 
@@ -388,7 +421,7 @@ export default function Countdown({
           {saveSuccess && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-semantic-success/10 border border-semantic-success/30 text-semantic-success text-xs font-medium">
               <CheckCircle2 className="size-4 shrink-0" />
-              <span>Đã lưu và cập nhật đồng hồ đếm ngược thành công!</span>
+              <span>Đã lưu vĩnh viễn và cập nhật đồng hồ đếm ngược thành công!</span>
             </div>
           )}
 
@@ -411,7 +444,7 @@ export default function Countdown({
                   onChange={(e) => handlePhaseSelectChange(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition cursor-pointer"
                 >
-                  <option value="">-- Chọn vòng thi --</option>
+                  <option value="">-- Tùy chỉnh ngoài vòng thi --</option>
                   {phases.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.phase_number ? `Vòng ${p.phase_number}: ` : ''}{p.title}
@@ -420,6 +453,48 @@ export default function Countdown({
                 </select>
               </div>
             )}
+
+            {/* Milestone Selector */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Mục tiêu đếm ngược
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleMilestoneChange('close')}
+                  className={`px-2.5 py-2 rounded-xl text-xs font-medium border transition cursor-pointer text-center ${
+                    modalMilestone === 'close'
+                      ? 'border-brand-cyan bg-brand-cyan/15 text-brand-cyan font-bold'
+                      : 'border-surface-border bg-surface-raised text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Đóng đơn / Hạn chót
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMilestoneChange('open')}
+                  className={`px-2.5 py-2 rounded-xl text-xs font-medium border transition cursor-pointer text-center ${
+                    modalMilestone === 'open'
+                      ? 'border-brand-cyan bg-brand-cyan/15 text-brand-cyan font-bold'
+                      : 'border-surface-border bg-surface-raised text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Mở đơn / Bắt đầu
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMilestoneChange('custom')}
+                  className={`px-2.5 py-2 rounded-xl text-xs font-medium border transition cursor-pointer text-center ${
+                    modalMilestone === 'custom'
+                      ? 'border-brand-cyan bg-brand-cyan/15 text-brand-cyan font-bold'
+                      : 'border-surface-border bg-surface-raised text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Tùy chỉnh khác
+                </button>
+              </div>
+            </div>
 
             {/* Title Input */}
             <div className="space-y-1.5">
@@ -431,7 +506,21 @@ export default function Countdown({
                 required
                 value={modalTitle}
                 onChange={(e) => setModalTitle(e.target.value)}
-                placeholder="VD: Vòng Sơ Loại: DREAM"
+                placeholder="VD: Kết thúc Vòng sơ loại GenD Arena: Dream"
+                className="w-full h-10 px-3 rounded-xl border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition"
+              />
+            </div>
+
+            {/* Label Input */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary">
+                Nhãn phụ hiển thị góc trên đồng hồ
+              </label>
+              <input
+                type="text"
+                value={modalLabel}
+                onChange={(e) => setModalLabel(e.target.value)}
+                placeholder="VD: Đếm ngược đóng cổng nộp bài"
                 className="w-full h-10 px-3 rounded-xl border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition"
               />
             </div>
@@ -440,17 +529,17 @@ export default function Countdown({
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-text-secondary flex items-center gap-1.5">
                 <Calendar className="size-3.5 text-brand-cyan" />
-                <span>Ngày & Giờ đếm ngược (Mốc thời gian mở đơn / bắt đầu) *</span>
+                <span>Ngày & Giờ đếm ngược đích đến *</span>
               </label>
               <input
                 type="datetime-local"
                 required
                 value={modalDateTime}
                 onChange={(e) => setModalDateTime(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition"
+                className="w-full h-10 px-3 rounded-xl border border-surface-border bg-surface-raised text-sm text-text-primary outline-none focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/20 transition font-mono"
               />
               <p className="text-[11px] text-text-tertiary leading-relaxed">
-                * Đồng hồ trên trang chủ sẽ tự động đếm ngược đến chính xác ngày và giờ này.
+                * Dữ liệu sẽ được lưu vào cơ sở dữ liệu và hệ thống cấu hình vĩnh viễn, không bị mất khi deploy bản mới.
               </p>
             </div>
 
@@ -471,7 +560,7 @@ export default function Countdown({
                 isLoading={isSaving}
                 leftIcon={<Sparkles className="size-4" />}
               >
-                Lưu & Áp dụng ngay
+                Lưu vĩnh viễn & Áp dụng ngay
               </Button>
             </DialogFooter>
           </form>
@@ -480,3 +569,5 @@ export default function Countdown({
     </>
   )
 }
+
+

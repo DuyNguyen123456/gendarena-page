@@ -25,7 +25,11 @@ import {
   AlertTriangle,
   CheckCircle2,
   Mail,
+  Trophy,
+  Globe,
+  ShieldCheck,
 } from 'lucide-react'
+import type { PublicProfileFields } from '@/types/profile'
 
 export type ProfileData = {
   id: string
@@ -41,6 +45,19 @@ export type ProfileData = {
   facebook_url: string | null
   avatar_url: string | null
   role?: string | null
+  achievements?: string | null
+  is_profile_public?: boolean | null
+  public_fields?: PublicProfileFields | null
+}
+
+export const DEFAULT_PUBLIC_FIELDS: PublicProfileFields = {
+  phone: false,
+  email: false,
+  facebook_url: true,
+  university: true,
+  faculty: true,
+  major: true,
+  achievements: true,
 }
 
 type FormState = {
@@ -52,6 +69,9 @@ type FormState = {
   major: string
   organization: string
   facebook_url: string
+  achievements: string
+  is_profile_public: boolean
+  public_fields: PublicProfileFields
 }
 
 export default function ProfileEditor({
@@ -74,6 +94,12 @@ export default function ProfileEditor({
     major: profile.major ?? '',
     organization: profile.organization ?? '',
     facebook_url: profile.facebook_url ?? '',
+    achievements: profile.achievements ?? '',
+    is_profile_public: Boolean(profile.is_profile_public),
+    public_fields: {
+      ...DEFAULT_PUBLIC_FIELDS,
+      ...(profile.public_fields || {}),
+    },
   })
   const [formErrors, setFormErrors] = useState<Partial<FormState>>({})
   const [saving, setSaving] = useState(false)
@@ -92,6 +118,12 @@ export default function ProfileEditor({
       major: profile.major ?? '',
       organization: profile.organization ?? '',
       facebook_url: profile.facebook_url ?? '',
+      achievements: profile.achievements ?? '',
+      is_profile_public: Boolean(profile.is_profile_public),
+      public_fields: {
+        ...DEFAULT_PUBLIC_FIELDS,
+        ...(profile.public_fields || {}),
+      },
     })
   }, [profile])
 
@@ -144,6 +176,9 @@ export default function ProfileEditor({
       organization: form.organization.trim() || null,
       facebook_url: form.facebook_url.trim() || null,
       avatar_url: avatarUrl,
+      achievements: form.achievements.trim() || null,
+      is_profile_public: form.is_profile_public,
+      public_fields: form.public_fields,
     }
 
     const result = await updateProfile(profile.id, payload)
@@ -385,6 +420,129 @@ export default function ProfileEditor({
               </p>
             )}
           </div>
+        </div>
+
+        {/* Achievements Section */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
+              <Trophy className="size-3.5 text-brand-gold" />
+              Thành tích &amp; Kỹ năng nổi bật
+            </label>
+            <span className="text-[11px] text-text-disabled">Khuyến khích</span>
+          </div>
+          <textarea
+            rows={3}
+            value={form.achievements}
+            onChange={(e) => setForm((prev) => ({ ...prev, achievements: e.target.value }))}
+            placeholder="VD: Giải Ba Hackathon AI 2025, chuyên môn Fullstack React/Next.js & Python, nghiên cứu khoa học cấp trường, IELTS 7.0..."
+            className="w-full px-3.5 py-2.5 bg-surface-overlay border border-surface-border rounded-lg text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-brand-cyan text-sm transition resize-none leading-relaxed"
+          />
+          <p className="text-[11px] text-text-tertiary">
+            Thông tin này sẽ được hiển thị cho các thí sinh khác khi bạn bật chế độ tìm bạn ghép đội.
+          </p>
+        </div>
+
+        {/* Teaming & Privacy Settings */}
+        <div className="p-4 rounded-xl border border-surface-border bg-surface-overlay/50 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Globe className="size-4 text-brand-cyan" />
+                <span className="text-sm font-semibold text-text-primary">
+                  Công khai hồ sơ để tìm bạn ghép đội
+                </span>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-semibold ${
+                    form.is_profile_public
+                      ? 'bg-semantic-success/15 text-semantic-success border border-semantic-success/30'
+                      : 'bg-surface-raised text-text-disabled border border-surface-border'
+                  }`}
+                >
+                  {form.is_profile_public ? 'Đang Bật' : 'Đang Tắt'}
+                </span>
+              </div>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                Cho phép các thí sinh chưa có đội khác tìm thấy và liên hệ với bạn để lập nhóm dự thi. Mặc định luôn tắt để bảo vệ quyền riêng tư.
+              </p>
+            </div>
+
+            {/* Toggle switch button */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.is_profile_public}
+              onClick={() =>
+                setForm((prev) => ({ ...prev, is_profile_public: !prev.is_profile_public }))
+              }
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                form.is_profile_public ? 'bg-brand-cyan' : 'bg-surface-raised border-surface-border'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                  form.is_profile_public ? 'translate-x-5 bg-brand-navy' : 'translate-x-0 bg-text-disabled'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Selective Fields Options (Visible when is_profile_public is true) */}
+          {form.is_profile_public && (
+            <div className="pt-3 border-t border-surface-border/60 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                  <ShieldCheck className="size-3.5 text-brand-cyan" />
+                  Chọn thông tin bạn muốn hiển thị công khai:
+                </span>
+                <span className="text-[11px] text-text-tertiary">
+                  Họ tên &amp; Avatar luôn hiển thị
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {[
+                  { key: 'phone', label: 'Số điện thoại (Gọi / Zalo)', desc: 'Tiện cho thí sinh khác liên hệ nhanh' },
+                  { key: 'email', label: 'Địa chỉ Email', desc: 'Thí sinh có thể gửi thư trao đổi' },
+                  { key: 'facebook_url', label: 'Link Facebook cá nhân', desc: 'Nhắn tin qua trang cá nhân Facebook' },
+                  { key: 'university', label: 'Trường học & Khoa / Ngành', desc: 'Tìm đồng đội cùng trường hoặc ngành phù hợp' },
+                  { key: 'achievements', label: 'Thành tích & Kỹ năng nổi bật', desc: 'Tăng cơ hội được mời vào đội mạnh' },
+                ].map((item) => {
+                  const isChecked = form.public_fields[item.key as keyof PublicProfileFields] !== false
+                  return (
+                    <label
+                      key={item.key}
+                      className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition ${
+                        isChecked
+                          ? 'bg-brand-cyan/5 border-brand-cyan/30 text-text-primary'
+                          : 'bg-surface-raised/40 border-surface-border/60 text-text-tertiary opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const checked = e.target.checked
+                          setForm((prev) => ({
+                            ...prev,
+                            public_fields: {
+                              ...prev.public_fields,
+                              [item.key]: checked,
+                            },
+                          }))
+                        }}
+                        className="mt-0.5 rounded border-surface-border text-brand-cyan focus:ring-brand-cyan size-4 accent-brand-cyan"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium leading-none">{item.label}</p>
+                        <p className="text-[10px] text-text-disabled mt-1 truncate">{item.desc}</p>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -41,7 +41,6 @@ export const siteConfig = {
   authNavItems: [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Bài nộp", href: "/submissions" },
-    { label: "Hồ sơ", href: "/profile" },
   ],
 };
 

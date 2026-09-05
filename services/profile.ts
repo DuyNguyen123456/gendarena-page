@@ -1,8 +1,8 @@
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
 import type { TopicCategory } from '@/types/submission'
-import type { Profile } from '@/types/profile'
-export type { Profile } from '@/types/profile'
+import type { Profile, PublicProfileFields, TeamingContestant } from '@/types/profile'
+export type { Profile, PublicProfileFields, TeamingContestant } from '@/types/profile'
 import { dobToDbFormat, dobToUiFormat } from '@/lib/utils'
 import { isProfileComplete } from '@/lib/profile-utils'
 import { notifyProfileUpdateStatus } from '@/services/notifications'
@@ -23,6 +23,9 @@ export type ProfileUpdate = {
   dob?: string | null
   facebook_url?: string | null
   avatar_url?: string | null
+  achievements?: string | null
+  is_profile_public?: boolean | null
+  public_fields?: PublicProfileFields | null
 }
 
 export function validateFacebookUrl(url: string): string | null {
@@ -261,3 +264,40 @@ export async function ensureProfileExists(
     return { ok: false, error: err?.message || 'Lỗi ngoại lệ khi tạo profile', data: null }
   }
 }
+
+export type BrowseContestantsResult =
+  | { ok: true; contestants: TeamingContestant[]; userHasTeam: boolean }
+  | { ok: false; error: string; isIncomplete?: boolean }
+
+/**
+ * Lấy danh sách các thí sinh chưa có đội và đang bật công khai hồ sơ ghép đội
+ */
+export async function fetchTeamingContestants(userId: string): Promise<BrowseContestantsResult> {
+  try {
+    const res = await fetch('/api/contestants/browse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+    const data = await res.json()
+    if (!res.ok || !data.ok) {
+      return {
+        ok: false,
+        error: data.error || 'Không thể tải danh sách thí sinh.',
+        isIncomplete: data.isIncomplete,
+      }
+    }
+    return {
+      ok: true,
+      contestants: data.contestants || [],
+      userHasTeam: Boolean(data.userHasTeam),
+    }
+  } catch (err: any) {
+    console.error('[services/profile fetchTeamingContestants Error]:', err)
+    return {
+      ok: false,
+      error: err?.message || 'Lỗi kết nối khi tải danh sách thí sinh.',
+    }
+  }
+}
+

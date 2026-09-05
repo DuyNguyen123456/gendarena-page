@@ -220,14 +220,6 @@ export default function Navbar() {
               >
                 <Calendar className="size-4" />
               </Link>
-              <Link
-                href="/profile"
-                className={getIconLinkClass('/profile', 'warning')}
-                title="Hồ sơ quản trị"
-                aria-label="Hồ sơ quản trị"
-              >
-                <UserIcon className="size-4" />
-              </Link>
             </>
           )}
 
@@ -397,13 +389,6 @@ export default function Navbar() {
               >
                 <Calendar className="size-4" />
                 <span>Timeline &amp; Vòng thi</span>
-              </Link>
-              <Link
-                href="/profile"
-                className={getMobileLinkClass('/profile')}
-              >
-                <UserIcon className="size-4" />
-                <span>Hồ sơ quản trị</span>
               </Link>
             </>
           )}

@@ -20,7 +20,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import ProfileEditor, { ProfileData } from '@/components/profile/ProfileEditor'
-import { ensureProfileExists, getProfile, dobToUiFormat } from '@/services/profile'
+import { ensureProfileExists, getProfile, dobToUiFormat, fetchTeamingContestants } from '@/services/profile'
+import type { TeamingContestant } from '@/types/profile'
 import { createNotification, checkAndSendIncompleteProfileReminder } from '@/services/notifications'
 import PaymentModal from '@/components/team/PaymentModal'
 import { calculateExpectedFee, type TeamPaymentStatus } from '@/types/payment'
@@ -52,6 +53,7 @@ import {
   Sparkles,
   ShieldCheck,
   Lock,
+  ArrowRight,
 } from 'lucide-react'
 import { isProfileComplete } from '@/lib/profile-utils'
 
@@ -183,8 +185,10 @@ function DashboardContent() {
   const [duplicateTeams, setDuplicateTeams] = useState<DuplicateMembership[]>([])
   const [resolvingTeam, setResolvingTeam] = useState<string | null>(null)
 
+  // Tab state (when contestant has team: 'team' | 'profile')
+  const [activeTab, setActiveTab] = useState<'team' | 'profile'>('team')
+
   // Modals & Dialogs
-  const [showProfileModal, setShowProfileModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showRenameDialog, setShowRenameDialog] = useState(false)
   const [renameValue, setRenameValue] = useState('')
@@ -205,7 +209,13 @@ function DashboardContent() {
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState('')
 
-  // Team Invite by UID (Leader only)
+  // Public Teaming Contestants (Leader direct recruitment list)
+  const [publicContestants, setPublicContestants] = useState<TeamingContestant[]>([])
+  const [publicContestantsLoading, setPublicContestantsLoading] = useState(false)
+  const [contestantSearchQuery, setContestantSearchQuery] = useState('')
+  const [showManualUid, setShowManualUid] = useState(false)
+
+  // Team Invite by UID (Leader manual fallback)
   const [inviteUid, setInviteUid] = useState('')
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteMessage, setInviteMessage] = useState('')
@@ -218,6 +228,35 @@ function DashboardContent() {
   const searchParams = useSearchParams()
   const supabase = useMemo(() => createClient(), [])
   const prefersReducedMotion = useReducedMotion()
+
+  const filteredPublicContestants = useMemo(() => {
+    if (!contestantSearchQuery.trim()) return publicContestants
+    const q = contestantSearchQuery.toLowerCase()
+    return publicContestants.filter((c) => {
+      const name = (c.full_name || '').toLowerCase()
+      const uni = (c.university || '').toLowerCase()
+      const fac = (c.faculty || '').toLowerCase()
+      const maj = (c.major || '').toLowerCase()
+      const ach = (c.achievements || '').toLowerCase()
+      return (
+        name.includes(q) ||
+        uni.includes(q) ||
+        fac.includes(q) ||
+        maj.includes(q) ||
+        ach.includes(q)
+      )
+    })
+  }, [publicContestants, contestantSearchQuery])
+
+  // Sync activeTab if searchParam tab changes
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'profile') {
+      setActiveTab('profile')
+    } else if (tabParam === 'team') {
+      setActiveTab('team')
+    }
+  }, [searchParams])
 
   // Fetch Team Members
   const fetchMembers = useCallback(async (teamId: string, leaderId?: string) => {
@@ -332,7 +371,7 @@ function DashboardContent() {
       }
 
       // Role-based redirect
-      if (userProfile.role && userProfile.role !== 'participant') {
+      if (userProfile.role && userProfile.role !== 'participant' && userProfile.role !== 'tester') {
         router.push(getPostLoginPath(userProfile.role))
         return
       }
@@ -482,6 +521,19 @@ function DashboardContent() {
                   .order('created_at', { ascending: false })
 
                 setSentInvites((invitesData ?? []) as unknown as SentInvite[])
+
+                // Fetch public teaming contestants for direct recruitment
+                setPublicContestantsLoading(true)
+                try {
+                  const contestantsRes = await fetchTeamingContestants(authUser.id)
+                  if (contestantsRes.ok) {
+                    setPublicContestants(contestantsRes.contestants)
+                  }
+                } catch (cErr) {
+                  console.warn('[Dashboard] Error fetching public contestants:', cErr)
+                } finally {
+                  setPublicContestantsLoading(false)
+                }
               }
             } else {
               setMyTeam(null)
@@ -693,8 +745,7 @@ function DashboardContent() {
 
     // Enforce profile completion gate
     if (!profile || !isProfileComplete(profile)) {
-      setCreateError('Vui lòng hoàn thiện hồ sơ cá nhân trước khi thành lập đội thi.')
-      setShowProfileModal(true)
+      setCreateError('Vui lòng hoàn thiện hồ sơ cá nhân bên cạnh trước khi thành lập đội thi.')
       return
     }
 
@@ -784,7 +835,78 @@ function DashboardContent() {
     }
   }
 
-  // Leader Only: Invite by UID
+  // Leader Only: Direct Invite Contestant from Public List
+  const handleInviteContestant = async (contestant: TeamingContestant) => {
+    if (!myTeam || !user || !isLeader) return
+
+    if (members.length >= myTeam.max_members) {
+      setGlobalMessage({ text: 'Đội thi đã đủ số lượng thành viên tối đa.', type: 'error' })
+      return
+    }
+
+    if (!contestant.uid) {
+      setGlobalMessage({ text: 'Thí sinh này chưa được cấp mã định danh UID.', type: 'error' })
+      return
+    }
+
+    const formattedUid = contestant.uid.trim().toUpperCase()
+
+    // Check if already invited
+    if (sentInvites.some((inv) => inv.invited_uid.toUpperCase() === formattedUid)) {
+      setGlobalMessage({ text: 'Đã gửi lời mời tới thí sinh này trước đó.', type: 'error' })
+      return
+    }
+
+    setActionLoading(contestant.id)
+    setGlobalMessage(null)
+
+    try {
+      const { error: inviteError } = await supabase.from('team_invites').insert({
+        team_id: myTeam.id,
+        invited_uid: formattedUid,
+        invited_by: user.id,
+        status: 'pending',
+      })
+
+      if (inviteError) {
+        setGlobalMessage({ text: `Gửi lời mời thất bại: ${inviteError.message}`, type: 'error' })
+      } else {
+        setGlobalMessage({
+          text: `Đã gửi lời mời gia nhập đội thành công tới ${contestant.full_name || 'thí sinh'}!`,
+          type: 'success',
+        })
+
+        // Refresh sent invites
+        const { data: teamInvites } = await supabase
+          .from('team_invites')
+          .select('id, invited_uid, status, created_at')
+          .eq('team_id', myTeam.id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+
+        if (teamInvites) setSentInvites(teamInvites as unknown as SentInvite[])
+
+        // Send notification to contestant
+        try {
+          await createNotification({
+            userId: contestant.id,
+            title: 'Lời mời tham gia đội thi',
+            message: `Đội "${myTeam.name}" đã gửi lời mời bạn tham gia đội thi.`,
+            type: 'team_invite',
+            link: '/dashboard',
+          })
+        } catch (notifErr) {
+          console.warn('Failed to send team invite notification:', notifErr)
+        }
+      }
+    } catch (err: any) {
+      setGlobalMessage({ text: `Lỗi khi gửi lời mời: ${err?.message}`, type: 'error' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Leader Only: Invite by UID (Manual fallback)
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!myTeam || !user || !isLeader || !inviteUid.trim()) return
@@ -807,7 +929,14 @@ function DashboardContent() {
       return
     }
 
-    if (targetProfile.role && targetProfile.role !== 'participant') {
+    // Nếu người mời là thí sinh thực tế, không cho phép tìm hoặc mời tài khoản tester
+    if (profile?.role === 'participant' && targetProfile.role === 'tester') {
+      setInviteMessage('Không tìm thấy đấu thủ với mã UID này.')
+      setInviteLoading(false)
+      return
+    }
+
+    if (targetProfile.role && targetProfile.role !== 'participant' && targetProfile.role !== 'tester') {
       setInviteMessage('Mã UID này thuộc tài khoản quản trị hoặc giám khảo.')
       setInviteLoading(false)
       return
@@ -863,10 +992,28 @@ function DashboardContent() {
     setInviteLoading(false)
   }
 
-  // Leader Only: Cancel Invite
+  // Leader Only: Cancel Invite (Calls secure server endpoint)
   const handleCancelInvite = async (inviteId: string) => {
-    await supabase.from('team_invites').delete().eq('id', inviteId)
-    setSentInvites((prev) => prev.filter((i) => i.id !== inviteId))
+    if (!user) return
+    setActionLoading(inviteId)
+    try {
+      const res = await fetch('/api/teams/invites/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteId, userId: user.id }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setSentInvites((prev) => prev.filter((i) => i.id !== inviteId))
+        setGlobalMessage({ text: 'Đã thu hồi lời mời thành công.', type: 'success' })
+      } else {
+        setGlobalMessage({ text: data.error || 'Thu hồi lời mời thất bại.', type: 'error' })
+      }
+    } catch (err: any) {
+      setGlobalMessage({ text: err.message || 'Lỗi khi thu hồi lời mời.', type: 'error' })
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   // Leader Only: Join Request actions
@@ -1111,49 +1258,19 @@ function DashboardContent() {
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-12">
-          {/* Top Row: Badges & Profile Modal Trigger */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <Badge variant="brand" size="sm">
-                {myTeam?.competitions?.title || 'GenD Arena 2026'}
+          {/* Top Row: Badges */}
+          <div className="flex items-center gap-2.5 flex-wrap mb-4">
+            <Badge variant="brand" size="sm">
+              {myTeam?.competitions?.title || 'GenD Arena 2026'}
+            </Badge>
+            {myTeam ? (
+              <Badge variant={myTeam.is_open ? 'success' : 'default'} size="sm">
+                {myTeam.is_open ? 'Đang mở tuyển' : 'Đã đóng tuyển'}
               </Badge>
-              {myTeam ? (
-                <Badge variant={myTeam.is_open ? 'success' : 'default'} size="sm">
-                  {myTeam.is_open ? 'Đang mở tuyển' : 'Đã đóng tuyển'}
-                </Badge>
-              ) : (
-                <Badge variant="info" size="sm">
-                  Thí sinh tự do
-                </Badge>
-              )}
-            </div>
-
-            {/* Always visible Profile button for participants */}
-            {profile && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowProfileModal(true)}
-                leftIcon={
-                  isProfileComplete(profile) ? (
-                    <BadgeCheck className="size-3.5 text-brand-cyan" />
-                  ) : (
-                    <Pencil className="size-3.5 text-semantic-warning" />
-                  )
-                }
-                className="w-full sm:w-auto shrink-0 justify-center text-xs gap-1.5"
-              >
-                <span>Hồ sơ cá nhân ({profile.full_name || 'Tôi'})</span>
-                {isProfileComplete(profile) ? (
-                  <span className="text-[10px] text-brand-cyan font-medium hidden sm:inline">
-                    · Đã xác thực
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-semantic-warning font-medium hidden sm:inline">
-                    · Chưa hoàn thiện
-                  </span>
-                )}
-              </Button>
+            ) : (
+              <Badge variant="info" size="sm">
+                Thí sinh tự do
+              </Badge>
             )}
           </div>
 
@@ -1169,6 +1286,12 @@ function DashboardContent() {
                   ) : (
                     <>
                       <span>Xin chào, {profile?.full_name || 'Đấu thủ'}!</span>
+                      {profile?.role === 'tester' && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-gold bg-brand-gold/10 border border-brand-gold/30 px-2.5 py-1 rounded-full" title="Tài khoản Tester thử nghiệm">
+                          <Sparkles className="size-3.5 text-brand-gold" />
+                          <span>Tester</span>
+                        </span>
+                      )}
                       {isProfileComplete(profile) && (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-cyan bg-brand-cyan/10 border border-brand-cyan/30 px-2.5 py-1 rounded-full" title="Đã xác thực hồ sơ">
                           <BadgeCheck className="size-3.5 text-brand-cyan" />
@@ -1241,33 +1364,6 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* Incomplete Profile Alert Banner */}
-      {profile && !isProfileComplete(profile) && (
-        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-6">
-          <div className="p-4 sm:p-5 rounded-xl border border-semantic-warning/40 bg-semantic-warning/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="size-5 text-semantic-warning shrink-0 mt-0.5" />
-              <div className="space-y-0.5">
-                <p className="text-sm font-semibold text-text-primary">
-                  Hoàn thiện hồ sơ để tiếp tục
-                </p>
-                <p className="text-xs text-text-secondary leading-relaxed">
-                  Bạn cần cập nhật đủ thông tin bắt buộc trước khi tạo đội hoặc xin gia nhập đội.
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setShowProfileModal(true)}
-              className="shrink-0 w-full sm:w-auto justify-center text-xs"
-              leftIcon={<Pencil className="size-3.5" />}
-            >
-              Cập nhật hồ sơ ngay
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Global Status Message Toast */}
       {globalMessage && (
@@ -1438,20 +1534,9 @@ function DashboardContent() {
                   )}
 
                   {!isProfileComplete(profile) && (
-                    <div className="p-3.5 rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 text-xs text-semantic-warning flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <AlertTriangle className="size-4 shrink-0 text-semantic-warning" />
-                        <span className="truncate">Hồ sơ chưa hoàn thiện. Cần cập nhật để tạo đội.</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setShowProfileModal(true)}
-                        className="text-xs h-7 px-2.5 shrink-0"
-                      >
-                        Cập nhật
-                      </Button>
+                    <div className="p-3.5 rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 text-xs text-semantic-warning flex items-center gap-2">
+                      <AlertTriangle className="size-4 shrink-0 text-semantic-warning" />
+                      <span>Hồ sơ chưa hoàn thiện. Vui lòng cập nhật đầy đủ thông tin cá nhân bên cạnh để tạo đội.</span>
                     </div>
                   )}
 
@@ -1560,13 +1645,25 @@ function DashboardContent() {
                   {/* Divider & Browse Link */}
                   <div className="pt-4 border-t border-surface-border text-center space-y-3">
                     <p className="text-xs text-text-tertiary">
-                      Hoặc bạn muốn tìm đội thi đang mở tuyển thành viên?
+                      Hoặc bạn muốn tìm đội thi hay tìm bạn để cùng thành lập đội?
                     </p>
-                    <Link href="/team/browse" className="inline-block">
-                      <Button variant="secondary" size="sm" leftIcon={<Search className="size-3.5" />}>
-                        Tìm &amp; Gia nhập đội có sẵn
-                      </Button>
-                    </Link>
+                    <div className="flex items-center justify-center gap-2.5 flex-wrap">
+                      <Link href="/team/browse?tab=teams" className="inline-block">
+                        <Button variant="secondary" size="sm" leftIcon={<Search className="size-3.5" />}>
+                          Tìm &amp; Gia nhập đội có sẵn
+                        </Button>
+                      </Link>
+                      <Link href="/team/browse?tab=contestants" className="inline-block">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="border-brand-gold/40 text-brand-gold hover:bg-brand-gold/10"
+                          leftIcon={<Sparkles className="size-3.5 text-brand-gold" />}
+                        >
+                          Xem thí sinh tìm đồng đội
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </Card>
               </div>
@@ -1574,9 +1671,59 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* CASE 3: PARTICIPANT HAS TEAM (UNIFIED TEAM MANAGEMENT VIEW) */}
+        {/* CASE 3: PARTICIPANT HAS TEAM (UNIFIED TEAM & PROFILE MANAGEMENT VIEW) */}
         {myTeam && (
-          <div className="space-y-8">
+          <div className="space-y-6">
+            {/* Tabs for switching between Team Management and Personal Profile */}
+            <div className="flex items-center gap-2 border-b border-surface-border pb-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab('team')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition cursor-pointer ${
+                  activeTab === 'team'
+                    ? 'bg-brand-cyan/15 text-brand-cyan border border-brand-cyan/40 shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised/60'
+                }`}
+              >
+                <Users className="size-4" />
+                <span>Quản lý đội thi</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-base border border-surface-border">
+                  {members.length} thành viên
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('profile')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition cursor-pointer ${
+                  activeTab === 'profile'
+                    ? 'bg-brand-cyan/15 text-brand-cyan border border-brand-cyan/40 shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised/60'
+                }`}
+              >
+                <UserIcon className="size-4" />
+                <span>Hồ sơ cá nhân</span>
+                {profile && !isProfileComplete(profile) && (
+                  <span className="size-2 rounded-full bg-semantic-warning animate-pulse" />
+                )}
+              </button>
+            </div>
+
+            {activeTab === 'profile' ? (
+              <div className="max-w-3xl">
+                {profile ? (
+                  <ProfileEditor
+                    profile={profile}
+                    onProfileUpdated={handleProfileUpdated}
+                  />
+                ) : (
+                  <Card className="p-8 text-center text-text-tertiary">
+                    <p className="text-sm">Đang tải thông tin hồ sơ...</p>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-8">
             {/* PAYMENT & VERIFICATION STATUS BANNER */}
             {myTeam.status === 'verified' ? (
               <div className="p-4 sm:p-5 rounded-2xl bg-brand-cyan/10 border border-brand-cyan/40 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -1872,76 +2019,123 @@ function DashboardContent() {
               <div className="lg:col-span-5 space-y-6">
                 {isLeader ? (
                   <>
-                    {/* Invite by UID Card */}
-                    <Card className="p-6 space-y-4">
-                      <div className="space-y-1">
+                    {/* Recruitment Navigation Card */}
+                    <Card className="p-6 space-y-5">
+                      <div className="space-y-1.5">
                         <h3 className="font-display font-semibold text-text-primary text-base flex items-center gap-2">
-                          <Share2 className="size-4 text-brand-cyan" />
-                          <span>Chiêu mộ thành viên bằng UID</span>
+                          <Sparkles className="size-4 text-brand-gold" />
+                          <span>Chiêu mộ thí sinh tìm đội</span>
                         </h3>
-                        <p className="text-xs text-text-secondary">
-                          Nhập mã định danh UID của đấu thủ để gửi lời mời trực tiếp
+                        <p className="text-xs text-text-secondary leading-relaxed">
+                          Khám phá danh sách các thí sinh tài năng đang bật công khai hồ sơ để tìm kiếm và mời đồng đội thi đấu.
                         </p>
                       </div>
 
-                        {inviteMessage && (
-                          <p
-                            className={`text-xs font-medium p-2.5 rounded-lg border ${
-                              inviteMessage.startsWith('Gửi')
-                                ? 'bg-semantic-success/10 border-semantic-success/30 text-semantic-success'
-                                : 'bg-semantic-danger/10 border-semantic-danger/30 text-semantic-danger'
-                            }`}
-                          >
-                            {inviteMessage}
-                          </p>
-                        )}
+                      {/* Primary Navigation CTA */}
+                      <Link href="/team/browse?tab=contestants" className="block">
+                        <Button
+                          variant="primary"
+                          className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold shadow-sm hover:shadow-brand-cyan/20"
+                        >
+                          <Users className="size-4" />
+                          <span>Duyệt danh sách thí sinh tìm đội</span>
+                          {publicContestants.length > 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/20 text-[11px] font-mono font-medium">
+                              {publicContestants.length}
+                            </span>
+                          )}
+                          <ArrowRight className="size-3.5 ml-0.5" />
+                        </Button>
+                      </Link>
 
-                        <form onSubmit={handleSendInvite} className="flex gap-2">
-                          <Input
-                            type="text"
-                            value={inviteUid}
-                            onChange={(e) => setInviteUid(e.target.value)}
-                            placeholder="Mã UID (VD: GEND-XXXX)"
-                            className="flex-1 text-sm font-mono uppercase"
-                            required
-                          />
-                          <Button
-                            type="submit"
-                            variant="primary"
-                            size="md"
-                            isLoading={inviteLoading}
-                            className="shrink-0"
-                          >
-                            Mời
-                          </Button>
-                        </form>
-
-                        {/* Sent Invites list */}
-                        {sentInvites.length > 0 && (
-                          <div className="pt-3 border-t border-surface-border space-y-2">
+                      {/* Sent Invites list */}
+                      {sentInvites.length > 0 && (
+                        <div className="pt-3 border-t border-surface-border space-y-2">
+                          <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold text-text-tertiary">
                               Lời mời đang chờ ({sentInvites.length})
                             </p>
-                            <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                              {sentInvites.map((inv) => (
+                          </div>
+                          <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                            {sentInvites.map((inv) => {
+                              const matched = publicContestants.find(
+                                (c) => c.uid?.toUpperCase() === inv.invited_uid?.toUpperCase()
+                              )
+                              return (
                                 <div
                                   key={inv.id}
                                   className="p-2.5 rounded-lg bg-surface-raised border border-surface-border flex items-center justify-between text-xs"
                                 >
-                                  <span className="font-mono text-brand-cyan">{inv.invited_uid}</span>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="font-semibold text-text-primary truncate">
+                                      {matched?.full_name || 'Thí sinh'}
+                                    </span>
+                                    <span className="font-mono text-[11px] text-brand-cyan truncate">
+                                      ({inv.invited_uid})
+                                    </span>
+                                  </div>
                                   <button
                                     type="button"
+                                    disabled={actionLoading === inv.id}
                                     onClick={() => handleCancelInvite(inv.id)}
-                                    className="text-text-tertiary hover:text-semantic-danger text-[11px] cursor-pointer"
+                                    className="text-text-tertiary hover:text-semantic-danger text-[11px] cursor-pointer shrink-0 ml-2 disabled:opacity-50 transition"
                                   >
-                                    Thu hồi
+                                    {actionLoading === inv.id ? 'Đang hủy...' : 'Thu hồi'}
                                   </button>
                                 </div>
-                              ))}
-                            </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Manual UID Inviting Fallback (Collapsible) */}
+                      <div className="pt-2 border-t border-surface-border/60">
+                        <button
+                          type="button"
+                          onClick={() => setShowManualUid(!showManualUid)}
+                          className="text-[11px] text-text-tertiary hover:text-brand-cyan transition cursor-pointer flex items-center justify-between w-full py-1"
+                        >
+                          <span>Mời trực tiếp qua mã UID thủ công</span>
+                          <span className="text-[10px]">{showManualUid ? '▲ Thu gọn' : '▼ Nhập mã'}</span>
+                        </button>
+
+                        {showManualUid && (
+                          <div className="pt-2.5 space-y-2">
+                            {inviteMessage && (
+                              <p
+                                className={`text-xs font-medium p-2 rounded-lg border ${
+                                  inviteMessage.startsWith('Gửi')
+                                    ? 'bg-semantic-success/10 border-semantic-success/30 text-semantic-success'
+                                    : 'bg-semantic-danger/10 border-semantic-danger/30 text-semantic-danger'
+                                }`}
+                              >
+                                {inviteMessage}
+                              </p>
+                            )}
+                            <form onSubmit={handleSendInvite} className="flex gap-2">
+                              <Input
+                                type="text"
+                                value={inviteUid}
+                                onChange={(e) => setInviteUid(e.target.value)}
+                                placeholder="Mã UID (VD: GEND-XXXX)"
+                                className="flex-1 text-xs font-mono uppercase h-8"
+                                required
+                              />
+                              <Button
+                                type="submit"
+                                variant="secondary"
+                                size="sm"
+                                isLoading={inviteLoading}
+                                className="shrink-0 text-xs h-8 px-3"
+                              >
+                                Gửi
+                              </Button>
+                            </form>
                           </div>
                         )}
-                      </Card>
+                      </div>
+                    </Card>
 
                       {/* Join Requests Card */}
                       <Card className="p-6 space-y-4">
@@ -2022,34 +2216,11 @@ function DashboardContent() {
                 )}
               </div>
             </div>
+              </div>
+            )}
           </div>
         )}
       </motion.main>
-
-      {/* DIALOG 1: PROFILE EDIT MODAL (HAS-TEAM PARTICIPANT) */}
-      <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
-        <DialogContent className="max-w-xl p-6 sm:p-8">
-          <DialogHeader>
-            <DialogTitle>Chỉnh sửa hồ sơ cá nhân</DialogTitle>
-            <DialogDescription>
-              Cập nhật thông tin định danh và phương thức liên hệ của bạn
-            </DialogDescription>
-          </DialogHeader>
-          {profile && (
-            <div className="mt-4">
-              <ProfileEditor
-                profile={profile}
-                isCompact
-                onCancel={() => setShowProfileModal(false)}
-                onProfileUpdated={(updated) => {
-                  handleProfileUpdated(updated)
-                  setShowProfileModal(false)
-                }}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* DIALOG 2: LEADER ONLY RENAME TEAM DIALOG */}
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>

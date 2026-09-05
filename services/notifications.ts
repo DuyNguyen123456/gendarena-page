@@ -184,7 +184,7 @@ export async function notifyProfileUpdateStatus(
         title: 'Thông tin của bạn đã được cập nhật thành công',
         message: 'Hồ sơ thông tin cá nhân của bạn đã được cập nhật đầy đủ và hợp lệ trên hệ thống GenD Arena.',
         type: 'profile',
-        link: '/profile',
+        link: '/dashboard?tab=profile',
       })
     } else {
       await createNotification({
@@ -192,7 +192,7 @@ export async function notifyProfileUpdateStatus(
         title: 'Thí sinh lưu ý cập nhật đủ thông tin cá nhân',
         message: 'Hồ sơ của bạn đã được lưu nhưng vẫn còn thiếu một số mục thông tin bắt buộc. Vui lòng bổ sung đầy đủ để đủ điều kiện tham gia đội thi và nộp bài.',
         type: 'profile',
-        link: '/profile',
+        link: '/dashboard?tab=profile',
       })
     }
   } catch (err) {
@@ -231,7 +231,7 @@ export async function checkAndSendIncompleteProfileReminder(
       title: 'Thí sinh lưu ý cập nhật đủ thông tin cá nhân',
       message: 'Vui lòng cập nhật đầy đủ thông tin cá nhân (họ tên, trường, khoa, chuyên ngành, số điện thoại, ngày sinh) để đủ điều kiện tham gia đội thi và nộp bài.',
       type: 'profile',
-      link: '/profile',
+      link: '/dashboard?tab=profile',
     })
   } catch (err) {
     console.warn('[services/notifications] Failed to send profile reminder:', err)

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Users, Search, CheckCircle, AlertCircle, Shield, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Users, Search, CheckCircle, AlertCircle, Shield, ShieldCheck, Sparkles } from 'lucide-react'
 import Loading from '@/components/loading'
 import DotGridBackground from '@/components/dot-grid-background'
 import { Badge } from '@/components/ui/badge'
@@ -167,6 +167,8 @@ export default function AdminUsers() {
                       <div className="flex items-center gap-2">
                         {u.role === 'admin' ? (
                           <ShieldCheck className="size-4 text-semantic-warning shrink-0" />
+                        ) : u.role === 'tester' ? (
+                          <span title="Tester (Kiểm thử viên)"><Sparkles className="size-4 text-brand-gold shrink-0" /></span>
                         ) : (
                           <Shield className="size-4 text-text-tertiary shrink-0" />
                         )}
@@ -190,6 +192,7 @@ export default function AdminUsers() {
                         className="h-8 rounded-md border border-surface-border bg-surface-raised px-2.5 text-xs text-text-primary outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/30 transition-colors cursor-pointer"
                       >
                         <option value="participant">Thí sinh</option>
+                        <option value="tester">Tester (Kiểm thử viên)</option>
                         <option value="admin">Quản trị viên (BTC)</option>
                       </select>
                     </td>
