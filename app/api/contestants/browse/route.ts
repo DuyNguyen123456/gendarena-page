@@ -43,8 +43,9 @@ export async function POST(request: Request) {
       )
     }
 
-    // 2. Kiểm tra điều kiện tiên quyết: Thí sinh phải hoàn thiện toàn bộ thông tin cá nhân
-    if (!isProfileComplete(requester)) {
+    // 2. Kiểm tra điều kiện tiên quyết: Thí sinh phải hoàn thiện toàn bộ thông tin cá nhân (Tester được miễn kiểm tra để kiểm thử)
+    const isRequesterTesterOrAdmin = requester.role === 'tester' || requester.role === 'admin'
+    if (!isRequesterTesterOrAdmin && !isProfileComplete(requester)) {
       return NextResponse.json(
         {
           ok: false,
@@ -80,18 +81,19 @@ export async function POST(request: Request) {
     // 5. Truy vấn danh sách thí sinh có bật công khai hồ sơ ghép đội
     // Logic Tester:
     // - Tester (hoặc Admin) có thể xem toàn bộ (cả thí sinh thực tế và tài khoản tester để kiểm thử).
-    // - Thí sinh thực tế (participant) CHỈ xem được các thí sinh thực tế (role = 'participant'), không xem được tester.
-    const allowedRoles =
-      requester.role === 'tester' || requester.role === 'admin'
-        ? ['participant', 'tester']
-        : ['participant']
-
-    const { data: publicProfiles, error: fetchErr } = await supabaseAdmin
+    // - Thí sinh thực tế CHỈ xem được các thí sinh thực tế, tuyệt đối không xem được tester.
+    let query = supabaseAdmin
       .from('profiles')
       .select('id, uid, full_name, avatar_url, email, phone, facebook_url, university, faculty, major, achievements, is_profile_public, public_fields, created_at, dob, role')
       .eq('is_profile_public', true)
-      .in('role', allowedRoles)
       .neq('id', userId)
+
+    if (!isRequesterTesterOrAdmin) {
+      // Loại bỏ tài khoản tester khỏi kết quả của thí sinh
+      query = query.neq('role', 'tester')
+    }
+
+    const { data: publicProfiles, error: fetchErr } = await query
 
     if (fetchErr) {
       console.error('[api/contestants/browse] Fetch error:', fetchErr)
@@ -107,8 +109,8 @@ export async function POST(request: Request) {
       if (teamedUserIds.has(p.id)) return false
       // Chỉ lấy hồ sơ hợp lệ / hoàn thiện
       if (!isProfileComplete(p)) return false
-      // Thí sinh thực tế không được xem tài khoản tester (phòng hộ kép)
-      if (requester.role === 'participant' && p.role === 'tester') return false
+      // Thí sinh thực tế không được xem tài khoản tester
+      if (!isRequesterTesterOrAdmin && p.role === 'tester') return false
       return true
     })
 

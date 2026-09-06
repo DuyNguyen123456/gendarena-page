@@ -67,9 +67,10 @@ export async function sendTeamJoinRequest(
     }
   }
 
-  // 2. Kiểm tra hồ sơ đã hoàn thiện đầy đủ 7 trường chưa
+  // 2. Kiểm tra hồ sơ đã hoàn thiện đầy đủ 7 trường chưa (Tester được miễn kiểm tra hồ sơ để kiểm thử)
   const profile = await getProfile(user.id)
-  if (!profile || !isProfileComplete(profile)) {
+  const isTester = profile?.role === 'tester'
+  if (!isTester && (!profile || !isProfileComplete(profile))) {
     return {
       ok: false,
       error: 'Vui lòng hoàn thiện hồ sơ cá nhân trước khi xin gia nhập đội.',
@@ -237,5 +238,40 @@ export async function getTeamWithMembers(teamId: string): Promise<BrowseTeam | n
   } catch (err) {
     console.error('[services/teams] Error in getTeamWithMembers:', err)
     return null
+  }
+}
+
+export type FetchBrowseTeamsResult =
+  | { ok: true; teams: BrowseTeam[] }
+  | { ok: false; error: string }
+
+/**
+ * Lấy danh sách đội thi đang mở tuyển thành viên qua Server API Route
+ * nhằm đảm bảo phân quyền chặt chẽ giữa Thí sinh và Tester (thí sinh không thấy đội tester).
+ */
+export async function fetchBrowseTeams(userId?: string): Promise<FetchBrowseTeamsResult> {
+  try {
+    const res = await fetch('/api/teams/browse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+    const data = await res.json()
+    if (!res.ok || !data.ok) {
+      return {
+        ok: false,
+        error: data.error || 'Không thể tải danh sách đội thi.',
+      }
+    }
+    return {
+      ok: true,
+      teams: data.teams || [],
+    }
+  } catch (err: any) {
+    console.error('[services/teams fetchBrowseTeams Error]:', err)
+    return {
+      ok: false,
+      error: err?.message || 'Lỗi kết nối khi tải danh sách đội thi.',
+    }
   }
 }

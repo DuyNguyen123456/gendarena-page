@@ -24,7 +24,8 @@ export async function POST(request: Request) {
       .eq('id', userId)
       .maybeSingle()
 
-    if (profileErr || !profile || !isProfileComplete(profile)) {
+    const isTester = profile.role === 'tester'
+    if (!isTester && !isProfileComplete(profile)) {
       return NextResponse.json(
         {
           ok: false,
@@ -51,11 +52,21 @@ export async function POST(request: Request) {
     // 3. Kiểm tra thông tin đội thi
     const { data: team, error: teamErr } = await supabaseAdmin
       .from('teams')
-      .select('id, name, leader_id, max_members, is_open, team_members(id)')
+      .select('id, name, leader_id, max_members, is_open, team_members(id), leader:profiles!leader_id(role)')
       .eq('id', teamId)
       .maybeSingle()
 
     if (teamErr || !team) {
+      return NextResponse.json(
+        { ok: false, error: 'Không tìm thấy đội thi.' },
+        { status: 404 }
+      )
+    }
+
+    const teamLeaderRole = (team.leader as any)?.role
+
+    // Thí sinh thực tế tuyệt đối không được tham gia hoặc gửi yêu cầu vào đội của Tester
+    if (!isTester && profile.role !== 'admin' && teamLeaderRole === 'tester') {
       return NextResponse.json(
         { ok: false, error: 'Không tìm thấy đội thi.' },
         { status: 404 }
@@ -103,7 +114,8 @@ export async function POST(request: Request) {
     }
 
     // 6. Gửi thông báo cho Đội trưởng
-    if (team.leader_id) {
+    // Chỉ gửi thông báo nếu người xin gia nhập KHÔNG PHẢI là tester (trừ khi chính đội trưởng cũng là tester)
+    if (team.leader_id && (!isTester || teamLeaderRole === 'tester')) {
       try {
         await supabaseAdmin.from('notifications').insert({
           user_id: team.leader_id,

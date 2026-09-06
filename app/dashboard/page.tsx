@@ -494,16 +494,22 @@ function DashboardContent() {
                   const reqUserIds = reqs.map((r) => r.requester_id)
                   const { data: reqProfiles } = await supabase
                     .from('profiles')
-                    .select('id, full_name, email, phone')
+                    .select('id, full_name, email, phone, role')
                     .in('id', reqUserIds)
 
-                  const reqProfileMap: Record<string, { full_name: string | null; email: string | null; phone: string | null }> = {}
+                  const reqProfileMap: Record<string, { full_name: string | null; email: string | null; phone: string | null; role?: string | null }> = {}
                   reqProfiles?.forEach((p) => {
-                    reqProfileMap[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone }
+                    reqProfileMap[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone, role: (p as any).role }
                   })
 
+                  // Nếu leader là thí sinh thực tế, ẩn các yêu cầu xin vào đội từ tài khoản tester
+                  const isLeaderTesterOrAdmin = userProfile.role === 'tester' || userProfile.role === 'admin'
+                  const visibleReqs = isLeaderTesterOrAdmin
+                    ? reqs
+                    : reqs.filter((r) => reqProfileMap[r.requester_id]?.role !== 'tester')
+
                   setJoinRequests(
-                    reqs.map((r) => ({
+                    visibleReqs.map((r) => ({
                       ...r,
                       profiles: reqProfileMap[r.requester_id] ?? null,
                     })) as unknown as JoinRequest[]
@@ -549,13 +555,41 @@ function DashboardContent() {
                 .from('team_invites')
                 .select(`
                   id, team_id, invited_by, status, created_at,
-                  teams(name),
-                  inviter:invited_by(full_name)
+                  teams(name, leader_id),
+                  inviter:invited_by(full_name, role)
                 `)
                 .eq('invited_uid', userProfile.uid)
                 .eq('status', 'pending')
 
-              setReceivedInvites((receivedData ?? []) as unknown as ReceivedInvite[])
+              let rawInvites = (receivedData ?? []) as any[]
+              // Nếu người xem là thí sinh thực tế, ẩn các lời mời xuất phát từ tester
+              const isViewerTesterOrAdmin = userProfile.role === 'tester' || userProfile.role === 'admin'
+              if (!isViewerTesterOrAdmin && rawInvites.length > 0) {
+                const teamLeaderIds = rawInvites.map((i) => i.teams?.leader_id).filter(Boolean)
+                const inviterIds = rawInvites.map((i) => i.invited_by).filter(Boolean)
+                const checkUserIds = Array.from(new Set([...teamLeaderIds, ...inviterIds]))
+
+                let testerUserIds = new Set<string>()
+                if (checkUserIds.length > 0) {
+                  const { data: checkProfiles } = await supabase
+                    .from('profiles')
+                    .select('id, role')
+                    .in('id', checkUserIds)
+
+                  checkProfiles?.forEach((cp) => {
+                    if (cp.role === 'tester') testerUserIds.add(cp.id)
+                  })
+                }
+
+                rawInvites = rawInvites.filter((inv) => {
+                  if (inv.inviter?.role === 'tester') return false
+                  if (testerUserIds.has(inv.invited_by)) return false
+                  if (inv.teams?.leader_id && testerUserIds.has(inv.teams.leader_id)) return false
+                  return true
+                })
+              }
+
+              setReceivedInvites(rawInvites as unknown as ReceivedInvite[])
             }
           }
         }
@@ -743,8 +777,10 @@ function DashboardContent() {
     e.preventDefault()
     if (!user) return
 
-    // Enforce profile completion gate
-    if (!profile || !isProfileComplete(profile)) {
+    const isTester = profile?.role === 'tester'
+
+    // Enforce profile completion gate (Tester được miễn kiểm tra hồ sơ để kiểm thử)
+    if (!isTester && (!profile || !isProfileComplete(profile))) {
       setCreateError('Vui lòng hoàn thiện hồ sơ cá nhân bên cạnh trước khi thành lập đội thi.')
       return
     }
@@ -761,19 +797,35 @@ function DashboardContent() {
     setCreateLoading(true)
     setCreateError('')
 
-    const { error: teamError } = await supabase.from('teams').insert({
-      name: createName.trim(),
-      description: createDescription.trim(),
-      competition_id: createCompId,
-      leader_id: user.id,
-      max_members: createMaxMembers,
-      is_open: createIsOpen,
-    })
+    const { data: insertedTeam, error: teamError } = await supabase
+      .from('teams')
+      .insert({
+        name: createName.trim(),
+        description: createDescription.trim(),
+        competition_id: createCompId,
+        leader_id: user.id,
+        max_members: createMaxMembers,
+        is_open: createIsOpen,
+      })
+      .select('id')
+      .maybeSingle()
 
     if (teamError) {
       setCreateError(`Tạo đội thất bại: ${teamError.message}`)
       setCreateLoading(false)
       return
+    }
+
+    // Tự động thêm Leader vào bảng team_members với vai trò 'leader'
+    if (insertedTeam?.id) {
+      const { error: memberError } = await supabase.from('team_members').insert({
+        team_id: insertedTeam.id,
+        user_id: user.id,
+        role: 'leader',
+      })
+      if (memberError) {
+        console.warn('[Dashboard] Insert leader into team_members warning:', memberError)
+      }
     }
 
     setCreateLoading(false)
@@ -886,17 +938,19 @@ function DashboardContent() {
 
         if (teamInvites) setSentInvites(teamInvites as unknown as SentInvite[])
 
-        // Send notification to contestant
-        try {
-          await createNotification({
-            userId: contestant.id,
-            title: 'Lời mời tham gia đội thi',
-            message: `Đội "${myTeam.name}" đã gửi lời mời bạn tham gia đội thi.`,
-            type: 'team_invite',
-            link: '/dashboard',
-          })
-        } catch (notifErr) {
-          console.warn('Failed to send team invite notification:', notifErr)
+        // Send notification to contestant (chỉ gửi nếu người mời KHÔNG PHẢI là tester)
+        if (profile?.role !== 'tester') {
+          try {
+            await createNotification({
+              userId: contestant.id,
+              title: 'Lời mời tham gia đội thi',
+              message: `Đội "${myTeam.name}" đã gửi lời mời bạn tham gia đội thi.`,
+              type: 'team_invite',
+              link: '/dashboard',
+            })
+          } catch (notifErr) {
+            console.warn('Failed to send team invite notification:', notifErr)
+          }
         }
       }
     } catch (err: any) {
@@ -929,8 +983,9 @@ function DashboardContent() {
       return
     }
 
-    // Nếu người mời là thí sinh thực tế, không cho phép tìm hoặc mời tài khoản tester
-    if (profile?.role === 'participant' && targetProfile.role === 'tester') {
+    // Nếu người mời là thí sinh thực tế (không phải tester/admin), không cho phép tìm hoặc mời tài khoản tester
+    const isInviterTesterOrAdmin = profile?.role === 'tester' || profile?.role === 'admin'
+    if (!isInviterTesterOrAdmin && targetProfile.role === 'tester') {
       setInviteMessage('Không tìm thấy đấu thủ với mã UID này.')
       setInviteLoading(false)
       return
@@ -950,12 +1005,12 @@ function DashboardContent() {
       .maybeSingle()
 
     if (memberCheck) {
-      setInviteMessage('Đấu thủ này đã tham gia một đội thi khác.')
+      setInviteMessage('Đấu thủ này đã là thành viên của một đội thi khác.')
       setInviteLoading(false)
       return
     }
 
-    // 3. Send invite
+    // 3. Send Invite
     const { error: inviteError } = await supabase.from('team_invites').insert({
       team_id: myTeam.id,
       invited_uid: formattedUid,
@@ -964,9 +1019,9 @@ function DashboardContent() {
     })
 
     if (inviteError) {
-      setInviteMessage(`Lỗi: ${inviteError.message}`)
+      setInviteMessage(`Gửi lời mời thất bại: ${inviteError.message}`)
     } else {
-      setInviteMessage('Gửi lời mời thành công!')
+      setInviteMessage(`Đã gửi lời mời thành công tới ${targetProfile.full_name || 'thí sinh'}!`)
       setInviteUid('')
       const { data: teamInvites } = await supabase
         .from('team_invites')
@@ -976,17 +1031,19 @@ function DashboardContent() {
 
       if (teamInvites) setSentInvites(teamInvites as unknown as SentInvite[])
 
-      // Send notification to invited user (try/catch non-blocking)
-      try {
-        await createNotification({
-          userId: targetProfile.id,
-          title: 'Lời mời tham gia đội thi',
-          message: `Đội "${myTeam.name}" đã gửi lời mời bạn tham gia đội thi.`,
-          type: 'team_invite',
-          link: '/dashboard',
-        })
-      } catch (notifErr) {
-        console.warn('Failed to send team invite notification:', notifErr)
+      // Send notification to invited user (chỉ gửi nếu người mời KHÔNG PHẢI là tester)
+      if (profile?.role !== 'tester') {
+        try {
+          await createNotification({
+            userId: targetProfile.id,
+            title: 'Lời mời tham gia đội thi',
+            message: `Đội "${myTeam.name}" đã gửi lời mời bạn tham gia đội thi.`,
+            type: 'team_invite',
+            link: '/dashboard',
+          })
+        } catch (notifErr) {
+          console.warn('Failed to send team invite notification:', notifErr)
+        }
       }
     }
     setInviteLoading(false)
@@ -1533,7 +1590,7 @@ function DashboardContent() {
                     </div>
                   )}
 
-                  {!isProfileComplete(profile) && (
+                  {profile?.role !== 'tester' && !isProfileComplete(profile) && (
                     <div className="p-3.5 rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 text-xs text-semantic-warning flex items-center gap-2">
                       <AlertTriangle className="size-4 shrink-0 text-semantic-warning" />
                       <span>Hồ sơ chưa hoàn thiện. Vui lòng cập nhật đầy đủ thông tin cá nhân bên cạnh để tạo đội.</span>
@@ -1632,10 +1689,10 @@ function DashboardContent() {
                         variant="primary"
                         size="md"
                         isLoading={createLoading}
-                        disabled={!isProfileComplete(profile)}
+                        disabled={profile?.role !== 'tester' && !isProfileComplete(profile)}
                         leftIcon={<Plus className="size-4" />}
                         className="w-full"
-                        title={!isProfileComplete(profile) ? 'Vui lòng hoàn thiện hồ sơ trước khi tạo đội' : undefined}
+                        title={profile?.role !== 'tester' && !isProfileComplete(profile) ? 'Vui lòng hoàn thiện hồ sơ trước khi tạo đội' : undefined}
                       >
                         Thành lập đội thi
                       </Button>

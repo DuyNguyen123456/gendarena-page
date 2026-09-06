@@ -5,6 +5,7 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
 import {
   sendTeamJoinRequest,
+  fetchBrowseTeams,
   type BrowseTeam,
   type TeamMemberProfile,
   type TeamMemberDetail,
@@ -99,6 +100,7 @@ function BrowseTeamsContent() {
   } | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [user, setUser] = useState<User | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   // Contestants teaming state
   const [contestants, setContestants] = useState<TeamingContestant[]>([])
@@ -143,7 +145,7 @@ function BrowseTeamsContent() {
 
       const hasTeam = Boolean(memberRecord || leaderRecord)
       setUserHasTeam(hasTeam)
-      const isRealParticipant = currentUserProfile?.role === 'participant'
+      setUserRole(currentUserProfile?.role ?? null)
 
       if (leaderRecord) {
         setLeaderTeam({
@@ -178,68 +180,13 @@ function BrowseTeamsContent() {
         setMyRequests(reqMap)
       }
 
-      // 3. Fetch open teams with members & leader
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select(`
-          id, name, description, max_members, is_open, leader_id, competition_id,
-          leader:profiles!leader_id(id, full_name, university, faculty, major, avatar_url, role, uid, phone, email, facebook_url, achievements, is_profile_public, public_fields),
-          competitions(title),
-          team_members(id, role, user_id, joined_at)
-        `)
-        .eq('is_open', true)
-
-      if (teamsError) {
-        console.error('Fetch teams error:', teamsError)
-        setFetchError('Không thể tải danh sách đội thi. Vui lòng thử lại sau.')
-      } else if (teamsData) {
-        const allUserIds = Array.from(
-          new Set(
-            teamsData.flatMap((t: any) => [
-              t.leader_id,
-              ...(t.team_members || []).map((m: any) => m.user_id),
-            ])
-          )
-        )
-
-        const profileMap: Record<string, TeamMemberProfile & { role?: string }> = {}
-        if (allUserIds.length > 0) {
-          const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('id, full_name, university, faculty, major, avatar_url, role, uid, phone, email, facebook_url, achievements, is_profile_public, public_fields')
-            .in('id', allUserIds)
-
-          profilesData?.forEach((p) => {
-            profileMap[p.id] = p as any
-          })
-        }
-
-        const processedTeams: BrowseTeam[] = teamsData.map((t: any) => {
-          const members: TeamMemberDetail[] = (t.team_members || []).map((m: any) => ({
-            id: m.id,
-            user_id: m.user_id,
-            role: m.role,
-            joined_at: m.joined_at,
-            profile: profileMap[m.user_id] ?? null,
-          }))
-
-          return {
-            ...t,
-            leader: (t.leader as unknown as TeamMemberProfile) ?? profileMap[t.leader_id] ?? null,
-            members,
-          }
-        })
-
-        const availableTeams = processedTeams.filter((t) => {
-          if (t.members.length >= t.max_members) return false
-          // Nếu người xem là thí sinh thực tế, ẩn các đội do tài khoản tester thành lập
-          if (isRealParticipant) {
-            const leaderRole = (t.leader as any)?.role || profileMap[t.leader_id]?.role
-            if (leaderRole === 'tester') return false
-          }
-          return true
-        })
-        setTeams(availableTeams)
+      // 3. Fetch open teams via secure API route (đảm bảo phân tách luồng Tester và Thí sinh)
+      const teamsRes = await fetchBrowseTeams(user.id)
+      if (!teamsRes.ok) {
+        console.error('Fetch teams error:', teamsRes.error)
+        setFetchError(teamsRes.error || 'Không thể tải danh sách đội thi. Vui lòng thử lại sau.')
+      } else {
+        setTeams(teamsRes.teams)
       }
 
       // 4. Fetch Teaming Contestants
@@ -338,17 +285,19 @@ function BrowseTeamsContent() {
           type: 'success',
         })
 
-        // Notify contestant
-        try {
-          await createNotification({
-            userId: contestant.id,
-            title: 'Lời mời tham gia đội thi',
-            message: `Đội "${leaderTeam.name}" đã gửi lời mời bạn tham gia đội thi.`,
-            type: 'team_invite',
-            link: '/dashboard',
-          })
-        } catch (nErr) {
-          console.warn('Failed to send team invite notification:', nErr)
+        // Chỉ gửi thông báo nếu người mời không phải là tài khoản Tester để cách ly luồng dữ liệu
+        if (userRole !== 'tester') {
+          try {
+            await createNotification({
+              userId: contestant.id,
+              title: 'Lời mời tham gia đội thi',
+              message: `Đội "${leaderTeam.name}" đã gửi lời mời bạn tham gia đội thi.`,
+              type: 'team_invite',
+              link: '/dashboard',
+            })
+          } catch (nErr) {
+            console.warn('Failed to send team invite notification:', nErr)
+          }
         }
       }
     } catch (err: any) {

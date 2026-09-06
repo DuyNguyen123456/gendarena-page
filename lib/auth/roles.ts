@@ -12,3 +12,11 @@ export function isTesterRole(role?: string | null): boolean {
   return role === 'tester'
 }
 
+export function isRealParticipantRole(role?: string | null): boolean {
+  return !role || role === 'participant'
+}
+
+export function isTesterOrAdminRole(role?: string | null): boolean {
+  return role === 'tester' || role === 'admin'
+}
+
